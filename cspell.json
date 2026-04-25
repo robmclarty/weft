@@ -1,0 +1,36 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "files": ["packages/*/src/**/*.ts", "**/*.md"],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "dist/**",
+    ".check/**",
+    "pnpm-lock.yaml",
+    "package.json"
+  ],
+  "words": [
+    "agnix",
+    "Corsa",
+    "cspell",
+    "esbuild",
+    "Excalidraw",
+    "fallow",
+    "frontmatter",
+    "Graphviz",
+    "hotspots",
+    "markdownlint",
+    "noemit",
+    "oxlint",
+    "oxlintrc",
+    "pnpm",
+    "ridgeline",
+    "sgconfig",
+    "stabilise",
+    "stryker",
+    "tldraw",
+    "tsconfig",
+    "tsgolint",
+    "vitest"
+  ]
+}
