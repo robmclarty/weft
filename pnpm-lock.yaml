@@ -53,6 +53,12 @@ importers:
 
   packages/core: {}
 
+  packages/studio: {}
+
+  packages/watch: {}
+
+  packages/weft: {}
+
 packages:
 
   '@ast-grep/cli-darwin-arm64@0.42.1':
