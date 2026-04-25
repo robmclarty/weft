@@ -2,9 +2,9 @@
  * Stryker mutation testing config.
  *
  * Invoked by the opt-in `mutation` step of `scripts/check.mjs` (and directly via
- * `pnpm check:mutation`). Incremental mode keeps re-runs cheap — the shared
- * baseline at `stryker.incremental.json` is committed so every contributor
- * and CI start from the same state.
+ * `pnpm check:mutation`). Incremental mode keeps re-runs cheap — the cache at
+ * `.check/mutation.incremental.json` is gitignored and rebuilt locally per
+ * contributor (cheap at current codebase size; revisit if cold runs grow long).
  */
 export default {
   packageManager: 'pnpm',
@@ -16,7 +16,7 @@ export default {
   mutate: ['packages/*/src/**/*.ts', '!packages/*/src/**/*.test.ts', '!packages/*/src/**/*.spec.ts'],
   coverageAnalysis: 'perTest',
   incremental: true,
-  incrementalFile: 'stryker.incremental.json',
+  incrementalFile: '.check/mutation.incremental.json',
   thresholds: {
     high: 80,
     low: 60,
