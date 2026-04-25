@@ -66,7 +66,7 @@ Enforced mechanically (ast-grep / oxlint / fallow). Review alone is not sufficie
 
 Strict downward dependency direction:
 
-```
+```text
 Application code (published consumers; none in this repo)
       ↓
 @repo/studio   (Vite SPA, unpublished)

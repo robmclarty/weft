@@ -8,16 +8,10 @@ The repo is a TypeScript/Node pnpm workspace with an agent-friendly `check` pipe
 
 ```text
 ├── packages/
-│   ├── core/                 name "@repo/core", pure library
-│   │   ├── package.json
-│   │   └── src/
-│   │       ├── index.ts
-│   │       └── example.{ts,test.ts}
-│   └── app/                  name "@repo/app", depends on @repo/core
-│       ├── package.json      declares "@repo/core": "workspace:*"
-│       └── src/
-│           ├── index.ts
-│           └── greet.{ts,test.ts}
+│   ├── core/                 @repo/core — implementation
+│   ├── weft/                 @repo/weft — published as @robmclarty/weft (umbrella, re-exports only)
+│   ├── studio/               @repo/studio — Vite SPA (unpublished)
+│   └── watch/                @repo/watch — published as @robmclarty/weft-watch (Node CLI)
 ├── rules/                    ast-grep structural rules
 ├── scripts/check.mjs         the check orchestrator
 ├── pnpm-workspace.yaml
@@ -27,7 +21,7 @@ The repo is a TypeScript/Node pnpm workspace with an agent-friendly `check` pipe
 └── package.json              all devDependencies live here
 ```
 
-The `core` and `app` packages are placeholder scaffolding. The v0 build (see `.ridgeline/builds/v0/spec.md`) replaces them with `@repo/core`, `@repo/weft`, `@repo/studio`, and `@repo/watch`.
+The package directories are stubs scaffolded for the v0 build (see `.ridgeline/builds/v0/spec.md`).
 
 Runtime deps live in the package that imports them. DevDeps live at the root. Cross-package imports use workspace names (`@repo/other`), not relative paths.
 
@@ -109,7 +103,7 @@ The backend (`scripts/bump-version.mjs` + `scripts/lib/lockstep.mjs`) auto-disco
 pnpm --filter @repo/core test                   # one package's tests
 pnpm --filter @repo/core add zod                # runtime dep to one package
 pnpm add -w -D typescript@latest                # root devDep
-pnpm --filter @repo/app add @repo/core --workspace
+pnpm --filter @repo/weft add @repo/core --workspace
 ```
 
 ## Fallow MCP

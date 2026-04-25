@@ -20,13 +20,15 @@ pnpm check
 
 ```text
 packages/
-  core/   @repo/core — pure library
-  app/    @repo/app — depends on @repo/core
-rules/    ast-grep structural rules
-scripts/  check orchestrator
+  core/     @repo/core — implementation
+  weft/     @repo/weft — published as @robmclarty/weft (umbrella, re-exports only)
+  studio/   @repo/studio — Vite SPA (unpublished)
+  watch/    @repo/watch — published as @robmclarty/weft-watch (Node CLI)
+rules/      ast-grep structural rules
+scripts/    check orchestrator
 ```
 
-`core` and `app` are placeholder packages. The v0 build (`.ridgeline/builds/v0/spec.md`) replaces them with `@repo/core`, `@repo/weft`, `@repo/studio`, and `@repo/watch`.
+The package directories are stubs scaffolded for the v0 build (`.ridgeline/builds/v0/spec.md`).
 
 Source lives under `packages/<name>/src/`, never at the repo root. Cross-package imports use workspace names (`@repo/core`), not relative paths. Tests are colocated: `foo.ts` next to `foo.test.ts`.
 

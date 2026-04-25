@@ -10,7 +10,7 @@ Where the picture is genuinely uncertain (per-kind visual encoding, inspector la
 
 ## §1 — Layered Packages
 
-```
+```text
                   ┌──────────────────────────────┐
    consumers ──▶  │  @robmclarty/weft (umbrella) │  re-exports only
                   └──────────────┬───────────────┘
@@ -60,7 +60,7 @@ Dependency direction is downward and outward: studio → umbrella → core; watc
 
 ### Static path (v0)
 
-```
+```text
 ┌──────────────────┐
 │ fascicle producer│   describe.json(flow) → FlowNode (plain JSON)
 └────────┬─────────┘
@@ -98,7 +98,7 @@ Dependency direction is downward and outward: studio → umbrella → core; watc
 
 ### Watch path (v0)
 
-```
+```text
 ┌──────────────────┐    chokidar    ┌──────────────────┐
 │ filesystem file  │ ─────────────▶ │ @repo/watch      │  reads, validates,
 │ /tmp/flow.json   │                │ ws server :PORT  │  pushes to clients
@@ -123,7 +123,7 @@ Dependency direction is downward and outward: studio → umbrella → core; watc
 
 The skeleton each package exposes. Specific files within each directory are a build decision; this layout reserves the slots.
 
-```
+```text
 weft/
 ├── package.json                    workspace root
 ├── pnpm-workspace.yaml
