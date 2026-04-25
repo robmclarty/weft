@@ -39,6 +39,14 @@ The bump script runs *first*, before the skill reasons about anything. By the ti
 
 On a successful bump, the JSON carries everything the skill needs: `new` is the authoritative version (never recompute it), and `since` is the SHA of the previous `vX.Y.Z` release commit — the left boundary for the CHANGELOG commit range. If `since` is `null`, there is no prior release and this is an initial release.
 
+## Conventions
+
+The skill's `allowed-tools` permissions match plain `git <verb>` invocations and Bash patterns like `cat *`. Stay inside those:
+
+- **Run git commands directly.** The skill's working directory is already the repo root. Use `git status`, `git log`, `git commit`, `git restore`, etc. without `-C <path>`. The `git -C <path> <verb>` form does not match patterns like `Bash(git log*)` and triggers a permission prompt for every command.
+- **Use Read or Glob for file existence checks.** Don't shell out to `ls`. If you need to inspect a file's content, use Read; if you only need to know whether it exists, Glob with the literal path.
+- **Quote-free commit messages.** The commit message is always literally `vX.Y.Z` (no body, no apostrophes), so `git commit -m "vX.Y.Z"` is safe inline — no scratch file needed.
+
 ## Steps
 
 1. **Parse the bump-result JSON from preflight.** Read the `mode` field and branch:
@@ -79,15 +87,26 @@ On a successful bump, the JSON carries everything the skill needs: `new` is the 
 
    **Print the drafted section back to the user** as a fenced `markdown` code block in your response text — the entire block, verbatim, exactly as it will be prepended to `CHANGELOG.md`. This is the user's one chance to see the prose in isolation before it's folded into the file, committed, and tagged. Do this before moving on to step 5; don't summarize or abbreviate — print the raw markdown. The skill continues automatically after printing (no wait for confirmation); if the user wants to change the prose, they'll interrupt.
 
-5. **Prepend the new section to `CHANGELOG.md`.** If the file exists, prepend above the existing content (keep a single `# Changelog` heading at the very top). If it doesn't exist, create it with:
+5. **Prepend the new section to `CHANGELOG.md`.** First, note whether the file already exists — the unwind in step 6 needs this fact. Use Glob with the literal path `CHANGELOG.md` to check, not a shell `ls`. Then:
 
-   ```markdown
-   # Changelog
+   - If it exists, prepend above the existing content (keep a single `# Changelog` heading at the very top).
+   - If it doesn't exist, create it with:
 
-   <new section here>
-   ```
+     ```markdown
+     # Changelog
 
-6. **Stage exactly the lockstep set + `CHANGELOG.md`, nothing else.** Use the exact paths from the JSON's `files[]` (they'll include any `packages/*/src/version.ts` that participated):
+     <new section here>
+     ```
+
+6. **Verify with `pnpm check --only docs,links,spell --bail` *before* staging.** Only these three checks can fail on a `(version strings + CHANGELOG)` diff — semver-string replacement in a handful of files can't break types, lint, struct, dead, or tests, so running the full pipeline is wasted CPU. If the narrow check exits 0, continue to step 7.
+
+   If it exits non-zero, the release must not happen. Roll the working tree back to its pre-bump state so the user can fix the issue and re-invoke the skill cleanly:
+
+   - Restore each lockstep-set file from the JSON's `files[]` to its pre-bump content: `git restore <each files[].rel>`. (The bump-script edits live in the working tree only — nothing has been staged yet — so `git restore` is the right tool.)
+   - For `CHANGELOG.md`: if the file existed before this skill run, `git restore CHANGELOG.md`. If it was newly created in step 5, `rm CHANGELOG.md`. Note this in step 5 so you know which branch to take here.
+   - Tell the user the check failed, show the tail of the relevant `.check/*.txt` or `.check/*.json` diagnostic, and stop. Don't retry; the user decides whether to fix and re-invoke the skill or investigate first.
+
+7. **Stage exactly the lockstep set + `CHANGELOG.md`, nothing else.** Use the exact paths from the JSON's `files[]` (they'll include any `packages/*/src/version.ts` that participated):
 
    ```bash
    git add <each path from files[].rel> CHANGELOG.md
@@ -102,20 +121,13 @@ On a successful bump, the JSON carries everything the skill needs: `new` is the 
 
    Confirm via `git status --short` that no other files are staged. If anything unexpected is staged, stop and hand it back to the user — a release commit is not the place to sneak other changes in.
 
-7. **Commit.** Use the JSON's `new` field literally:
+8. **Commit.** Use the JSON's `new` field literally:
 
    ```bash
    git commit -m "vX.Y.Z"
    ```
 
    No prefix, no body, no footer. That matches the marker convention the repo uses to find "the last release" on the next bump.
-
-8. **Verify with `pnpm check --only docs,links,spell --bail`.** Only these three checks can fail on a `(version strings + CHANGELOG)` diff — semver-string replacement in a handful of files can't break types, lint, struct, dead, or tests, so running the full pipeline is wasted CPU. If the narrow check exits 0, continue to step 9.
-
-   If it exits non-zero:
-   - The release commit is already created (step 7 already ran).
-   - Undo with `git reset --hard HEAD~1`. This restores both the lockstep-set files (back to the old version) and `CHANGELOG.md`.
-   - Tell the user the check failed, show the tail of the relevant `.check/*.txt` or `.check/*.json` diagnostic, and stop. Don't retry the commit; the user decides whether to fix and re-invoke the skill or investigate first.
 
 9. **Create an annotated tag and push it.** Use the JSON's `new` field literally:
 
@@ -169,5 +181,5 @@ In every error case: no edits, no git operations, no retry. The user decides wha
 - **`CHANGELOG.md` exists but has no `# Changelog` heading.** Prepend the new heading plus the new section; leave the old content below untouched.
 - **Commit list contains merge commits.** Drop them from the summary unless they introduced something not present in the squashed commits. `--no-merges` on the log is fine if the output is noisy.
 - **A commit is marked with `BREAKING:` or `!:` but the user asked for `patch` or `minor`.** Warn the user and ask if they meant `major`. Don't override silently. Note: by this point the bump has *already happened on disk* (the script ran in preflight); if the user wants `major` instead, they need to `git restore` the lockstep set and re-invoke `/version major`.
-- **`pnpm check --only docs,links,spell --bail` fails in step 8.** `git reset --hard HEAD~1` restores the pre-bump state. Do not amend, do not retry the commit from inside the skill — the user decides. Common cause: a word in the new CHANGELOG entry is missing from `cspell.json`'s `words` list. Fix via a separate commit, then re-invoke `/version`.
+- **`pnpm check --only docs,links,spell --bail` fails in step 6.** The skill restores the lockstep set with `git restore` and either removes a freshly-created `CHANGELOG.md` or restores a pre-existing one (per the existence check in step 5). No commit was created, so no reset is needed. Common cause: a word in the new CHANGELOG entry is missing from `cspell.json`'s `words` list. Fix via a separate commit, then re-invoke `/version`.
 - **New package added with no `version.ts`.** Fine — it participates via its `package.json` only. If a package later adds `src/version.ts` with the literal `export const version = '<SEMVER>';` line, the lockstep enumerator picks it up automatically on the next bump.
