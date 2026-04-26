@@ -14,6 +14,8 @@ The watch CLI has zero React or canvas surface. It uses `chokidar` for file watc
 
 The single source of truth for "done" remains `pnpm check` exiting 0.
 
+The repo has visual-testing tooling pre-installed (`@vitest/browser`, `@playwright/test`, `playwright`, `@axe-core/playwright`, `msw`, `agent-browser`) for phases 3 and 5. **None of it applies to this phase.** The watch CLI is Node-only with no React, DOM, or HTTP surface. Tests use plain Vitest in Node mode plus a real `ws` client; the existing AC 15 integration tests are explicitly anti-mock (real chokidar, real ws, real filesystem). Do not introduce `msw` to stub the WebSocket — the test bar is hitting the real server bound on `127.0.0.1:0`. `@repo/watch` source is also subject to constraints §3 (no React peer surface) and constraints §4 (no HTTP clients), which would make most browser-tooling integrations a constraints violation regardless.
+
 Inputs: spec.md §4.2 (the `?ws=` route the CLI must construct), §5.5, §6 (Watch CLI ≥ Node 20), §8 F1 / F7 / F8 / F9, §9, §10, §11; constraints.md §3 (watch CLI import rules), §4 (forbidden dependencies), §5.3, §5.5, §5.6, §7 invariant 7, §9; the fixtures from phase 1.
 
 Outputs consumed by phase 5: the `weft-watch` binary, the WebSocket message envelope contract, the file-deleted "unreachable" signal, the `--no-open` and `--studio-url` flags.

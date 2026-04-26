@@ -16,6 +16,8 @@ This phase fills in `packages/core/src/transform/`, `packages/core/src/schemas.t
 
 The single source of truth for "done" remains `pnpm check` exiting 0. New tests added in this phase run inside the existing pipeline.
 
+The repo has visual-testing tooling pre-installed (`@vitest/browser`, `@playwright/test`, `playwright`, `@axe-core/playwright`, `msw`, `agent-browser`) for phases 3 and 5. **None of it applies to this phase.** The data layer is pure functions over plain JSON; Vitest in its default Node environment is the right and only tool here. Do not reach for browser-mode Vitest or Playwright for transform / schema / hash tests.
+
 Inputs: spec.md §3, §4.1 (the transform / schema / `tree_id` signatures), §5.1, §8 F2 / F6, §9 (regression test framing); constraints.md §1, §2, §3, §5.2, §5.3, §5.7, §9; taste.md principles 1, 4, 9, 10; design.md §3 (data flow); the fixtures from phase 1.
 
 Outputs consumed by phase 3 (layout + canvas): the typed graph shape produced by `tree_to_graph` (the input to `layout_graph`); the `tree_id` hash (used by phase 5 for localStorage keys); the Zod schemas (which inform phase 4's parity-tested watch CLI schema).

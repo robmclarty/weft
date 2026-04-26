@@ -14,9 +14,18 @@ Phase 2 delivered the data layer: Zod schemas, `tree_to_graph`, `tree_id`. The u
 
 This phase fills in `packages/core/src/layout/`, `packages/core/src/canvas/`, `packages/core/src/nodes/`, and extends `@repo/core/src/index.ts` and `@repo/weft/src/index.ts` with the library's full public surface. The studio (phase 5) will consume this surface; phase 4's watch CLI is independent and does not touch any of this code.
 
-The single source of truth for "done" remains `pnpm check` exiting 0.
+The single source of truth for "done" remains `pnpm check` exiting 0. The opt-in `e2e` check defined in `scripts/check.mjs` is **not** required to pass at this phase — Playwright e2e is a phase 5 concern. Component-level rendering inside this phase runs through Vitest (Node or browser mode, builder's choice — see AC 25–26).
 
-Inputs: spec.md §4.1, §4.3, §4.4, §5.2, §5.6, §6, §7, §8 F3 / F4 / F5 / F6 / F11, §9, §10, §12; constraints.md §3, §4, §5.1, §5.2, §5.7, §7 invariants 1, 2, 5, 6 (re-verified); design.md §1, §2, §5; the data-layer outputs from phase 2.
+Visual-testing tooling pre-installed at the repo root and consumed in this phase:
+
+- `@vitest/browser` 4.1.5 — runs Vitest specs in real Chromium. Recommended for any test that exercises React Flow's measured DOM (handle positions, ELK port-id wiring, the parallel-ordering render-side regression). jsdom does not measure layout, so jsdom-mode component tests of `WeftCanvas` and node components are silently misleading.
+- `agent-browser` 0.26.0 — exploratory CLI for the builder to *see* the canvas mid-task without writing a spec. Use it to confirm the rendered shape matches expectation before adding a regression test, not as a gate.
+- `playwright` 1.59.1 / `@playwright/test` 1.59.1 are present but reserved for phase 5. Do not add canvas-rendering Playwright specs to `test/e2e/` from this phase; the studio doesn't exist yet, and a contrived harness would just need to be torn down later.
+- `msw` 2.13.6 and `@axe-core/playwright` 4.11.2 are not consumed in this phase.
+
+See `docs/visual-testing.md` for the when-to-reach-for-which guide, including the `pnpm check --include e2e` opt-in and the agent-browser smoke at `scripts/agent-browser-smoke.mjs`.
+
+Inputs: spec.md §4.1, §4.3, §4.4, §5.2, §5.6, §6, §7, §8 F3 / F4 / F5 / F6 / F11, §9, §10, §12; constraints.md §3, §4, §5.1, §5.2, §5.7, §7 invariants 1, 2, 5, 6 (re-verified); design.md §1, §2, §5; the data-layer outputs from phase 2; the visual-testing scaffold (`docs/visual-testing.md`, `test/e2e/`, `scripts/agent-browser-smoke.mjs`).
 
 Outputs consumed by phase 5: the entire library public surface via `@robmclarty/weft`, including `WeftCanvas`, `canvas_api`, `tree_to_graph`, `layout_graph`, `tree_id`, the Zod schemas, and the v0 types.
 
@@ -40,14 +49,14 @@ Outputs consumed by phase 5: the entire library public surface via `@robmclarty/
 10. `WeftCanvas` is a function React component exported from `@repo/core` conforming to `WeftCanvasProps` in spec §4.1: `tree`, `on_node_click`, `on_ready`, `initial_viewport`, plus the v1-reserved `events` prop accepted but ignored in v0.
 11. `canvas_api` exposes `focus_node(id)`, `fit_view()`, `export_png(): Promise<Blob>`, `get_viewport()`. `WeftCanvas` invokes `on_ready(api)` once mounted and the canvas is interactive.
 12. The `@xyflow/react` `nodeTypes` registry is the single dispatch table mapping each v0 kind to its component (`StepNode`, `SequenceNode`, `ParallelNode`, `PipeNode`, `RetryNode`, `ScopeNode`, `StashNode`, `UseNode`) and falls through to `GenericNode` for any unknown kind. No node component contains an `if (kind === '...')` branch for another kind (constraints §3 "Dispatch-on-kind, never branch-on-kind").
-13. Each node component renders the visual encoding specified in spec §4.3 — handles, labels, badges, container chrome — for representative configs. Component tests verify each.
+13. Each node component renders the visual encoding specified in spec §4.3 — handles, labels, badges, container chrome — for representative configs. Component tests verify each. Tests that assert on measured DOM (handle bounding boxes, ELK port positions, container-chrome geometry) run under `@vitest/browser` (Chromium); pure prop-and-DOM-tree tests can stay in jsdom. The choice per spec is the builder's; document the split in a one-line README under the test directory so later phases know where to reach.
 14. Each node component fixes its width and height via CSS classes/tokens so layout runs in a single pass with known dimensions (per the open-question §13.8 v0 strategy). Node sizes live in a single styling source.
 15. `WeftNodeData` is uniform across kinds (per taste principle 4): `{ kind, id, config?, execution_state? (ignored in v0), latest_event? (ignored in v0) }`. Per-kind rendering specifics come from `config` introspection within each component.
-16. **Parallel ordering regression — render side.** `ParallelNode` declares per-handle ports matching the layout's port ids. The regression test from phase 2 is extended end-to-end: load `parallel_ordering.json`, run `tree_to_graph` and `layout_graph`, then re-run after a config tweak, and assert stable child order in the *positioned* output. The documented escape hatch (set `node.zIndex` from declaration order) is referenced in a code comment near `ParallelNode` or the transform.
+16. **Parallel ordering regression — render side.** `ParallelNode` declares per-handle ports matching the layout's port ids. The regression test from phase 2 is extended end-to-end: load `parallel_ordering.json`, run `tree_to_graph` and `layout_graph`, then re-run after a config tweak, and assert stable child order in the *positioned* output. The assertion on positioned coordinates runs under `@vitest/browser` (Chromium) so handle measurements are real, not jsdom defaults. The documented escape hatch (set `node.zIndex` from declaration order) is referenced in a code comment near `ParallelNode` or the transform.
 
 ### Performance hardening on the canvas
 
-17. When node count exceeds the configurable threshold (default 200, per spec §6 and research F12), `WeftCanvas` enables `OnlyRenderVisibleElements` and disables the minimap while panning. Custom node components are memoized (`React.memo` or equivalent). A unit / component test verifies the threshold behavior toggles around 200. Phase 5 verifies this end-to-end through the studio with a > 200-node fixture.
+17. When node count exceeds the configurable threshold (default 200, per spec §6 and research F12), `WeftCanvas` enables `OnlyRenderVisibleElements` and disables the minimap while panning. Custom node components are memoized (`React.memo` or equivalent). A `@vitest/browser` component test verifies the threshold behavior toggles around 200 in real DOM (jsdom would not catch a regression where the prop is set but the render tree never re-mounts). Phase 5 verifies this end-to-end through the studio with a > 200-node fixture under Playwright.
 
 ### PNG export
 
@@ -67,6 +76,12 @@ Outputs consumed by phase 5: the entire library public surface via `@robmclarty/
 ### Coverage
 
 24. Coverage floor of 70% lines / functions / branches / statements is met for `@repo/core` and `@repo/weft` across the union of phase 2 + phase 3 code.
+
+### Visual testing — phase 3 surface
+
+25. Browser-mode Vitest is configured for the canvas / nodes test directory (e.g. a `vitest.config.ts` override with `browser: { enabled: true, provider: 'playwright', name: 'chromium' }`) and the suite runs as part of the standard `pnpm check` `test` step — not as a separate command. A failing browser-mode component test fails `pnpm check`. The browser mode runs headless and contributes coverage to the workspace floor (per AC 24).
+26. The `agent-browser` smoke (`pnpm test:agent-browser`) still exits 0 against `scripts/agent-browser-smoke.mjs`. The smoke is an exploratory harness, not a gate — but a regression in the underlying `agent-browser` install or Chrome binary should be caught here, not when phase 5 needs it for studio verification.
+27. The opt-in `e2e` Playwright check (`pnpm check --include e2e`) is **not** required to pass at this phase. `test/e2e/` keeps the existing `smoke.spec.ts` only; do not add canvas-rendering Playwright specs from this phase. (Phase 5 wires the studio dev server into `playwright.config.ts` and adds the real e2e suite there.)
 
 ## Spec Reference
 
@@ -88,3 +103,4 @@ Outputs consumed by phase 5: the entire library public surface via `@robmclarty/
 - constraints.md §9 (Testing Requirements)
 - taste.md principles 1, 3, 4, 5, 6, 8, 9, 10
 - design.md §1 (Layered Packages), §2 (Package Responsibilities), §5 (Public Surface)
+- docs/visual-testing.md (when-to-reach-for-which: `@vitest/browser` for component tests, `agent-browser` for exploratory verification, Playwright reserved for phase 5)
