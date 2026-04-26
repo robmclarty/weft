@@ -28,6 +28,8 @@
     "@ast-grep/cli": "0.42.1",
     "@axe-core/playwright": "4.11.2",
     "@playwright/test": "1.59.1",
+    "@repo/watch": "workspace:*",
+    "@repo/weft": "workspace:*",
     "@stryker-mutator/core": "9.6.1",
     "@stryker-mutator/vitest-runner": "9.6.1",
     "@types/node": "24.12.2",

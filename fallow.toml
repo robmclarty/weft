@@ -7,6 +7,7 @@ entry = [
   "stryker.config.mjs",
   "test/e2e/playwright.config.ts",
   "test/e2e/**/*.spec.ts",
+  "test/integration/**/*.test.ts",
 ]
 
 # CLI/tooling deps used via command line or config files, not imported from source.

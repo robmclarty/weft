@@ -11,6 +11,8 @@
   ],
   "words": [
     "agnix",
+    "behaviour",
+    "chokidar",
     "Corsa",
     "cspell",
     "elkjs",
@@ -24,6 +26,7 @@
     "Graphviz",
     "hotspots",
     "markdownlint",
+    "noclient",
     "noemit",
     "oxlint",
     "oxlintrc",
@@ -36,8 +39,10 @@
     "stabilise",
     "stryker",
     "tldraw",
+    "TOCTOU",
     "tsconfig",
     "tsgolint",
+    "unrefs",
     "vitest",
     "xyflow"
   ]

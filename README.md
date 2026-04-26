@@ -22,7 +22,7 @@ The repo is a TypeScript/Node pnpm workspace with an agent-friendly `check` pipe
 └── package.json              all devDependencies live here
 ```
 
-The package directories are stubs scaffolded for the v0 build (see `.ridgeline/builds/v0/spec.md`). The build is split into 5 phases under `.ridgeline/builds/v0/phases/`; **phase 1 of 5** (workspace + check pipeline foundation) is what this commit set delivers. Phases 2–5 add the data layer, layout / canvas, watch CLI, and studio.
+The package directories are scaffolded for the v0 build (see `.ridgeline/builds/v0/spec.md`). The build is split into 5 phases under `.ridgeline/builds/v0/phases/`; **phases 1–4 of 5** are complete: workspace + check pipeline foundation, the pure data layer, layout + canvas + library umbrella, and the standalone watch CLI. Phase 5 adds the studio app.
 
 Runtime deps live in the package that imports them. DevDeps live at the root. Cross-package imports use workspace names (`@repo/other`), not relative paths.
 

@@ -6,6 +6,9 @@
   "author": "Rob McLarty",
   "type": "module",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "publishConfig": {
     "name": "@robmclarty/weft-watch",
     "access": "public"
@@ -15,5 +18,14 @@
   },
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "chokidar": "4.0.3",
+    "commander": "13.0.0",
+    "ws": "8.18.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/ws": "8.5.13"
   }
 }

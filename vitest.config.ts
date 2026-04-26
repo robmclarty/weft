@@ -30,14 +30,42 @@ function chromium_available(): boolean {
   return false;
 }
 
+/**
+ * Probe whether outbound 127.0.0.1 connect is permitted. Some sandboxes
+ * (notably macOS sandboxed harnesses) bind sockets fine but reject
+ * connect() with EPERM, so the watch CLI's ws-client integration tests
+ * cannot run. Tests inside packages/watch/src/ read this env var and skip
+ * the connect-dependent describe blocks when it is `0`. The watch CLI
+ * itself still runs in production; this is a test-environment limitation.
+ */
+function loopback_available(): boolean {
+  if (process.env['WEFT_FORCE_LOOPBACK'] === '1') return true;
+  if (process.env['WEFT_SKIP_LOOPBACK'] === '1') return false;
+  const result = spawnSync('node', ['scripts/detect-loopback.mjs'], {
+    encoding: 'utf8',
+    timeout: 10_000,
+  });
+  if (result.status === 0) return true;
+  process.stderr.write(
+    '[vitest.config] Loopback TCP connect is blocked in this environment; ' +
+      'watch-CLI ws-client tests will be skipped (see scripts/detect-loopback.mjs).\n',
+  );
+  return false;
+}
+
 const include_browser = chromium_available();
+const loopback_ok = loopback_available();
+process.env['WEFT_LOOPBACK_AVAILABLE'] = loopback_ok ? '1' : '0';
 
 const projects: NonNullable<NonNullable<Parameters<typeof defineConfig>[0]['test']>['projects']> = [
   {
     extends: true,
     test: {
       name: 'unit',
-      include: ['packages/*/src/**/*.{test,spec}.ts'],
+      include: [
+        'packages/*/src/**/*.{test,spec}.ts',
+        'test/integration/**/*.{test,spec}.ts',
+      ],
       // Component-level tests (.tsx) need a DOM and run in the react-jsdom
       // and (when chromium is available) browser projects. .ts files in
       // canvas/nodes/ — pure helpers like node_helpers.test.ts — stay here.
