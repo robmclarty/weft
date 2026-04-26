@@ -5,5 +5,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@xyflow/react": "12.10.2",
+    "zod": "3.25.76"
   }
 }

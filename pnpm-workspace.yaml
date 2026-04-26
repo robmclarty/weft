@@ -5,3 +5,4 @@ allowBuilds:
   '@ast-grep/cli': true
   'agent-browser': true
   fallow: true
+packageImportMethod: copy

@@ -13,9 +13,13 @@
     "agnix",
     "Corsa",
     "cspell",
+    "elkjs",
     "esbuild",
     "Excalidraw",
     "fallow",
+    "fanout",
+    "fascicle",
+    "FNV",
     "frontmatter",
     "Graphviz",
     "hotspots",
@@ -23,6 +27,7 @@
     "noemit",
     "oxlint",
     "oxlintrc",
+    "parentid",
     "playwright",
     "pnpm",
     "ridgeline",
@@ -33,6 +38,7 @@
     "tldraw",
     "tsconfig",
     "tsgolint",
-    "vitest"
+    "vitest",
+    "xyflow"
   ]
 }
