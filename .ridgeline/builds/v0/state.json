@@ -1,6 +1,6 @@
 {
   "buildName": "v0",
-  "startedAt": "2026-04-25T23:24:58.352Z",
+  "startedAt": "2026-04-26T02:53:20.610Z",
   "pipeline": {
     "shape": "skipped",
     "design": "skipped",
@@ -8,7 +8,58 @@
     "research": "complete",
     "refine": "complete",
     "plan": "complete",
-    "build": "pending"
+    "build": "running"
   },
-  "phases": []
+  "phases": [
+    {
+      "id": "01-workspace-foundation",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/v0/01-workspace-foundation",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "02-data-layer",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/v0/02-data-layer",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "03-layout-and-canvas",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/v0/03-layout-and-canvas",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "04-watch-cli",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/v0/04-watch-cli",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "05-studio-and-hardening",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/v0/05-studio-and-hardening",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    }
+  ]
 }
