@@ -18,3 +18,13 @@
 {"timestamp":"2026-04-26T03:07:01.595Z","level":"info","phase":null,"message":"Sandbox: greywall"}
 {"timestamp":"2026-04-26T03:07:01.596Z","level":"info","phase":null,"message":"Starting build: v0 (5 phases)\n"}
 {"timestamp":"2026-04-26T03:07:01.647Z","level":"info","phase":"01-workspace-foundation","message":"Phase 1/5: 01-workspace-foundation"}
+{"timestamp":"2026-04-26T03:07:01.771Z","level":"info","phase":"01-workspace-foundation","message":"Building..."}
+{"timestamp":"2026-04-26T03:26:15.019Z","level":"info","phase":"01-workspace-foundation","message":"Build failed (transient): Error: Failed to parse claude output: Error: No result event found in stream-json output"}
+{"timestamp":"2026-04-26T03:26:15.020Z","level":"info","phase":"01-workspace-foundation","message":"Waiting 1.5s before retry..."}
+{"timestamp":"2026-04-26T03:26:16.513Z","level":"info","phase":"01-workspace-foundation","message":"Retry 1: building..."}
+{"timestamp":"2026-04-26T03:26:16.530Z","level":"info","phase":"01-workspace-foundation","message":"Build failed (transient): Error: claude exited with code null: "}
+{"timestamp":"2026-04-26T03:26:16.531Z","level":"info","phase":"01-workspace-foundation","message":"Waiting 2.5s before retry..."}
+{"timestamp":"2026-04-26T03:32:13.215Z","level":"info","phase":null,"message":"Resuming build 'v0' from phase 1/5"}
+{"timestamp":"2026-04-26T03:32:13.847Z","level":"info","phase":null,"message":"Sandbox: greywall"}
+{"timestamp":"2026-04-26T03:32:13.849Z","level":"info","phase":null,"message":"Starting build: v0 (5 phases)\n"}
+{"timestamp":"2026-04-26T03:32:13.903Z","level":"info","phase":"01-workspace-foundation","message":"Phase 1/5: 01-workspace-foundation"}

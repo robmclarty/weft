@@ -47,11 +47,19 @@ importers:
 
   packages/core: {}
 
-  packages/studio: {}
+  packages/studio:
+    dependencies:
+      '@repo/weft':
+        specifier: workspace:*
+        version: link:../weft
 
   packages/watch: {}
 
-  packages/weft: {}
+  packages/weft:
+    dependencies:
+      '@repo/core':
+        specifier: workspace:*
+        version: link:../core
 
 packages:
 

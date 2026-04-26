@@ -1,1 +1,1 @@
-export { version } from './version.js';
+export { version } from '@repo/core';

@@ -1,9 +1,19 @@
 {
   "name": "@repo/weft",
   "version": "0.1.0",
-  "private": true,
+  "description": "Umbrella library for weft. Re-exports the curated public surface of @repo/core.",
+  "license": "Apache-2.0",
+  "author": "Rob McLarty",
   "type": "module",
+  "private": true,
+  "publishConfig": {
+    "name": "@robmclarty/weft",
+    "access": "public"
+  },
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@repo/core": "workspace:*"
   }
 }
