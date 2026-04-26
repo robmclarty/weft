@@ -13,12 +13,12 @@
   "phases": [
     {
       "id": "01-workspace-foundation",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/v0/01-workspace-foundation",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/v0/01-workspace-foundation",
       "retries": 0,
-      "duration": 9352,
-      "completedAt": null,
+      "duration": 480950,
+      "completedAt": "2026-04-26T03:40:14.975Z",
       "failedAt": null
     },
     {
