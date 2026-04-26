@@ -1,0 +1,113 @@
+{
+  "entries": [
+    {
+      "phase": "plan",
+      "role": "specialist",
+      "attempt": 0,
+      "costUsd": 0.6307755,
+      "inputTokens": 7,
+      "outputTokens": 8706,
+      "cacheReadInputTokens": 50413,
+      "cacheCreationInputTokens": 59256,
+      "durationMs": 138042,
+      "timestamp": "2026-04-25T23:24:58.348Z"
+    },
+    {
+      "phase": "plan",
+      "role": "synthesizer",
+      "attempt": 0,
+      "costUsd": 0.6832534999999998,
+      "inputTokens": 9,
+      "outputTokens": 9852,
+      "cacheReadInputTokens": 196670,
+      "cacheCreationInputTokens": 50634,
+      "durationMs": 167411,
+      "timestamp": "2026-04-25T23:24:58.350Z"
+    },
+    {
+      "phase": "research",
+      "role": "researcher",
+      "attempt": 0,
+      "costUsd": 1.39478025,
+      "inputTokens": 6495,
+      "outputTokens": 12370,
+      "cacheReadInputTokens": 247107,
+      "cacheCreationInputTokens": 78515,
+      "durationMs": 224680,
+      "timestamp": "2026-04-26T01:07:38.959Z"
+    },
+    {
+      "phase": "research",
+      "role": "researcher",
+      "attempt": 1,
+      "costUsd": 2.0859017,
+      "inputTokens": 4644,
+      "outputTokens": 14069,
+      "cacheReadInputTokens": 542203,
+      "cacheCreationInputTokens": 96807,
+      "durationMs": 294466,
+      "timestamp": "2026-04-26T01:07:38.961Z"
+    },
+    {
+      "phase": "research",
+      "role": "synthesizer",
+      "attempt": 0,
+      "costUsd": 0.7065125,
+      "inputTokens": 7,
+      "outputTokens": 13151,
+      "cacheReadInputTokens": 70650,
+      "cacheCreationInputTokens": 51370,
+      "durationMs": 187702,
+      "timestamp": "2026-04-26T01:07:38.961Z"
+    },
+    {
+      "phase": "refine",
+      "role": "refiner",
+      "attempt": 0,
+      "costUsd": 1.491137,
+      "inputTokens": 11,
+      "outputTokens": 32829,
+      "cacheReadInputTokens": 366082,
+      "cacheCreationInputTokens": 74240,
+      "durationMs": 574206,
+      "timestamp": "2026-04-26T01:27:43.343Z"
+    },
+    {
+      "phase": "plan",
+      "role": "specialist",
+      "attempt": 0,
+      "costUsd": 0.657644,
+      "inputTokens": 7,
+      "outputTokens": 8373,
+      "cacheReadInputTokens": 55448,
+      "cacheCreationInputTokens": 63904,
+      "durationMs": 133519,
+      "timestamp": "2026-04-26T01:54:23.243Z"
+    },
+    {
+      "phase": "plan",
+      "role": "specialist",
+      "attempt": 1,
+      "costUsd": 0.75562275,
+      "inputTokens": 7,
+      "outputTokens": 14655,
+      "cacheReadInputTokens": 72233,
+      "cacheCreationInputTokens": 53109,
+      "durationMs": 237501,
+      "timestamp": "2026-04-26T01:54:23.246Z"
+    },
+    {
+      "phase": "plan",
+      "role": "synthesizer",
+      "attempt": 0,
+      "costUsd": 0.9199437500000001,
+      "inputTokens": 8,
+      "outputTokens": 14867,
+      "cacheReadInputTokens": 166440,
+      "cacheCreationInputTokens": 69291,
+      "durationMs": 240910,
+      "timestamp": "2026-04-26T01:54:23.246Z"
+    }
+  ],
+  "totalCostUsd": 9.32557095
+}

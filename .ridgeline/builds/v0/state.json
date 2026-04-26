@@ -1,0 +1,14 @@
+{
+  "buildName": "v0",
+  "startedAt": "2026-04-25T23:24:58.352Z",
+  "pipeline": {
+    "shape": "skipped",
+    "design": "skipped",
+    "spec": "skipped",
+    "research": "complete",
+    "refine": "complete",
+    "plan": "complete",
+    "build": "pending"
+  },
+  "phases": []
+}

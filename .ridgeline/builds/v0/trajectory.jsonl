@@ -1,0 +1,12 @@
+{"timestamp":"2026-04-25T23:38:03.780Z","type":"research_start","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Research started (full mode, iteration 1)"}
+{"timestamp":"2026-04-25T23:41:59.953Z","type":"specialist_fail","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Specialist competitive failed: Claude invocation timed out","reason":"timeout","specialist":"competitive","stage":"research"}
+{"timestamp":"2026-04-25T23:41:59.968Z","type":"specialist_fail","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Specialist academic failed: Claude invocation timed out","reason":"timeout","specialist":"academic","stage":"research"}
+{"timestamp":"2026-04-25T23:51:11.915Z","type":"research_start","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Research started (full mode, iteration 1)"}
+{"timestamp":"2026-04-25T23:55:03.112Z","type":"specialist_fail","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Specialist competitive failed: Claude invocation timed out","reason":"timeout","specialist":"competitive","stage":"research"}
+{"timestamp":"2026-04-25T23:55:04.873Z","type":"specialist_fail","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Specialist academic failed: Claude invocation timed out","reason":"timeout","specialist":"academic","stage":"research"}
+{"timestamp":"2026-04-26T00:58:41.938Z","type":"research_start","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Research started (full mode, iteration 1)"}
+{"timestamp":"2026-04-26T01:07:38.961Z","type":"research_complete","phaseId":null,"duration":482168,"tokens":{"input":11146,"output":39590},"costUsd":4.18719445,"summary":"Research complete (2 specialists, iteration 1)"}
+{"timestamp":"2026-04-26T01:18:05.935Z","type":"refine_start","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Refine started (iteration 1)"}
+{"timestamp":"2026-04-26T01:27:43.345Z","type":"refine_complete","phaseId":null,"duration":574206,"tokens":{"input":11,"output":32829},"costUsd":1.491137,"summary":"Refine complete (iteration 1)"}
+{"timestamp":"2026-04-26T01:46:10.565Z","type":"plan_start","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Planning started"}
+{"timestamp":"2026-04-26T01:54:23.247Z","type":"plan_complete","phaseId":null,"duration":478411,"tokens":{"input":22,"output":37895},"costUsd":2.3332105,"summary":"Generated 2 phases"}
