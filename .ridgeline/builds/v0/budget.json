@@ -203,7 +203,19 @@
       "cacheCreationInputTokens": 478219,
       "durationMs": 3356633,
       "timestamp": "2026-04-26T08:18:34.963Z"
+    },
+    {
+      "phase": "05-studio-and-hardening",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 2.4629589000000003,
+      "inputTokens": 15,
+      "outputTokens": 15050,
+      "cacheReadInputTokens": 1619284,
+      "cacheCreationInputTokens": 169685,
+      "durationMs": 293484,
+      "timestamp": "2026-04-26T08:23:28.527Z"
     }
   ],
-  "totalCostUsd": 114.47942175000003
+  "totalCostUsd": 116.94238065000003
 }

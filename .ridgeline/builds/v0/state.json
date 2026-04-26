@@ -8,7 +8,7 @@
     "research": "complete",
     "refine": "complete",
     "plan": "complete",
-    "build": "running"
+    "build": "complete"
   },
   "phases": [
     {
@@ -53,12 +53,12 @@
     },
     {
       "id": "05-studio-and-hardening",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/v0/05-studio-and-hardening",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/v0/05-studio-and-hardening",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
+      "duration": 3650336,
+      "completedAt": "2026-04-26T08:23:28.585Z",
       "failedAt": null
     }
   ]

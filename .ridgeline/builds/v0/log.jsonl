@@ -55,3 +55,7 @@
 {"timestamp":"2026-04-26T07:22:38.192Z","level":"info","phase":"04-watch-cli","message":"PASSED (1637s)"}
 {"timestamp":"2026-04-26T07:22:38.193Z","level":"info","phase":"05-studio-and-hardening","message":"Phase 5/5: 05-studio-and-hardening"}
 {"timestamp":"2026-04-26T07:22:38.329Z","level":"info","phase":"05-studio-and-hardening","message":"Building..."}
+{"timestamp":"2026-04-26T08:18:35.041Z","level":"info","phase":"05-studio-and-hardening","message":"Reviewing..."}
+{"timestamp":"2026-04-26T08:23:28.585Z","level":"info","phase":"05-studio-and-hardening","message":"PASSED (3650s)"}
+{"timestamp":"2026-04-26T08:23:28.862Z","level":"info","phase":null,"message":"Running retrospective for build 'v0'..."}
+{"timestamp":"2026-04-26T08:24:18.139Z","level":"info","phase":null,"message":"Retrospective complete. Learnings appended to .ridgeline/learnings.md"}
