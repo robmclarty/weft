@@ -4,9 +4,11 @@
 entry = [
   "packages/*/src/index.ts",
   "packages/*/src/**/*.test.ts",
+  "packages/*/src/**/*.test.tsx",
   "stryker.config.mjs",
   "test/e2e/playwright.config.ts",
   "test/e2e/**/*.spec.ts",
+  "test/e2e/lib/**/*.ts",
   "test/integration/**/*.test.ts",
 ]
 

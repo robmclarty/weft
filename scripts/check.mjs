@@ -96,8 +96,8 @@ const CHECKS = [
   {
     name: 'e2e',
     description: 'Playwright end-to-end tests',
-    command: 'pnpm',
-    args: ['exec', 'playwright', 'test', '--config', 'test/e2e/playwright.config.ts'],
+    command: 'node',
+    args: ['scripts/run-e2e.mjs'],
     output_file: null, // playwright's json reporter writes .check/e2e.json directly
     opt_in: true,
   },

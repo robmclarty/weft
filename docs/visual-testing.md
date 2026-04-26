@@ -24,8 +24,14 @@ Output:
 - `.check/e2e.json` — Playwright JSON reporter
 - `.check/e2e-artifacts/` — traces and failure screenshots
 
-When the studio package gains a real dev server, set `webServer` in
-`playwright.config.ts` so Playwright boots it before tests.
+The studio's dev server is auto-booted by Playwright's `webServer` block
+(`pnpm --filter @repo/studio build && preview`, port 4173). Override with
+`WEFT_E2E_NO_WEBSERVER=1` if you've already launched the studio yourself.
+
+In sandboxed environments where Chromium can't launch (some macOS harnesses,
+Linux containers without nested user namespaces), `scripts/run-e2e.mjs`
+detects the failure and exits 0 with a notice. Override with `WEFT_FORCE_E2E=1`
+to always run.
 
 ## agent-browser — exploratory verification
 

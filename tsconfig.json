@@ -3,6 +3,11 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["packages/*/src/**/*", "test/integration/**/*"],
+  "include": [
+    "packages/*/src/**/*",
+    "packages/studio/vite.config.ts",
+    "test/integration/**/*",
+    "test/e2e/**/*.ts"
+  ],
   "exclude": ["node_modules", "**/dist", ".check"]
 }
