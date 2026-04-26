@@ -43,12 +43,12 @@
     },
     {
       "id": "04-watch-cli",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/v0/04-watch-cli",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/v0/04-watch-cli",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
+      "duration": 1636819,
+      "completedAt": "2026-04-26T07:22:38.191Z",
       "failedAt": null
     },
     {
