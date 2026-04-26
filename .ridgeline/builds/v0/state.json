@@ -17,7 +17,7 @@
       "checkpointTag": "ridgeline/checkpoint/v0/01-workspace-foundation",
       "completionTag": null,
       "retries": 0,
-      "duration": null,
+      "duration": 9352,
       "completedAt": null,
       "failedAt": null
     },
