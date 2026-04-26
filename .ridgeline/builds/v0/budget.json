@@ -107,7 +107,19 @@
       "cacheCreationInputTokens": 69291,
       "durationMs": 240910,
       "timestamp": "2026-04-26T01:54:23.246Z"
+    },
+    {
+      "phase": "01-workspace-foundation",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 4.277564249999999,
+      "inputTokens": 59,
+      "outputTokens": 31005,
+      "cacheReadInputTokens": 4837528,
+      "cacheCreationInputTokens": 171265,
+      "durationMs": 480950,
+      "timestamp": "2026-04-26T03:40:14.977Z"
     }
   ],
-  "totalCostUsd": 9.32557095
+  "totalCostUsd": 13.603135199999999
 }

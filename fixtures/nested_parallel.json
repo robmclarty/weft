@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "root": {
+    "kind": "sequence",
+    "id": "seq:fanout",
+    "children": [
+      {
+        "kind": "step",
+        "id": "step:prepare",
+        "config": {
+          "fn": { "kind": "<fn>", "name": "prepare" }
+        }
+      },
+      {
+        "kind": "parallel",
+        "id": "par:outer",
+        "config": {
+          "keys": ["alpha", "beta"]
+        },
+        "children": [
+          {
+            "kind": "parallel",
+            "id": "par:alpha",
+            "config": {
+              "keys": ["one", "two"]
+            },
+            "children": [
+              {
+                "kind": "step",
+                "id": "step:alpha-one",
+                "config": {
+                  "fn": { "kind": "<fn>", "name": "alpha_one" }
+                }
+              },
+              {
+                "kind": "step",
+                "id": "step:alpha-two",
+                "config": {
+                  "fn": { "kind": "<fn>", "name": "alpha_two" }
+                }
+              }
+            ]
+          },
+          {
+            "kind": "step",
+            "id": "step:beta",
+            "config": {
+              "fn": { "kind": "<fn>", "name": "beta" }
+            }
+          }
+        ]
+      },
+      {
+        "kind": "step",
+        "id": "step:gather",
+        "config": {
+          "fn": { "kind": "<fn>", "name": "gather" }
+        }
+      }
+    ]
+  }
+}

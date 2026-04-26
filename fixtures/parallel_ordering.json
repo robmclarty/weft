@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "root": {
+    "kind": "parallel",
+    "id": "par:ordered",
+    "config": {
+      "keys": ["first", "second", "third", "fourth"]
+    },
+    "children": [
+      {
+        "kind": "step",
+        "id": "step:first",
+        "config": {
+          "fn": { "kind": "<fn>", "name": "first_branch" }
+        }
+      },
+      {
+        "kind": "step",
+        "id": "step:second",
+        "config": {
+          "fn": { "kind": "<fn>", "name": "second_branch" }
+        }
+      },
+      {
+        "kind": "step",
+        "id": "step:third",
+        "config": {
+          "fn": { "kind": "<fn>", "name": "third_branch" }
+        }
+      },
+      {
+        "kind": "step",
+        "id": "step:fourth",
+        "config": {
+          "fn": { "kind": "<fn>", "name": "fourth_branch" }
+        }
+      }
+    ]
+  }
+}

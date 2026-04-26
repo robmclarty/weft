@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "root": {
+    "kind": "sequence",
+    "id": "seq:loop",
+    "children": [
+      {
+        "kind": "step",
+        "id": "step:start",
+        "config": {
+          "fn": { "kind": "<fn>", "name": "start" }
+        }
+      },
+      {
+        "kind": "pipe",
+        "id": "pipe:recurse",
+        "config": {
+          "fn": { "kind": "<fn>", "name": "recurse" }
+        },
+        "children": [
+          {
+            "kind": "<cycle>",
+            "id": "seq:loop"
+          }
+        ]
+      }
+    ]
+  }
+}

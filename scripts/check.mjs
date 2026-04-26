@@ -66,6 +66,13 @@ const CHECKS = [
     output_file: 'dead.json',
   },
   {
+    name: 'invariants',
+    description: 'Architectural invariants (constraints §7) + unsafe-eval guard',
+    command: 'node',
+    args: ['scripts/check-invariants.mjs'],
+    output_file: 'invariants.json',
+  },
+  {
     name: 'test',
     description: 'Vitest tests with coverage',
     command: 'pnpm',

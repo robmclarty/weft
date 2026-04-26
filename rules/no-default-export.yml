@@ -4,6 +4,7 @@ severity: error
 language: typescript
 files:
   - packages/*/src/**/*.ts
+  - packages/*/src/**/*.tsx
 rule:
   any:
     - pattern: export default $$$

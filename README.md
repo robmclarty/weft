@@ -12,8 +12,9 @@ The repo is a TypeScript/Node pnpm workspace with an agent-friendly `check` pipe
 │   ├── weft/                 @repo/weft — published as @robmclarty/weft (umbrella, re-exports only)
 │   ├── studio/               @repo/studio — Vite SPA (unpublished)
 │   └── watch/                @repo/watch — published as @robmclarty/weft-watch (Node CLI)
+├── fixtures/                 sample flow_tree JSON files for tests + manual use
 ├── rules/                    ast-grep structural rules
-├── scripts/check.mjs         the check orchestrator
+├── scripts/                  check.mjs and check-invariants.mjs
 ├── pnpm-workspace.yaml
 ├── tsconfig.json
 ├── fallow.toml  vitest.config.ts  stryker.config.mjs  cspell.json  sgconfig.yml
@@ -21,7 +22,7 @@ The repo is a TypeScript/Node pnpm workspace with an agent-friendly `check` pipe
 └── package.json              all devDependencies live here
 ```
 
-The package directories are stubs scaffolded for the v0 build (see `.ridgeline/builds/v0/spec.md`).
+The package directories are stubs scaffolded for the v0 build (see `.ridgeline/builds/v0/spec.md`). The build is split into 5 phases under `.ridgeline/builds/v0/phases/`; **phase 1 of 5** (workspace + check pipeline foundation) is what this commit set delivers. Phases 2–5 add the data layer, layout / canvas, watch CLI, and studio.
 
 Runtime deps live in the package that imports them. DevDeps live at the root. Cross-package imports use workspace names (`@repo/other`), not relative paths.
 
@@ -42,6 +43,7 @@ pnpm check
 | `lint`   | `oxlint` + `oxlint-tsgolint`     | Syntax, floating promises, unsafe any, type-aware   |
 | `struct` | `ast-grep`                       | Structural rules in `rules/`                        |
 | `dead`   | `fallow`                         | Unused code, circular deps, duplication, boundaries |
+| `invariants` | `scripts/check-invariants.mjs` | Architectural invariants (constraints §7) + unsafe-eval guard |
 | `test`   | `vitest` + `@vitest/coverage-v8` | Test failures and coverage floors                   |
 | `docs`   | `markdownlint-cli2`              | Broken markdown                                     |
 | `spell`  | `cspell`                         | Misspellings                                        |
