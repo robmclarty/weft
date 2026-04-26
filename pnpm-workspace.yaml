@@ -4,5 +4,7 @@ packages:
 allowBuilds:
   '@ast-grep/cli': true
   'agent-browser': true
+  esbuild: true
   fallow: true
+  msw: true
 packageImportMethod: copy

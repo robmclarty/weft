@@ -72,6 +72,8 @@ const projects: NonNullable<NonNullable<Parameters<typeof defineConfig>[0]['test
       exclude: [
         'packages/core/src/canvas/**/*.{test,spec}.tsx',
         'packages/core/src/nodes/**/*.{test,spec}.tsx',
+        'packages/studio/src/**/*.{test,spec}.tsx',
+        'packages/studio/src/state/use_*.{test,spec}.{ts,tsx}',
       ],
       environment: 'node',
     },
@@ -83,6 +85,8 @@ const projects: NonNullable<NonNullable<Parameters<typeof defineConfig>[0]['test
       include: [
         'packages/core/src/canvas/**/*.{test,spec}.tsx',
         'packages/core/src/nodes/**/*.{test,spec}.tsx',
+        'packages/studio/src/**/*.{test,spec}.tsx',
+        'packages/studio/src/state/use_*.{test,spec}.{ts,tsx}',
       ],
       environment: 'jsdom',
       setupFiles: ['packages/core/test/setup_jsdom.ts'],
@@ -119,6 +123,7 @@ export default defineConfig({
         'packages/*/src/**/*.d.ts',
         'packages/*/src/test_helpers.ts',
         'packages/*/src/nodes/render_helpers.ts',
+        'packages/studio/src/main.tsx',
       ],
       reporter: ['text', 'json-summary', 'json'],
       reportsDirectory: '.check/coverage',
