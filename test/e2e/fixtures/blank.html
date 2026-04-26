@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>weft e2e smoke</title>
+  </head>
+  <body>
+    <h1 id="hello">Hello, weft.</h1>
+    <button id="ping" type="button">Ping</button>
+    <p id="pong" data-state="idle">idle</p>
+    <script>
+      document.getElementById('ping').addEventListener('click', () => {
+        const pong = document.getElementById('pong');
+        pong.textContent = 'pong';
+        pong.setAttribute('data-state', 'pinged');
+      });
+    </script>
+  </body>
+</html>

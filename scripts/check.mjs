@@ -94,6 +94,14 @@ const CHECKS = [
     opt_in: true,
   },
   {
+    name: 'e2e',
+    description: 'Playwright end-to-end tests',
+    command: 'pnpm',
+    args: ['exec', 'playwright', 'test', '--config', 'test/e2e/playwright.config.ts'],
+    output_file: null, // playwright's json reporter writes .check/e2e.json directly
+    opt_in: true,
+  },
+  {
     name: 'docs',
     description: 'Markdown linting',
     command: 'pnpm',

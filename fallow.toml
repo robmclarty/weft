@@ -1,10 +1,21 @@
 # Fallow: dead code, circular deps, duplication, complexity, architecture boundaries.
 # Docs: https://docs.fallow.tools
 
-entry = ["packages/*/src/index.ts", "packages/*/src/**/*.test.ts", "stryker.config.mjs"]
+entry = [
+  "packages/*/src/index.ts",
+  "packages/*/src/**/*.test.ts",
+  "stryker.config.mjs",
+  "test/e2e/playwright.config.ts",
+  "test/e2e/**/*.spec.ts",
+]
 
 # CLI/tooling deps used via command line or config files, not imported from source.
-ignoreDependencies = ["@ast-grep/cli", "@stryker-mutator/vitest-runner"]
+ignoreDependencies = [
+  "@ast-grep/cli",
+  "@stryker-mutator/vitest-runner",
+  "@playwright/test",
+  "agent-browser",
+]
 
 [rules]
 unused-exports = "error"

@@ -23,6 +23,7 @@
     "noemit",
     "oxlint",
     "oxlintrc",
+    "playwright",
     "pnpm",
     "ridgeline",
     "robmclarty",
