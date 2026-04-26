@@ -8,6 +8,14 @@
   },
   "dependencies": {
     "@xyflow/react": "12.10.2",
+    "elkjs": "0.11.0",
+    "html-to-image": "1.11.11",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.20",
+    "@types/react-dom": "18.3.7"
   }
 }

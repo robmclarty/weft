@@ -19,3 +19,18 @@ export type {
   WeftNode,
   WeftNodeData,
 } from './transform/tree_to_graph.js';
+
+export { layout_graph } from './layout/layout_graph.js';
+
+export type { LayoutGraphOptions } from './layout/layout_graph.js';
+export type { LayoutDirection, LayoutOptions } from './layout/layout_options.js';
+
+export { fallback_layout } from './layout/fallback_layout.js';
+export { make_latest_wins_debounce } from './layout/debounce.js';
+export type { DebouncedAsync } from './layout/debounce.js';
+
+export { WeftCanvas } from './canvas/WeftCanvas.js';
+export type { WeftCanvasProps, TrajectoryEvent } from './canvas/WeftCanvas.js';
+export type { CanvasApi, CanvasViewport } from './canvas/canvas_api.js';
+
+export { node_types } from './nodes/registry.js';

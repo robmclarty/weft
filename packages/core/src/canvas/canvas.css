@@ -1,0 +1,175 @@
+/*
+ * weft canvas styles.
+ *
+ * Single source of truth for node dimensions: per the spec.md §13.8 v0
+ * strategy, node sizes are fixed CSS so the first ELK pass uses known
+ * dimensions and the measure step is optional. All CSS is first-party
+ * (research F7); no @import, no @font-face from external origins.
+ *
+ * Token namespace: --weft-* to avoid collisions with React Flow's
+ * --xy-* variables when consumers theme above us.
+ */
+
+:root {
+  --weft-color-bg: #ffffff;
+  --weft-color-fg: #1f2937;
+  --weft-color-muted: #6b7280;
+  --weft-color-border: #d1d5db;
+  --weft-color-step-bg: #f9fafb;
+  --weft-color-step-border: #4b5563;
+  --weft-color-container-bg: rgba(243, 244, 246, 0.55);
+  --weft-color-container-border: #9ca3af;
+  --weft-color-overlay-edge: #94a3b8;
+  --weft-color-warn: #d97706;
+  --weft-color-warn-bg: #fffbeb;
+  --weft-color-cycle: #b91c1c;
+  --weft-color-cycle-bg: #fef2f2;
+
+  --weft-leaf-width: 200px;
+  --weft-leaf-height: 64px;
+  --weft-container-min-width: 280px;
+  --weft-container-min-height: 120px;
+  --weft-cycle-width: 160px;
+  --weft-cycle-height: 56px;
+
+  --weft-radius: 8px;
+  --weft-pad-x: 12px;
+  --weft-pad-y: 8px;
+
+  --weft-font-stack: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --weft-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.weft-node {
+  font-family: var(--weft-font-stack);
+  color: var(--weft-color-fg);
+  background: var(--weft-color-bg);
+  border: 1px solid var(--weft-color-border);
+  border-radius: var(--weft-radius);
+  padding: var(--weft-pad-y) var(--weft-pad-x);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.weft-node-step {
+  width: var(--weft-leaf-width);
+  height: var(--weft-leaf-height);
+  background: var(--weft-color-step-bg);
+  border-color: var(--weft-color-step-border);
+}
+
+.weft-node-stash,
+.weft-node-use {
+  width: var(--weft-leaf-width);
+  height: var(--weft-leaf-height);
+  background: #eef2ff;
+  border-color: #6366f1;
+}
+
+.weft-node-container {
+  min-width: var(--weft-container-min-width);
+  min-height: var(--weft-container-min-height);
+  width: 100%;
+  height: 100%;
+  background: var(--weft-color-container-bg);
+  border-color: var(--weft-color-container-border);
+  border-style: dashed;
+  padding: 28px 16px 16px;
+  display: block;
+}
+
+.weft-node-cycle {
+  width: var(--weft-cycle-width);
+  height: var(--weft-cycle-height);
+  color: var(--weft-color-cycle);
+  background: var(--weft-color-cycle-bg);
+  border-color: var(--weft-color-cycle);
+}
+
+.weft-node-generic {
+  width: var(--weft-leaf-width);
+  height: var(--weft-leaf-height);
+  background: var(--weft-color-warn-bg);
+  border-color: var(--weft-color-warn);
+}
+
+.weft-node-generic-container {
+  min-width: var(--weft-container-min-width);
+  min-height: var(--weft-container-min-height);
+  background: var(--weft-color-warn-bg);
+  border-color: var(--weft-color-warn);
+  border-style: dashed;
+  padding: 28px 16px 16px;
+  display: block;
+}
+
+.weft-node-title {
+  font-weight: 600;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.weft-node-subtitle {
+  font-size: 11px;
+  color: var(--weft-color-muted);
+  font-family: var(--weft-font-mono);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weft-node-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--weft-color-border);
+  color: var(--weft-color-fg);
+  margin-left: 4px;
+}
+
+.weft-node-badge-warn {
+  background: var(--weft-color-warn);
+  color: #ffffff;
+}
+
+.weft-node-badge-cycle {
+  background: var(--weft-color-cycle);
+  color: #ffffff;
+}
+
+.weft-node-container-header {
+  position: absolute;
+  top: 6px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.weft-node-container .weft-node-title,
+.weft-node-generic-container .weft-node-title {
+  position: absolute;
+  top: 6px;
+  left: 12px;
+}
+
+.weft-edge-overlay path {
+  stroke: var(--weft-color-overlay-edge);
+  stroke-dasharray: 4 4;
+}
+
+.weft-canvas {
+  width: 100%;
+  height: 100%;
+  background: var(--weft-color-bg);
+}

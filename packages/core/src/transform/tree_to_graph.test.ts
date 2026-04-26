@@ -214,7 +214,7 @@ function child_order(g: { nodes: ReadonlyArray<WeftNode>; edges: ReadonlyArray<W
     .map((n) => n.id);
   const fan_out = g.edges
     .filter((e) => e.source === 'par:ordered' && e.data?.kind === 'structural')
-    .map((e) => `${e.target}|${String(e.label)}`);
+    .map((e) => `${e.target}|${typeof e.label === 'string' ? e.label : ''}`);
   return { children, fan_out };
 }
 
