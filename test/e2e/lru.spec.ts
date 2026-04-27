@@ -10,13 +10,19 @@ const INDEX_CAP = 50;
 
 test('localStorage LRU index stays at or below the cap (AC 22)', async ({ page }) => {
   await page.goto('/');
-  const textarea = page.locator('textarea');
   for (let i = 0; i < INDEX_CAP + 5; i += 1) {
     const tree = JSON.stringify({
       version: 1,
       root: { kind: 'step', id: `step:${String(i)}` },
     });
-    await textarea.fill(tree);
+    // After the first successful load the loader collapses into a "load
+    // another" link to save sidebar space. Expand it before each subsequent
+    // paste so the textarea is visible.
+    const expand = page.locator('[data-weft-action="expand-loader"]');
+    if (await expand.count() > 0) {
+      await expand.click();
+    }
+    await page.locator('textarea').fill(tree);
     await page.getByRole('button', { name: 'load pasted JSON' }).click();
     // Wait for the canvas to render so the persistence path runs.
     await page.waitForFunction(
