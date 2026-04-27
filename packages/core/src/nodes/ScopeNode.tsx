@@ -10,13 +10,17 @@ import type { JSX } from 'react';
 import { memo } from 'react';
 
 import type { WeftNode } from '../transform/tree_to_graph.js';
+import { ScopeGlyph } from './glyphs.js';
 
 function ScopeNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
   return (
-    <div className="weft-node weft-node-container" data-weft-kind="scope">
-      <div className="weft-node-title">
-        {data.id}
-        <span className="weft-node-badge">scope</span>
+    <div
+      className="weft-node weft-node-container weft-node-scope"
+      data-weft-kind="scope"
+    >
+      <div className="weft-node-header">
+        <span className="weft-node-badge"><ScopeGlyph />scope</span>
+        <div className="weft-node-title">{data.id}</div>
       </div>
     </div>
   );

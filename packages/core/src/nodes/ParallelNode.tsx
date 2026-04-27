@@ -17,15 +17,21 @@ import type { JSX } from 'react';
 import { memo } from 'react';
 
 import type { WeftNode } from '../transform/tree_to_graph.js';
+import { ParallelGlyph } from './glyphs.js';
 import { read_string_array_field } from './node_helpers.js';
 
 function ParallelNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
   const keys = read_string_array_field(data.config, 'keys') ?? [];
   return (
-    <div className="weft-node weft-node-container" data-weft-kind="parallel">
-      <div className="weft-node-title">
-        {data.id}
-        <span className="weft-node-badge">parallel × {keys.length}</span>
+    <div
+      className="weft-node weft-node-container weft-node-parallel"
+      data-weft-kind="parallel"
+    >
+      <div className="weft-node-header">
+        <span className="weft-node-badge">
+          <ParallelGlyph />parallel × {keys.length}
+        </span>
+        <div className="weft-node-title">{data.id}</div>
       </div>
       <Handle type="target" position={Position.Left} id="in" />
       {keys.map((key) => (

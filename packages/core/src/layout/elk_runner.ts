@@ -58,8 +58,9 @@ const ELK_DIRECTION: Record<LayoutDirection, string> = {
   TB: 'DOWN',
 };
 
-const DEFAULT_NODE_WIDTH = 200;
-const DEFAULT_NODE_HEIGHT = 80;
+// Mirrors --weft-leaf-width / --weft-leaf-height in canvas.css.
+const DEFAULT_NODE_WIDTH = 220;
+const DEFAULT_NODE_HEIGHT = 72;
 
 const PARALLEL_KIND = 'parallel';
 const PARALLEL_INPUT_PORT = 'in';

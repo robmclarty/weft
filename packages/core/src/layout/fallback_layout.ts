@@ -13,10 +13,17 @@
 import type { WeftEdge, WeftNode } from '../transform/tree_to_graph.js';
 import { resolve_options, type LayoutOptions } from './layout_options.js';
 
-const DEFAULT_NODE_WIDTH = 200;
-const DEFAULT_NODE_HEIGHT = 80;
+// Mirrors the CSS sizing tokens in canvas.css. Keep these in lockstep with
+// the --weft-leaf-* / --weft-container-* / --weft-container-header-h custom
+// properties; if a node grows in CSS, the fallback must grow too or
+// containers will visibly compress when ELK is not available.
+const DEFAULT_LEAF_WIDTH = 220;
+const DEFAULT_LEAF_HEIGHT = 72;
+const CONTAINER_MIN_WIDTH = 300;
+const CONTAINER_MIN_HEIGHT = 140;
+const CONTAINER_HEADER_H = 32;
 const PAD_X = 24;
-const PAD_Y = 48;
+const PAD_Y = CONTAINER_HEADER_H + 16;
 
 type Frame = { width: number; height: number };
 
@@ -44,7 +51,7 @@ function layout_children(
 ): Frame {
   const direct = children_of(parent, nodes);
   if (direct.length === 0) {
-    return { width: DEFAULT_NODE_WIDTH, height: DEFAULT_NODE_HEIGHT };
+    return { width: DEFAULT_LEAF_WIDTH, height: DEFAULT_LEAF_HEIGHT };
   }
 
   let inner_w = 0;
@@ -55,8 +62,11 @@ function layout_children(
 
   for (const child of direct) {
     const child_inner = layout_children(child.id, nodes, layout, direction, node_spacing, rank_spacing);
-    const w = Math.max(child.width ?? DEFAULT_NODE_WIDTH, child_inner.width);
-    const h = Math.max(child.height ?? DEFAULT_NODE_HEIGHT, child_inner.height);
+    const has_inner = (children_of(child.id, nodes).length) > 0;
+    const min_w = has_inner ? CONTAINER_MIN_WIDTH : DEFAULT_LEAF_WIDTH;
+    const min_h = has_inner ? CONTAINER_MIN_HEIGHT : DEFAULT_LEAF_HEIGHT;
+    const w = Math.max(child.width ?? min_w, child_inner.width, min_w);
+    const h = Math.max(child.height ?? min_h, child_inner.height, min_h);
     layout.sizes.set(child.id, { width: w, height: h });
 
     layout.positions.set(child.id, { x: cursor_x, y: cursor_y });
@@ -76,8 +86,8 @@ function layout_children(
     return { width: inner_w, height: inner_h };
   }
   return {
-    width: inner_w + PAD_X * 2,
-    height: inner_h + PAD_Y + PAD_X,
+    width: Math.max(inner_w + PAD_X * 2, CONTAINER_MIN_WIDTH),
+    height: Math.max(inner_h + PAD_Y + PAD_X, CONTAINER_MIN_HEIGHT),
   };
 }
 

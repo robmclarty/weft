@@ -8,42 +8,88 @@
  *
  * Token namespace: --weft-* to avoid collisions with React Flow's
  * --xy-* variables when consumers theme above us.
+ *
+ * Theme: dark only in v0. See .ridgeline/builds/v0/visual-spec.md.
  */
 
 :root {
-  --weft-color-bg: #ffffff;
-  --weft-color-fg: #1f2937;
-  --weft-color-muted: #6b7280;
-  --weft-color-border: #d1d5db;
-  --weft-color-step-bg: #f9fafb;
-  --weft-color-step-border: #4b5563;
-  --weft-color-container-bg: rgba(243, 244, 246, 0.55);
-  --weft-color-container-border: #9ca3af;
-  --weft-color-overlay-edge: #94a3b8;
-  --weft-color-warn: #d97706;
-  --weft-color-warn-bg: #fffbeb;
-  --weft-color-cycle: #b91c1c;
-  --weft-color-cycle-bg: #fef2f2;
+  /* surfaces */
+  --weft-color-bg: #0f1115;
+  --weft-color-surface: #161a22;
+  --weft-color-surface-raised: #1f242e;
+  --weft-color-fg: #e6e8ee;
+  --weft-color-fg-muted: #8a92a3;
+  --weft-color-border: #2a3040;
+  --weft-color-grid: #1c212b;
+  --weft-color-overlay-edge: #6e8c70;
+  --weft-color-edge-default: #4a5267;
+  --weft-color-edge-label-bg: #1f242e;
 
-  --weft-leaf-width: 200px;
-  --weft-leaf-height: 64px;
-  --weft-container-min-width: 280px;
-  --weft-container-min-height: 120px;
-  --weft-cycle-width: 160px;
-  --weft-cycle-height: 56px;
+  /* per-kind palettes (bg / border / accent) */
+  --weft-step-bg: #161a22;
+  --weft-step-border: #3a4458;
+  --weft-step-accent: #c0c8d8;
+
+  --weft-sequence-bg: #1a1830;
+  --weft-sequence-border: #5b4dbf;
+  --weft-sequence-accent: #b6acff;
+
+  --weft-parallel-bg: #0f2421;
+  --weft-parallel-border: #1f7a6e;
+  --weft-parallel-accent: #79e0c9;
+
+  --weft-pipe-bg: #102134;
+  --weft-pipe-border: #2c5fa8;
+  --weft-pipe-accent: #88baff;
+
+  --weft-retry-bg: #2a1f10;
+  --weft-retry-border: #a26a1c;
+  --weft-retry-accent: #ffce7a;
+
+  --weft-scope-bg: #0f2618;
+  --weft-scope-border: #2f8a52;
+  --weft-scope-accent: #79e09a;
+
+  --weft-stash-bg: #14241a;
+  --weft-stash-border: #4ca271;
+  --weft-stash-accent: #a4e9be;
+
+  --weft-use-bg: #14241a;
+  --weft-use-border: #357c52;
+  --weft-use-accent: #8cc8a8;
+
+  --weft-cycle-bg: #2a1015;
+  --weft-cycle-border: #c8334a;
+  --weft-cycle-accent: #ff9aa6;
+
+  --weft-generic-bg: #2a200d;
+  --weft-generic-border: #c89033;
+  --weft-generic-accent: #ffd17a;
+
+  /* sizing */
+  --weft-leaf-width: 220px;
+  --weft-leaf-height: 72px;
+  --weft-container-min-width: 300px;
+  --weft-container-min-height: 140px;
+  --weft-container-header-h: 32px;
+  --weft-cycle-width: 200px;
+  --weft-cycle-height: 64px;
 
   --weft-radius: 8px;
-  --weft-pad-x: 12px;
-  --weft-pad-y: 8px;
+  --weft-radius-sm: 4px;
+  --weft-pad-x: 14px;
+  --weft-pad-y: 10px;
 
   --weft-font-stack: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --weft-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+/* base node */
+
 .weft-node {
   font-family: var(--weft-font-stack);
   color: var(--weft-color-fg);
-  background: var(--weft-color-bg);
+  background: var(--weft-color-surface);
   border: 1px solid var(--weft-color-border);
   border-radius: var(--weft-radius);
   padding: var(--weft-pad-y) var(--weft-pad-x);
@@ -51,116 +97,324 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: 4px;
+}
+
+/* leaf (step + stash + use + cycle + generic-leaf) */
+
+.weft-node-leaf {
+  width: var(--weft-leaf-width);
+  height: var(--weft-leaf-height);
 }
 
 .weft-node-step {
-  width: var(--weft-leaf-width);
-  height: var(--weft-leaf-height);
-  background: var(--weft-color-step-bg);
-  border-color: var(--weft-color-step-border);
+  background: var(--weft-step-bg);
+  border-color: var(--weft-step-border);
 }
 
-.weft-node-stash,
+.weft-node-stash {
+  background: var(--weft-stash-bg);
+  border-color: var(--weft-stash-border);
+}
+
 .weft-node-use {
+  background: var(--weft-use-bg);
+  border-color: var(--weft-use-border);
+}
+
+.weft-node-cycle {
+  width: var(--weft-cycle-width);
+  height: var(--weft-cycle-height);
+  background: var(--weft-cycle-bg);
+  border-color: var(--weft-cycle-border);
+  color: var(--weft-cycle-accent);
+}
+
+.weft-node-generic {
   width: var(--weft-leaf-width);
   height: var(--weft-leaf-height);
-  background: #eef2ff;
-  border-color: #6366f1;
+  background: var(--weft-generic-bg);
+  border-color: var(--weft-generic-border);
 }
+
+/* containers */
 
 .weft-node-container {
   min-width: var(--weft-container-min-width);
   min-height: var(--weft-container-min-height);
   width: 100%;
   height: 100%;
-  background: var(--weft-color-container-bg);
-  border-color: var(--weft-color-container-border);
+  background: var(--weft-color-surface);
+  border-color: var(--weft-color-border);
   border-style: dashed;
-  padding: 28px 16px 16px;
+  /* Reserve top space for the header band so children laid out by ELK do not
+   * overlap the title. The body padding below is the gap from header to first
+   * child. */
+  padding: calc(var(--weft-container-header-h) + 8px) 16px 16px;
   display: block;
+  position: relative;
+  overflow: visible;
 }
 
-.weft-node-cycle {
-  width: var(--weft-cycle-width);
-  height: var(--weft-cycle-height);
-  color: var(--weft-color-cycle);
-  background: var(--weft-color-cycle-bg);
-  border-color: var(--weft-color-cycle);
+.weft-node-sequence {
+  background: var(--weft-sequence-bg);
+  border-color: var(--weft-sequence-border);
 }
 
-.weft-node-generic {
-  width: var(--weft-leaf-width);
-  height: var(--weft-leaf-height);
-  background: var(--weft-color-warn-bg);
-  border-color: var(--weft-color-warn);
+.weft-node-parallel {
+  background: var(--weft-parallel-bg);
+  border-color: var(--weft-parallel-border);
 }
 
-.weft-node-generic-container {
-  min-width: var(--weft-container-min-width);
-  min-height: var(--weft-container-min-height);
-  background: var(--weft-color-warn-bg);
-  border-color: var(--weft-color-warn);
-  border-style: dashed;
-  padding: 28px 16px 16px;
-  display: block;
+.weft-node-pipe {
+  background: var(--weft-pipe-bg);
+  border-color: var(--weft-pipe-border);
 }
+
+.weft-node-retry {
+  background: var(--weft-retry-bg);
+  border-color: var(--weft-retry-border);
+}
+
+.weft-node-scope {
+  background: var(--weft-scope-bg);
+  border-color: var(--weft-scope-border);
+}
+
+/* container header band: a fixed-height strip pinned to the top inside the
+ * container. The body padding above ensures children sit below it. */
+
+.weft-node-container .weft-node-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--weft-container-header-h);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--weft-color-border) 60%, transparent);
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  border-top-left-radius: var(--weft-radius);
+  border-top-right-radius: var(--weft-radius);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* leaf header is inline (no absolute positioning) */
+.weft-node-leaf .weft-node-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* labels */
 
 .weft-node-title {
   font-weight: 600;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  font-size: 12px;
+  color: var(--weft-color-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .weft-node-subtitle {
   font-size: 11px;
-  color: var(--weft-color-muted);
+  color: var(--weft-color-fg-muted);
   font-family: var(--weft-font-mono);
-  margin-top: 2px;
+  margin-top: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* badge: a small pill carrying glyph + label */
+
 .weft-node-badge {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   font-size: 10px;
-  padding: 2px 6px;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+  padding: 2px 7px 2px 5px;
   border-radius: 999px;
-  background: var(--weft-color-border);
-  color: var(--weft-color-fg);
-  margin-left: 4px;
+  background: var(--weft-color-surface-raised);
+  border: 1px solid var(--weft-color-border);
+  color: var(--weft-color-fg-muted);
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
-.weft-node-badge-warn {
-  background: var(--weft-color-warn);
-  color: #ffffff;
+.weft-node-badge svg {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 auto;
 }
 
+/* per-kind badge tinting */
+
+.weft-node-step .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-step-accent) 30%, transparent);
+  color: var(--weft-step-accent);
+}
+
+.weft-node-sequence .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-sequence-accent) 35%, transparent);
+  color: var(--weft-sequence-accent);
+  background: color-mix(in srgb, var(--weft-sequence-accent) 8%, var(--weft-color-surface-raised));
+}
+
+.weft-node-parallel .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-parallel-accent) 35%, transparent);
+  color: var(--weft-parallel-accent);
+  background: color-mix(in srgb, var(--weft-parallel-accent) 8%, var(--weft-color-surface-raised));
+}
+
+.weft-node-pipe .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-pipe-accent) 35%, transparent);
+  color: var(--weft-pipe-accent);
+  background: color-mix(in srgb, var(--weft-pipe-accent) 8%, var(--weft-color-surface-raised));
+}
+
+.weft-node-retry .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-retry-accent) 35%, transparent);
+  color: var(--weft-retry-accent);
+  background: color-mix(in srgb, var(--weft-retry-accent) 8%, var(--weft-color-surface-raised));
+}
+
+.weft-node-scope .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-scope-accent) 35%, transparent);
+  color: var(--weft-scope-accent);
+  background: color-mix(in srgb, var(--weft-scope-accent) 8%, var(--weft-color-surface-raised));
+}
+
+.weft-node-stash .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-stash-accent) 35%, transparent);
+  color: var(--weft-stash-accent);
+  background: color-mix(in srgb, var(--weft-stash-accent) 8%, var(--weft-color-surface-raised));
+}
+
+.weft-node-use .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-use-accent) 35%, transparent);
+  color: var(--weft-use-accent);
+  background: color-mix(in srgb, var(--weft-use-accent) 8%, var(--weft-color-surface-raised));
+}
+
+.weft-node-cycle .weft-node-badge,
 .weft-node-badge-cycle {
-  background: var(--weft-color-cycle);
-  color: #ffffff;
+  border-color: color-mix(in srgb, var(--weft-cycle-accent) 40%, transparent);
+  color: var(--weft-cycle-accent);
+  background: color-mix(in srgb, var(--weft-cycle-accent) 10%, var(--weft-color-surface-raised));
 }
 
-.weft-node-container-header {
-  position: absolute;
-  top: 6px;
-  left: 12px;
-  right: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  pointer-events: none;
+.weft-node-generic .weft-node-badge,
+.weft-node-badge-warn {
+  border-color: color-mix(in srgb, var(--weft-generic-accent) 40%, transparent);
+  color: var(--weft-generic-accent);
+  background: color-mix(in srgb, var(--weft-generic-accent) 10%, var(--weft-color-surface-raised));
 }
 
-.weft-node-container .weft-node-title,
-.weft-node-generic-container .weft-node-title {
-  position: absolute;
-  top: 6px;
-  left: 12px;
+/* selection ring + hover affordance */
+
+.react-flow__node.selected .weft-node {
+  box-shadow: 0 0 0 2px var(--weft-color-fg), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-step {
+  box-shadow: 0 0 0 2px var(--weft-step-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-sequence {
+  box-shadow: 0 0 0 2px var(--weft-sequence-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-parallel {
+  box-shadow: 0 0 0 2px var(--weft-parallel-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-pipe {
+  box-shadow: 0 0 0 2px var(--weft-pipe-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-retry {
+  box-shadow: 0 0 0 2px var(--weft-retry-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-scope {
+  box-shadow: 0 0 0 2px var(--weft-scope-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-stash {
+  box-shadow: 0 0 0 2px var(--weft-stash-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-use {
+  box-shadow: 0 0 0 2px var(--weft-use-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-cycle {
+  box-shadow: 0 0 0 2px var(--weft-cycle-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-generic {
+  box-shadow: 0 0 0 2px var(--weft-generic-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+/* search filter affordance: nodes outside the active search match get dimmed.
+ * Studio toggles this via a body data attribute when search is active. */
+[data-weft-search="active"] .react-flow__node:not(.weft-search-match) .weft-node {
+  opacity: 0.25;
+  filter: saturate(0.4);
+}
+
+/* React Flow handles tinted to the kind's accent for visible IO ports */
+
+.react-flow__handle {
+  background: var(--weft-color-fg-muted);
+  border-color: var(--weft-color-bg);
+  width: 8px;
+  height: 8px;
+}
+
+.weft-node-step .react-flow__handle { background: var(--weft-step-accent); }
+.weft-node-sequence .react-flow__handle { background: var(--weft-sequence-accent); }
+.weft-node-parallel .react-flow__handle { background: var(--weft-parallel-accent); }
+.weft-node-pipe .react-flow__handle { background: var(--weft-pipe-accent); }
+.weft-node-retry .react-flow__handle { background: var(--weft-retry-accent); }
+.weft-node-scope .react-flow__handle { background: var(--weft-scope-accent); }
+.weft-node-stash .react-flow__handle { background: var(--weft-stash-accent); }
+.weft-node-use .react-flow__handle { background: var(--weft-use-accent); }
+.weft-node-cycle .react-flow__handle { background: var(--weft-cycle-accent); }
+.weft-node-generic .react-flow__handle { background: var(--weft-generic-accent); }
+
+/* edges */
+
+.react-flow__edge-path {
+  stroke: var(--weft-color-edge-default);
+  stroke-width: 1.5;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:focus .react-flow__edge-path {
+  stroke: var(--weft-color-fg);
+  stroke-width: 2;
+}
+
+.react-flow__edge-text {
+  fill: var(--weft-color-fg);
+  font-family: var(--weft-font-mono);
+  font-size: 10px;
+}
+
+.react-flow__edge-textbg {
+  fill: var(--weft-color-edge-label-bg);
 }
 
 .weft-edge-overlay path {
@@ -168,8 +422,57 @@
   stroke-dasharray: 4 4;
 }
 
+.weft-edge-overlay .react-flow__edge-text {
+  fill: var(--weft-scope-accent);
+}
+
+/* canvas frame */
+
 .weft-canvas {
   width: 100%;
   height: 100%;
   background: var(--weft-color-bg);
+}
+
+.weft-canvas .react-flow__background {
+  background: var(--weft-color-bg);
+}
+
+.weft-canvas .react-flow__background-pattern {
+  color: var(--weft-color-grid);
+}
+
+/* React Flow controls: blend with dark theme */
+
+.weft-canvas .react-flow__controls {
+  background: var(--weft-color-surface);
+  border: 1px solid var(--weft-color-border);
+  border-radius: var(--weft-radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.weft-canvas .react-flow__controls-button {
+  background: var(--weft-color-surface);
+  color: var(--weft-color-fg);
+  border-bottom: 1px solid var(--weft-color-border);
+  fill: var(--weft-color-fg);
+}
+
+.weft-canvas .react-flow__controls-button:hover {
+  background: var(--weft-color-surface-raised);
+}
+
+.weft-canvas .react-flow__controls-button:last-child {
+  border-bottom: none;
+}
+
+.weft-canvas .react-flow__minimap {
+  background: var(--weft-color-surface);
+  border: 1px solid var(--weft-color-border);
+  border-radius: var(--weft-radius-sm);
+}
+
+.weft-canvas .react-flow__minimap-mask {
+  fill: rgba(15, 17, 21, 0.7);
 }

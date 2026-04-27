@@ -19,6 +19,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   Background,
+  BackgroundVariant,
   Controls,
   MiniMap,
   type ReactFlowInstance,
@@ -96,6 +97,8 @@ function CanvasInner({
   large_threshold = DEFAULT_LARGE_THRESHOLD,
 }: CanvasInternalProps): JSX.Element {
   const container_ref = useRef<HTMLDivElement | null>(null);
+  const instance_ref = useRef<ReactFlowInstance<WeftNode, WeftEdge> | null>(null);
+  const has_auto_fit_ref = useRef(false);
   const [nodes, set_nodes] = useState<WeftNode[]>([]);
   const [edges, set_edges] = useState<WeftEdge[]>([]);
   const [is_panning, set_is_panning] = useState(false);
@@ -104,6 +107,12 @@ function CanvasInner({
     () => make_latest_wins_debounce(layout_graph, LAYOUT_DEBOUNCE_MS),
     [],
   );
+
+  // Reset the auto-fit guard when the tree itself changes (a new tree gets a
+  // fresh fit; subsequent layout passes for the same tree do not).
+  useEffect(() => {
+    has_auto_fit_ref.current = false;
+  }, [tree]);
 
   useEffect(() => {
     let cancelled = false;
@@ -126,6 +135,33 @@ function CanvasInner({
     };
   }, [tree, layout_options, debounced_layout]);
 
+  // After each layout settles, if the user did not pre-supply an
+  // initial_viewport, fit the tree once so it lands centered. Subsequent
+  // re-layouts of the same tree leave the viewport alone so user pan/zoom
+  // sticks. New trees reset the guard via the effect above.
+  //
+  // The fit must wait for React Flow to mount and measure every node — its
+  // bounds calculation reads `node.measured.{width,height}` and returns a
+  // clipped result if measurement hasn't happened yet. Two `rAF` ticks is
+  // empirically enough to clear both the React commit and the React Flow
+  // internal measurement pass; one tick raced the layout commit at start.
+  useEffect(() => {
+    if (nodes.length === 0) return;
+    if (has_auto_fit_ref.current) return;
+    if (initial_viewport !== undefined) {
+      has_auto_fit_ref.current = true;
+      return;
+    }
+    const instance = instance_ref.current;
+    if (instance === null) return;
+    has_auto_fit_ref.current = true;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        void instance.fitView({ duration: 250, padding: 0.08, minZoom: 0.1 });
+      });
+    });
+  }, [nodes, initial_viewport]);
+
   useEffect(
     () => () => {
       debounced_layout.cancel();
@@ -135,6 +171,7 @@ function CanvasInner({
 
   const handle_init = useCallback(
     (instance: ReactFlowInstance<WeftNode, WeftEdge>) => {
+      instance_ref.current = instance;
       if (initial_viewport !== undefined) {
         void instance.setViewport({
           x: initial_viewport.x,
@@ -211,9 +248,9 @@ function CanvasInner({
         onlyRenderVisibleElements={is_large}
         proOptions={{ hideAttribution: true }}
       >
-        <Background />
-        <Controls />
-        {show_minimap ? <MiniMap pannable zoomable /> : null}
+        <Background variant={BackgroundVariant.Dots} gap={18} size={1.2} />
+        <Controls showInteractive={false} />
+        {show_minimap ? <MiniMap pannable zoomable maskColor="rgba(15, 17, 21, 0.7)" /> : null}
       </ReactFlow>
     </div>
   );
