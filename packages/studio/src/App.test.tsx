@@ -65,4 +65,37 @@ describe('App', () => {
     );
     expect(mounted.container.querySelector('[data-weft-route="watch"]')).not.toBeNull();
   });
+
+  it('? toggles the shortcuts modal and Escape closes it', () => {
+    mounted = mount(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    );
+    expect(document.querySelector('[data-weft-shortcuts-modal]')).toBeNull();
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '?' }));
+    });
+    expect(document.querySelector('[data-weft-shortcuts-modal]')).not.toBeNull();
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    });
+    expect(document.querySelector('[data-weft-shortcuts-modal]')).toBeNull();
+  });
+
+  it('renders a help pill in the header that opens the modal', () => {
+    mounted = mount(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    );
+    const pill = mounted.container.querySelector<HTMLButtonElement>(
+      '.weft-help-pill',
+    );
+    expect(pill).not.toBeNull();
+    act(() => {
+      pill?.click();
+    });
+    expect(document.querySelector('[data-weft-shortcuts-modal]')).not.toBeNull();
+  });
 });

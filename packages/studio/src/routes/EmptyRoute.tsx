@@ -24,6 +24,15 @@ export function EmptyRoute(): JSX.Element {
     <main className="weft-main" data-weft-route="empty">
       <CanvasShell
         tree={tree}
+        empty_message={
+          <span>
+            paste a flow_tree on the right
+            <br />
+            <span style={{ color: 'var(--weft-fg-muted)', fontSize: 11 }}>
+              or drop a JSON file, or fetch one from a URL
+            </span>
+          </span>
+        }
         side_top={
           <LoaderPanel
             on_loaded={(loaded) => {
@@ -34,6 +43,7 @@ export function EmptyRoute(): JSX.Element {
               set_error(err);
             }}
             last_error={error}
+            tree_loaded={tree !== null}
           />
         }
       />

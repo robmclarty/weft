@@ -25,6 +25,7 @@ const DEFAULT_STATE: CanvasState = {
 
 export type UseCanvasPersistenceResult = {
   readonly state: CanvasState;
+  readonly hydrated: boolean;
   readonly set_state: (next: CanvasState) => void;
   readonly reset: () => void;
 };
@@ -35,20 +36,38 @@ export function use_canvas_persistence(
   const storage = typeof window === 'undefined' ? null : window.localStorage;
   const [state, set_internal] = useState<CanvasState>(() => {
     if (tree_id === null || storage === null) return DEFAULT_STATE;
-    return read_state(storage, tree_id) ?? DEFAULT_STATE;
+    return (read_state(storage, tree_id) ?? DEFAULT_STATE);
+  });
+  const [hydrated, set_hydrated] = useState<boolean>(() => {
+    if (tree_id === null || storage === null) return false;
+    return read_state(storage, tree_id) !== null;
   });
 
   useEffect(() => {
     if (tree_id === null || storage === null) {
       set_internal(DEFAULT_STATE);
+      set_hydrated(false);
       return;
     }
-    set_internal(read_state(storage, tree_id) ?? DEFAULT_STATE);
+    const stored = read_state(storage, tree_id);
+    set_internal(stored ?? DEFAULT_STATE);
+    set_hydrated(stored !== null);
+    // Touch the LRU index on mount so loading a tree counts as the same
+    // kind of access as clicking a node. Without this, a user who loads a
+    // tree but never clicks would never appear in the cap accounting and
+    // would never be subject to eviction. Writes the existing state when
+    // present so live data is not regressed; writes the default state for
+    // a never-seen tree so an index entry exists.
+    const touched = persist_state(storage, tree_id, stored ?? DEFAULT_STATE);
+    if (!touched.ok) {
+      console.warn(`[weft] canvas state touch failed: ${touched.reason}`);
+    }
   }, [tree_id, storage]);
 
   const set_state = useCallback(
     (next: CanvasState) => {
       set_internal(next);
+      set_hydrated(true);
       if (tree_id === null || storage === null) return;
       const result = persist_state(storage, tree_id, next);
       if (!result.ok) {
@@ -59,8 +78,9 @@ export function use_canvas_persistence(
   );
 
   const reset = useCallback(() => {
-    set_state(DEFAULT_STATE);
-  }, [set_state]);
+    set_internal(DEFAULT_STATE);
+    set_hydrated(false);
+  }, []);
 
-  return { state, set_state, reset };
+  return { state, hydrated, set_state, reset };
 }

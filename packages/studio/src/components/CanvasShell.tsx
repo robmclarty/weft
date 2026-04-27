@@ -10,6 +10,10 @@
  *
  * Collapse is applied as a tree projection (see `state/collapse.ts`) and
  * passed to WeftCanvas. Double-click on a container toggles collapse.
+ *
+ * Search is handled via the `search` event channel: the header dispatches
+ * the query, this component computes matches, tags React Flow node DOM,
+ * and reports the count back for header display.
  */
 
 import {
@@ -19,6 +23,7 @@ import {
   useRef,
   useState,
   type JSX,
+  type ReactNode,
 } from 'react';
 
 import {
@@ -31,15 +36,19 @@ import {
 
 import { apply_collapse } from '../state/collapse.js';
 import { use_canvas_persistence } from '../state/use_canvas_persistence.js';
+import {
+  dispatch_search_result,
+  matches_query,
+  on_search_query,
+} from '../state/search.js';
 import { InspectorPanel } from './InspectorPanel.js';
-import { ShortcutsModal } from './ShortcutsModal.js';
 
 export type CanvasShellProps = {
   readonly tree: FlowTree | null;
-  readonly empty_message?: string;
+  readonly empty_message?: ReactNode;
   readonly search_input_id?: string;
-  readonly side_top?: JSX.Element | undefined;
-  readonly banners?: JSX.Element | undefined;
+  readonly side_top?: ReactNode | undefined;
+  readonly banners?: ReactNode | undefined;
 };
 
 export function CanvasShell({
@@ -53,9 +62,8 @@ export function CanvasShell({
     () => (tree === null ? null : compute_tree_id(tree.root)),
     [tree],
   );
-  const { state, set_state } = use_canvas_persistence(tid);
+  const { state, hydrated, set_state } = use_canvas_persistence(tid);
   const [selected, set_selected] = useState<FlowNode | null>(null);
-  const [shortcuts_open, set_shortcuts_open] = useState(false);
   const canvas_api_ref = useRef<CanvasApi | null>(null);
 
   useEffect(() => {
@@ -105,6 +113,42 @@ export function CanvasShell({
     set_selected(null);
   }, []);
 
+  // Search wiring: subscribe to query events, walk the live React Flow node
+  // DOM, tag matches, and surface the count for the header. Re-applied
+  // whenever a new tree loads (via tid), since previous matches are stale.
+  useEffect(() => {
+    function recompute(query: string): void {
+      const trimmed = query.trim();
+      if (typeof document === 'undefined') return;
+      const node_els = document.querySelectorAll<HTMLElement>(
+        '.react-flow__node',
+      );
+      if (trimmed.length === 0) {
+        for (const el of node_els) el.classList.remove('weft-search-match');
+        dispatch_search_result(null);
+        return;
+      }
+      let count = 0;
+      for (const el of node_els) {
+        const inner = el.querySelector('[data-weft-kind]');
+        const kind = inner?.getAttribute('data-weft-kind') ?? '';
+        const graph_id = el.getAttribute('data-id') ?? '';
+        const id = strip_path(graph_id);
+        const hit = matches_query(trimmed, { kind, id });
+        el.classList.toggle('weft-search-match', hit);
+        if (hit) count += 1;
+      }
+      dispatch_search_result(count);
+    }
+    const off = on_search_query(recompute);
+    // Also re-run on tree change so a stale highlight from a previous tree
+    // does not linger after load.
+    recompute('');
+    return () => {
+      off();
+    };
+  }, [tid]);
+
   useEffect(() => {
     function handler(event: KeyboardEvent): void {
       const target = event.target;
@@ -113,11 +157,6 @@ export function CanvasShell({
       const editing =
         tag === 'input' || tag === 'textarea' || tag === 'select';
       if (event.key === 'Escape') {
-        if (shortcuts_open) {
-          set_shortcuts_open(false);
-          event.preventDefault();
-          return;
-        }
         if (selected !== null) {
           set_selected(null);
           event.preventDefault();
@@ -125,11 +164,6 @@ export function CanvasShell({
         return;
       }
       if (editing) return;
-      if (event.key === '?') {
-        set_shortcuts_open((prev) => !prev);
-        event.preventDefault();
-        return;
-      }
       if (event.key === 'f' || event.key === 'F') {
         canvas_api_ref.current?.fit_view();
         event.preventDefault();
@@ -149,7 +183,7 @@ export function CanvasShell({
     return () => {
       window.removeEventListener('keydown', handler);
     };
-  }, [selected, shortcuts_open, search_input_id]);
+  }, [selected, search_input_id]);
 
   return (
     <>
@@ -162,7 +196,9 @@ export function CanvasShell({
           handle_node_double_click(event.nativeEvent);
         }}
       >
-        {banners}
+        {banners !== undefined ? (
+          <div className="weft-banner-layer">{banners}</div>
+        ) : null}
         {projected_tree === null ? (
           <div className="weft-empty">
             {empty_message ?? 'load a flow_tree to get started.'}
@@ -172,25 +208,23 @@ export function CanvasShell({
             tree={projected_tree}
             on_node_click={handle_node_click}
             on_ready={handle_ready}
-            initial_viewport={{
-              x: state.viewport.x,
-              y: state.viewport.y,
-              zoom: state.zoom,
-            }}
+            {...(hydrated
+              ? {
+                  initial_viewport: {
+                    x: state.viewport.x,
+                    y: state.viewport.y,
+                    zoom: state.zoom,
+                  },
+                }
+              : {})}
           />
         )}
       </div>
       <aside className="weft-side" aria-label="side panel">
         {side_top}
         <InspectorPanel selected={selected} />
-        <PngExportButton api_ref={canvas_api_ref} />
+        <PngExportButton api_ref={canvas_api_ref} disabled={projected_tree === null} />
       </aside>
-      <ShortcutsModal
-        open={shortcuts_open}
-        on_close={() => {
-          set_shortcuts_open(false);
-        }}
-      />
     </>
   );
 }
@@ -202,9 +236,10 @@ function strip_path(graph_id: string): string {
 
 type PngExportButtonProps = {
   readonly api_ref: { current: CanvasApi | null };
+  readonly disabled: boolean;
 };
 
-function PngExportButton({ api_ref }: PngExportButtonProps): JSX.Element {
+function PngExportButton({ api_ref, disabled }: PngExportButtonProps): JSX.Element {
   const [busy, set_busy] = useState(false);
   const [err, set_err] = useState<string | null>(null);
 
@@ -242,7 +277,7 @@ function PngExportButton({ api_ref }: PngExportButtonProps): JSX.Element {
         onClick={() => {
           void handle_click();
         }}
-        disabled={busy}
+        disabled={busy || disabled}
         data-weft-png-export="true"
       >
         {busy ? 'exporting…' : 'download PNG'}

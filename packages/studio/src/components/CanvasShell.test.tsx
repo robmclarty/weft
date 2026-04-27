@@ -80,26 +80,10 @@ describe('CanvasShell', () => {
     expect(mounted.container.querySelector('.weft-canvas')).not.toBeNull();
   });
 
-  it('? toggles the shortcuts modal and Escape closes it', () => {
-    mounted = mount(<CanvasShell tree={null} />);
-    expect(
-      mounted.container.querySelector('[data-weft-shortcuts-modal]'),
-    ).toBeNull();
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: '?' }));
-    });
-    expect(
-      mounted.container.querySelector('[data-weft-shortcuts-modal]'),
-    ).not.toBeNull();
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-    });
-    expect(
-      mounted.container.querySelector('[data-weft-shortcuts-modal]'),
-    ).toBeNull();
-  });
+  // The shortcuts modal moved to App.tsx (the help pill is in the header
+  // outside CanvasShell). See packages/studio/src/App.test.tsx.
 
-  it('Escape clears selection (no-op when nothing selected)', () => {
+it('Escape clears selection (no-op when nothing selected)', () => {
     mounted = mount(<CanvasShell tree={null} />);
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));

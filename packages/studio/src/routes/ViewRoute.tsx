@@ -103,6 +103,7 @@ export function ViewRoute({ fetch_impl }: ViewRouteProps = {}): JSX.Element {
               set_error(err);
             }}
             last_error={error}
+            tree_loaded={tree !== null}
           />
         }
       />

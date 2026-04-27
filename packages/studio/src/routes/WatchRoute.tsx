@@ -6,7 +6,11 @@
  * canvas keeps the last known tree and surfaces a banner. On `invalid`
  * envelopes the loader panel surfaces the offending JSON path. The
  * connection auto-reconnects with backoff (see `use_watch_socket`); after
- * the cap is exceeded a manual reconnect button replaces the banner.
+ * the cap is exceeded a manual reconnect button replaces the banner with
+ * an "urgent" emphasis variant.
+ *
+ * The LoaderPanel is also exposed in the side panel so the user can fall
+ * back to drag-drop / paste / URL fetch without leaving the watch route.
  */
 
 import { useEffect, useMemo, useState, type JSX } from 'react';
@@ -16,6 +20,10 @@ import { flow_tree_schema, type FlowTree } from '@repo/weft';
 
 import { Banner } from '../components/Banner.js';
 import { CanvasShell } from '../components/CanvasShell.js';
+import {
+  LoaderPanel,
+  type LoaderError,
+} from '../components/LoaderPanel.js';
 import { use_watch_socket } from '../state/use_watch_socket.js';
 
 export type WatchRouteProps = {
@@ -39,6 +47,7 @@ export function WatchRoute({ socket_factory }: WatchRouteProps = {}): JSX.Elemen
   const [tree, set_tree] = useState<FlowTree | null>(null);
   const [invalid_msg, set_invalid_msg] = useState<string | null>(null);
   const [unreachable_msg, set_unreachable_msg] = useState<string | null>(null);
+  const [loader_error, set_loader_error] = useState<LoaderError | null>(null);
 
   useEffect(() => {
     const env = socket_state.last_envelope;
@@ -78,6 +87,19 @@ export function WatchRoute({ socket_factory }: WatchRouteProps = {}): JSX.Elemen
             : 'waiting for the watch server to push a flow_tree…'
         }
         banners={banner}
+        side_top={
+          <LoaderPanel
+            on_loaded={(loaded) => {
+              set_tree(loaded);
+              set_loader_error(null);
+            }}
+            on_error={(err) => {
+              set_loader_error(err);
+            }}
+            last_error={loader_error}
+            tree_loaded={tree !== null}
+          />
+        }
       />
     </main>
   );
@@ -92,9 +114,11 @@ function build_status_banner(
     return (
       <Banner
         tone="error"
+        emphasis="urgent"
         action={
           <button
             type="button"
+            className="weft-banner-action"
             onClick={() => {
               state.retry();
             }}

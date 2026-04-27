@@ -7,8 +7,14 @@
  * `on_error` (failure). Validation failure does not replace the previous
  * canvas — the parent owns that policy.
  *
- * Per spec §5.4: error UI uses React text children only; no
- * `dangerouslySetInnerHTML`.
+ * Two presentations:
+ *   - expanded (initial / on demand): the full input surface.
+ *   - collapsed (after a tree is loaded): a compact "load another" link
+ *     that re-expands the surface. Saves sidebar space when the user is
+ *     already inspecting a tree.
+ *
+ * Per spec §5.4: error messages render as React text children only.
+ * Untrusted-HTML render APIs are forbidden in the studio.
  */
 
 import {
@@ -42,6 +48,7 @@ export type LoaderPanelProps = {
   readonly on_error: (err: LoaderError) => void;
   readonly fetch_impl?: FetchLike;
   readonly last_error?: LoaderError | null;
+  readonly tree_loaded?: boolean;
 };
 
 export function LoaderPanel({
@@ -49,6 +56,7 @@ export function LoaderPanel({
   on_error,
   fetch_impl,
   last_error,
+  tree_loaded = false,
 }: LoaderPanelProps): JSX.Element {
   const file_input_id = useId();
   const paste_id = useId();
@@ -57,12 +65,16 @@ export function LoaderPanel({
   const [paste_text, set_paste_text] = useState('');
   const [src_url, set_src_url] = useState('');
   const [is_dragging, set_is_dragging] = useState(false);
+  const [expanded, set_expanded] = useState(false);
+  const has_error = last_error !== null && last_error !== undefined;
+  const show_full = !tree_loaded || expanded || has_error;
 
   const handle_payload = useCallback(
     (raw: unknown, source: LoaderError['source']) => {
       const result = validate_loader_payload(raw);
       if (result.ok) {
         on_loaded(result.tree, source);
+        set_expanded(false);
         return;
       }
       on_error({
@@ -148,22 +160,45 @@ export function LoaderPanel({
     handle_payload(result.payload, 'url');
   }, [src_url, fetch_impl, handle_payload, on_error]);
 
+  if (!show_full) {
+    return (
+      <div className="weft-loader-collapsed" data-weft-loader-state="collapsed">
+        <span>tree loaded.</span>
+        <button
+          type="button"
+          onClick={() => {
+            set_expanded(true);
+          }}
+          data-weft-action="expand-loader"
+        >
+          load another →
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <section className="weft-panel" aria-label="Loader">
+    <section
+      className="weft-panel weft-loader"
+      aria-label="Loader"
+      data-weft-loader-state={tree_loaded ? 'expanded' : 'initial'}
+    >
       <h2>load a flow_tree</h2>
 
-      {last_error !== null && last_error !== undefined ? (
+      {has_error ? (
         <div
           className="weft-banner"
-          data-tone="error"
+          data-tone={tone_for(last_error.source)}
           role="alert"
           data-weft-loader-error="true"
         >
-          <strong>{last_error.source} error</strong>
-          <div className="weft-error-text">
-            {last_error.zod_path === undefined
-              ? last_error.message
-              : `${last_error.zod_path}: ${last_error.message}`}
+          <div>
+            <strong>{label_for(last_error.source)}</strong>
+            <div className="weft-banner-detail">
+              {last_error.zod_path === undefined
+                ? last_error.message
+                : `${last_error.zod_path}: ${last_error.message}`}
+            </div>
           </div>
         </div>
       ) : null}
@@ -176,20 +211,17 @@ export function LoaderPanel({
         data-weft-dropzone="true"
         data-weft-dragging={String(is_dragging)}
       >
-        <label htmlFor={file_input_id}>
-          drop a .json file or
-          <input
-            ref={file_input_ref}
-            id={file_input_id}
-            type="file"
-            accept="application/json,.json"
-            style={{ marginLeft: 6 }}
-            onChange={(event) => {
-              const f = event.target.files?.[0];
-              if (f !== undefined) handle_file(f);
-            }}
-          />
-        </label>
+        <label htmlFor={file_input_id}>drop a .json file or pick one</label>
+        <input
+          ref={file_input_ref}
+          id={file_input_id}
+          type="file"
+          accept="application/json,.json"
+          onChange={(event) => {
+            const f = event.target.files?.[0];
+            if (f !== undefined) handle_file(f);
+          }}
+        />
 
         <label htmlFor={paste_id}>paste JSON</label>
         <textarea
@@ -201,7 +233,7 @@ export function LoaderPanel({
           }}
           placeholder='{"version": 1, "root": {...}}'
         />
-        <button type="button" onClick={handle_paste_load}>
+        <button type="button" className="weft-primary" onClick={handle_paste_load}>
           load pasted JSON
         </button>
 
@@ -224,8 +256,31 @@ export function LoaderPanel({
           fetch URL
         </button>
       </div>
+
+      {tree_loaded ? (
+        <button
+          type="button"
+          onClick={() => {
+            set_expanded(false);
+          }}
+          data-weft-action="collapse-loader"
+        >
+          done
+        </button>
+      ) : null}
     </section>
   );
+}
+
+function tone_for(source: LoaderError['source']): string {
+  if (source === 'url') return 'warn';
+  return 'info';
+}
+
+function label_for(source: LoaderError['source']): string {
+  if (source === 'paste') return 'JSON parse / validation';
+  if (source === 'drag-drop') return 'file load / validation';
+  return 'URL fetch';
 }
 
 const default_fetch: FetchLike = async (input, init) => {
