@@ -57,6 +57,13 @@ export type WeftEdgeData = {
    * edge components stay free of config-parsing logic.
    */
   wrapper_label?: string;
+  /**
+   * Semantic role for branch/fallback labeled edges. Surfaces in CSS so
+   * `otherwise`/`backup` edges can render dashed (the "alt path" subway
+   * convention) while `then`/`primary` stay solid. Absent on structural
+   * edges that have no semantic role.
+   */
+  role?: 'then' | 'otherwise' | 'primary' | 'backup';
 };
 
 export type WeftNode = Node<WeftNodeData>;
@@ -164,6 +171,14 @@ function emit_warning_node(
   ctx.nodes.push(rf_node);
 }
 
+type BranchRole = NonNullable<WeftEdgeData['role']>;
+
+function role_for_label(label: string | undefined): BranchRole | undefined {
+  if (label === 'then' || label === 'otherwise') return label;
+  if (label === 'primary' || label === 'backup') return label;
+  return undefined;
+}
+
 function structural_edge(
   source: string,
   target: string,
@@ -173,14 +188,14 @@ function structural_edge(
   const id = label === undefined
     ? `e:${source}->${target}`
     : `e:${source}->${target}:${label}`;
-  const edge: WeftEdge = {
-    id,
-    source,
-    target,
-    data: { kind: 'structural' },
-  };
+  const role = role_for_label(label);
+  const data: WeftEdgeData = role === undefined
+    ? { kind: 'structural' }
+    : { kind: 'structural', role };
+  const edge: WeftEdge = { id, source, target, data };
   if (label !== undefined) edge.label = label;
   if (source_handle !== undefined) edge.sourceHandle = source_handle;
+  if (role !== undefined) edge.className = `weft-edge-role-${role}`;
   return edge;
 }
 

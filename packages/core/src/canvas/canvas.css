@@ -524,6 +524,30 @@
   stroke-width: 3.5px;
 }
 
+/*
+ * Branch / fallback labeled edges — the "alt path" gets a dashed stroke
+ * in a warm-orange hue so the divergence reads at a glance: solid line
+ * is the happy path, dashed line is the otherwise / backup branch.
+ * Subway-map convention.
+ */
+.react-flow__edge.weft-edge-role-then .react-flow__edge-path {
+  stroke: var(--weft-hue-orange);
+}
+
+.react-flow__edge.weft-edge-role-otherwise .react-flow__edge-path {
+  stroke: var(--weft-hue-orange);
+  stroke-dasharray: 8 6;
+}
+
+.react-flow__edge.weft-edge-role-primary .react-flow__edge-path {
+  stroke: var(--weft-hue-orange);
+}
+
+.react-flow__edge.weft-edge-role-backup .react-flow__edge-path {
+  stroke: var(--weft-hue-orange);
+  stroke-dasharray: 8 6;
+}
+
 .weft-edge-self-loop-label,
 .weft-edge-loop-back-label {
   font-family: var(--weft-font-mono);
