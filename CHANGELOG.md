@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.3 — 2026-05-02
+
+### Changed
+
+- Test files moved into colocated `__tests__/` folders (e.g. `packages/core/src/__tests__/schemas.test.ts`) so the main package directories stay quiet. Source-and-test colocation is preserved, just one level down. AGENTS.md updated to reflect the new convention.
+
 ## v0.1.2 — 2026-05-02
 
 ### Added
