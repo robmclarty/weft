@@ -7,6 +7,8 @@ coverage/
 .screenshots/
 .serena/
 .playwright-mcp/
+.vitest-attachments/
+**/__screenshots__/
 *.log
 .DS_Store
 .claude/settings.local.json
