@@ -451,11 +451,11 @@ function loop_back_edge(node_id: string, label: string, wrapper_id: string): Wef
 }
 
 /**
- * Walk a wrapper's child subtree, then attach a wrapper-specific decoration
- * edge to the wrapped child. The wrapper itself remains in the graph as a
- * container (so it stays clickable for the inspector and runtime overlay
- * cascade); the decoration edge is what surfaces the wrapper's signature
- * topology — retry's self-loop, loop's back-edge — visually.
+ * Walk an expanded `compose`'s child subtree. Pipe/retry/loop/timeout/
+ * checkpoint/map are intercepted by `walk_for_chain` before they reach
+ * `walk()`, so this function only runs for compose-expanded — where the
+ * children are walked via `walk_for_chain` so any wrapper grandchildren
+ * still lift to peers.
  */
 function walk_wrapper_child(
   ctx: WalkContext,
@@ -464,24 +464,7 @@ function walk_wrapper_child(
 ): void {
   const children = parent_node.children ?? [];
   for (const child of children) {
-    walk(ctx, child, parent_graph_id, parent_graph_id);
-  }
-  if (children.length === 0) return;
-  // The wrapped child is the first (and for retry/loop typically the only)
-  // child; the decoration edge lands on it. Loop's optional guard child is
-  // a second sibling — it does not need its own back-edge.
-  const first_child = children[0];
-  if (first_child === undefined) return;
-  const child_graph_id = child_path(parent_graph_id, first_child.id);
-  if (parent_node.kind === 'retry') {
-    const label = format_retry_label(parent_node.config);
-    ctx.edges.push(self_loop_edge(child_graph_id, label, parent_graph_id));
-    return;
-  }
-  if (parent_node.kind === 'loop') {
-    const label = format_loop_label(parent_node.config);
-    ctx.edges.push(loop_back_edge(child_graph_id, label, parent_graph_id));
-    return;
+    walk_for_chain(ctx, child, parent_graph_id, parent_graph_id);
   }
 }
 
@@ -598,6 +581,55 @@ function map_cardinality_edge(
     className: 'weft-edge-map-cardinality',
     data: { kind: 'map-cardinality', wrapper_id, wrapper_label: label },
   };
+}
+
+/**
+ * Walk a `retry(child)` or `loop(child)` wrapper as a pure edge
+ * decoration. The wrapper itself is NOT emitted as a node — only the
+ * wrapped child appears in the graph. A self-loop (retry) or loop-back
+ * (loop) edge attaches to the child carrying the wrapper's config
+ * label. Optional sibling children (loop's guard) walk normally.
+ *
+ * Chain segment passes through the wrapped child unchanged: predecessor
+ * lands on `child.first`, successor leaves from `child.last`. The
+ * wrapper has no presence in the chain.
+ */
+function walk_retry_or_loop_as_edge(
+  ctx: WalkContext,
+  node: FlowNode,
+  parent_graph_id: string | null,
+  graph_id: string,
+): ChainSegment {
+  ctx.visited.add(node);
+
+  const children = node.children ?? [];
+  const inner = children[0];
+  if (inner === undefined) {
+    // Empty retry/loop: degenerate. Return a synthetic single-id segment
+    // anchored at the wrapper's would-be graph id; no edge emitted.
+    return { first: graph_id, last: graph_id };
+  }
+
+  // The lift: child's parentId becomes the wrapper's parent.
+  const inner_segment = walk_for_chain(ctx, inner, parent_graph_id, graph_id);
+
+  if (node.kind === 'retry') {
+    const label = format_retry_label(node.config);
+    ctx.edges.push(self_loop_edge(inner_segment.first, label, graph_id));
+  } else {
+    const label = format_loop_label(node.config);
+    ctx.edges.push(loop_back_edge(inner_segment.first, label, graph_id));
+  }
+
+  // Optional guard children (loop's second child, if present) walk
+  // alongside as peers but get no back-edge of their own.
+  for (let i = 1; i < children.length; i += 1) {
+    const sibling = children[i];
+    if (sibling === undefined) continue;
+    walk_for_chain(ctx, sibling, parent_graph_id, graph_id);
+  }
+
+  return inner_segment;
 }
 
 /**
@@ -749,6 +781,15 @@ function walk_for_chain(
   if (node.kind === CYCLE_KIND || ctx.visited.has(node)) {
     walk(ctx, node, parent_graph_id, parent_path_str);
     return { first: graph_id, last: graph_id };
+  }
+
+  // Retry / loop: drop the wrapper node entirely. The wrapped child
+  // takes the wrapper's place in the chain; a self-loop (retry) or
+  // loop-back (loop) edge carries the wrapper's config label and is the
+  // sole visual signature. Inspector access for the wrapper config will
+  // come from edge-click handling in a follow-up.
+  if (node.kind === 'retry' || node.kind === 'loop') {
+    return walk_retry_or_loop_as_edge(ctx, node, parent_graph_id, graph_id);
   }
 
   // Pipe: lift child to peer, emit pipe as marker, return [child, marker].

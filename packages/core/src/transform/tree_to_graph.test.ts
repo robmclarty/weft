@@ -97,13 +97,19 @@ describe('tree_to_graph: containers and wrappers', () => {
     ]);
   });
 
-  it('wires retry wrapper children with parentId (still container)', () => {
+  it('drops the retry wrapper from the graph and emits a self-loop on the wrapped child', () => {
     const tree = parse_fixture('full_primitive_set.json');
-    const { nodes } = tree_to_graph(tree);
-    const retry_node = find_by_id(nodes, 'seq:everything/retry:flaky');
+    const { nodes, edges } = tree_to_graph(tree);
+    // Retry wrapper itself is no longer emitted as a node (B-deluxe).
+    expect(find_by_id(nodes, 'seq:everything/retry:flaky')).toBeUndefined();
     const retry_child = find_by_id(nodes, 'seq:everything/retry:flaky/step:flaky');
-    expect(retry_node?.type).toBe('retry');
-    expect(retry_child?.parentId).toBe('seq:everything/retry:flaky');
+    // The wrapped child sits as a peer of the retry's parent (sequence).
+    expect(retry_child?.parentId).toBe('seq:everything');
+    // A self-loop edge attaches to the child carrying retry's config.
+    const self_loops = edges.filter(
+      (e) => e.data?.kind === 'self-loop' && e.source === 'seq:everything/retry:flaky/step:flaky',
+    );
+    expect(self_loops.length).toBe(1);
   });
 
   it('lifts pipe wrapper children to peers and emits a pipe-fn decoration edge', () => {
@@ -333,20 +339,27 @@ describe('tree_to_graph: new primitive kinds', () => {
     ]);
   });
 
-  it('wires loop wrapper as a container over its children (still nested)', () => {
+  it('drops the loop wrapper from the graph and emits a loop-back edge on the wrapped child', () => {
     const tree: FlowTree = {
       version: 1,
       root: {
         kind: 'loop',
         id: 'loop_1',
+        config: { max_rounds: 5 },
         children: [{ kind: 'step', id: 'inner' }],
       },
     };
-    const { nodes } = tree_to_graph(tree);
-    const wrapper = find_by_id(nodes, 'loop_1');
+    const { nodes, edges } = tree_to_graph(tree);
+    // Loop wrapper is not emitted as a node (B-deluxe).
+    expect(find_by_id(nodes, 'loop_1')).toBeUndefined();
     const child = find_by_id(nodes, 'loop_1/inner');
-    expect(wrapper?.type).toBe('loop');
-    expect(child?.parentId).toBe('loop_1');
+    expect(child).toBeDefined();
+    // The child is at the root level — its parentId is undefined (no parent).
+    expect(child?.parentId).toBeUndefined();
+    // A loop-back edge attaches to the child carrying the loop's config.
+    const loop_backs = edges.filter((e) => e.data?.kind === 'loop-back');
+    expect(loop_backs.length).toBe(1);
+    expect(loop_backs[0]?.source).toBe('loop_1/inner');
   });
 
   it('lifts timeout/checkpoint/map wrapper children to peers and emits decoration edges', () => {
