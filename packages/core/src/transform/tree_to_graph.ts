@@ -51,17 +51,19 @@ export type WeftNodeData = {
 };
 
 export type WeftEdgeData = {
-  kind: 'structural' | 'overlay' | 'self-loop' | 'loop-back';
+  kind: 'structural' | 'overlay' | 'self-loop' | 'loop-back' | 'pipe-fn';
   /**
-   * For wrapper-derived edges (`self-loop`, `loop-back`), the wrapper's
-   * graph id so the edge click handler can route the inspector to the
-   * wrapper's flow-tree node. Structural/overlay edges leave this absent.
+   * For wrapper-derived edges (`self-loop`, `loop-back`, `pipe-fn`), the
+   * wrapper's graph id so the edge click handler can route the inspector
+   * to the wrapper's flow-tree node. Structural/overlay edges leave this
+   * absent.
    */
   wrapper_id?: string;
   /**
-   * Condensed label for wrapper edges, e.g. "↻ 3× / 250ms" for retry.
-   * Renderers use this verbatim; transform formats it once at emit time so
-   * edge components stay free of config-parsing logic.
+   * Condensed label for wrapper edges, e.g. "↻ 3× / 250ms" for retry,
+   * "<fn:to_upper>" for pipe. Renderers use this verbatim; transform
+   * formats it once at emit time so edge components stay free of
+   * config-parsing logic.
    */
   wrapper_label?: string;
   /**
@@ -300,7 +302,10 @@ function walk_scope_children(
 ): void {
   const children = scope_node.children ?? [];
   for (const child of children) {
-    walk(ctx, child, scope_graph_id, scope_graph_id);
+    // Use walk_for_chain so wrapper children inside the scope still get
+    // lifted to peers; we don't chain the segments here because scope
+    // doesn't emit sequential edges between members.
+    walk_for_chain(ctx, child, scope_graph_id, scope_graph_id);
   }
   const stashes: StashRecord[] = [];
   const uses: UseRecord[] = [];
@@ -317,23 +322,34 @@ function walk_scope_children(
   }
 }
 
+/**
+ * Each child returns a chain segment when walked: `first` is the graph id
+ * the predecessor's edge should target (the input port), `last` is the
+ * graph id the successor's edge should originate from (the output port).
+ * For most kinds these are the same id; for wrappers that splice a marker
+ * around their child (pipe), they differ — `first` lands on the lifted
+ * child, `last` on the trailing marker.
+ */
+type ChainSegment = {
+  first: string;
+  last: string;
+};
+
 function walk_sequence_children(
   ctx: WalkContext,
   parent_node: FlowNode,
   parent_graph_id: string,
 ): void {
   const children = parent_node.children ?? [];
-  const child_graph_ids: string[] = [];
+  const segments: ChainSegment[] = [];
   for (const child of children) {
-    const child_graph_id = child_path(parent_graph_id, child.id);
-    child_graph_ids.push(child_graph_id);
-    walk(ctx, child, parent_graph_id, parent_graph_id);
+    segments.push(walk_for_chain(ctx, child, parent_graph_id, parent_graph_id));
   }
-  for (let i = 0; i < child_graph_ids.length - 1; i += 1) {
-    const source = child_graph_ids[i];
-    const target = child_graph_ids[i + 1];
-    if (source === undefined || target === undefined) continue;
-    ctx.edges.push(structural_edge(source, target));
+  for (let i = 0; i < segments.length - 1; i += 1) {
+    const a = segments[i];
+    const b = segments[i + 1];
+    if (a === undefined || b === undefined) continue;
+    ctx.edges.push(structural_edge(a.last, b.first));
   }
 }
 
@@ -347,11 +363,10 @@ function walk_parallel_children(
   for (let i = 0; i < children.length; i += 1) {
     const child = children[i];
     if (child === undefined) continue;
-    const child_graph_id = child_path(parent_graph_id, child.id);
-    walk(ctx, child, parent_graph_id, parent_graph_id);
+    const segment = walk_for_chain(ctx, child, parent_graph_id, parent_graph_id);
     const label = keys[i];
     const source_handle = label === undefined ? undefined : `out:${label}`;
-    ctx.edges.push(structural_edge(parent_graph_id, child_graph_id, label, source_handle));
+    ctx.edges.push(structural_edge(parent_graph_id, segment.first, label, source_handle));
   }
 }
 
@@ -365,11 +380,10 @@ function walk_labeled_children(
   for (let i = 0; i < children.length; i += 1) {
     const child = children[i];
     if (child === undefined) continue;
-    const child_graph_id = child_path(parent_graph_id, child.id);
-    walk(ctx, child, parent_graph_id, parent_graph_id);
+    const segment = walk_for_chain(ctx, child, parent_graph_id, parent_graph_id);
     const label = labels[i];
     const source_handle = label === undefined ? undefined : `out:${label}`;
-    ctx.edges.push(structural_edge(parent_graph_id, child_graph_id, label, source_handle));
+    ctx.edges.push(structural_edge(parent_graph_id, segment.first, label, source_handle));
   }
 }
 
@@ -463,6 +477,142 @@ function walk_wrapper_child(
   }
 }
 
+const PIPE_MARKER_W = 44;
+const PIPE_MARKER_H = 44;
+
+function format_fn_chip(value: FlowValue | undefined): string {
+  // Inline of nodes/node_helpers.format_fn_ref so the transform layer
+  // doesn't import from the nodes layer (keeps the boundary clean).
+  // Narrow via the `kind: '<fn>'` discriminant in FlowValue's record
+  // branch — FlowValue allows record subtypes that include the fn-ref
+  // shape, so we can read `kind` and `name` directly without spreads or
+  // type assertions.
+  if (value === null || value === undefined) return '<fn>';
+  if (typeof value !== 'object') return '<fn>';
+  if (Array.isArray(value)) return '<fn>';
+  if (!('kind' in value) || value.kind !== '<fn>') return '<fn>';
+  if (!('name' in value)) return '<fn>';
+  const name = value.name;
+  if (typeof name !== 'string' || name === '') return '<fn>';
+  return `<fn:${name}>`;
+}
+
+function pipe_fn_edge(
+  source: string,
+  target: string,
+  label: string,
+  wrapper_id: string,
+): WeftEdge {
+  return {
+    id: `e:pipe-fn:${source}->${target}`,
+    source,
+    target,
+    label,
+    className: 'weft-edge-pipe-fn',
+    data: { kind: 'pipe-fn', wrapper_id, wrapper_label: label },
+  };
+}
+
+/**
+ * Walk a `pipe(child, fn)` wrapper as a peer marker (B-deluxe topology).
+ *
+ * Topology: the inner child is lifted to share `parent_graph_id` with the
+ * pipe marker, so React Flow treats them as siblings instead of nesting
+ * the child inside the pipe. The pipe itself is emitted as a small leaf
+ * marker (44×44) downstream of the child; a `pipe-fn` decoration edge
+ * carries the `<fn:name>` chip from child to marker.
+ *
+ * Chain: predecessor → child → marker → successor. The returned segment
+ * has `first = inner.first` (so a sequence's prev edge enters the lifted
+ * child) and `last = marker_graph_id` (so the next edge leaves the
+ * marker).
+ *
+ * This is the prototype lift-to-peers conversion the rest of the wrapper
+ * kinds will follow in subsequent commits.
+ */
+function walk_pipe_as_marker(
+  ctx: WalkContext,
+  node: FlowNode,
+  parent_graph_id: string | null,
+  graph_id: string,
+): ChainSegment {
+  ctx.visited.add(node);
+
+  const children = node.children ?? [];
+  const inner = children[0];
+  let inner_segment: ChainSegment;
+  if (inner === undefined) {
+    // Pipe with no child is degenerate but possible; treat it as a lone
+    // marker with no incoming chain piece.
+    inner_segment = { first: graph_id, last: graph_id };
+  } else {
+    // Lift: parentId stays at the pipe's parent, but path-string keeps the
+    // pipe's id in the chain so child graph_ids remain unique across
+    // sibling wrappers with the same inner-id.
+    inner_segment = walk_for_chain(ctx, inner, parent_graph_id, graph_id);
+  }
+
+  // Emit the pipe itself as a small marker leaf. Width/height are set
+  // explicitly so ELK lays it out as a 44px node, not the default 184px
+  // leaf size.
+  const data = build_node_data(node);
+  const rf_node: WeftNode = {
+    id: graph_id,
+    type: 'pipe',
+    position: { x: 0, y: 0 },
+    width: PIPE_MARKER_W,
+    height: PIPE_MARKER_H,
+    data,
+  };
+  if (parent_graph_id !== null) rf_node.parentId = parent_graph_id;
+  ctx.nodes.push(rf_node);
+
+  // Decoration edge from the inner's last → marker, carrying the fn chip.
+  const fn_label = format_fn_chip(node.config?.['fn']);
+  if (inner !== undefined) {
+    ctx.edges.push(pipe_fn_edge(inner_segment.last, graph_id, fn_label, graph_id));
+  }
+
+  return { first: inner_segment.first, last: graph_id };
+}
+
+/**
+ * Chain-aware walk: returns a `ChainSegment` describing where the
+ * predecessor's edge should land (`first`) and where the successor's
+ * edge should originate (`last`). For most kinds these match
+ * (single-node segment); wrappers that splice a marker around their
+ * child diverge.
+ *
+ * Sequence/parallel/branch/fallback/scope walkers use this so wrapper
+ * children can be lifted to peers transparently.
+ */
+function walk_for_chain(
+  ctx: WalkContext,
+  node: FlowNode,
+  parent_graph_id: string | null,
+  parent_path_str: string | null,
+): ChainSegment {
+  const graph_id = parent_path_str === null
+    ? node.id
+    : child_path(parent_path_str, node.id);
+
+  // Cycle sentinels and previously-visited nodes always emit as-is and
+  // contribute a single-id chain segment — no lifting.
+  if (node.kind === CYCLE_KIND || ctx.visited.has(node)) {
+    walk(ctx, node, parent_graph_id, parent_path_str);
+    return { first: graph_id, last: graph_id };
+  }
+
+  // Pipe: lift child to peer, emit pipe as marker, return [child, marker].
+  if (node.kind === 'pipe') {
+    return walk_pipe_as_marker(ctx, node, parent_graph_id, graph_id);
+  }
+
+  // Default: the regular walk, single-id segment.
+  walk(ctx, node, parent_graph_id, parent_path_str);
+  return { first: graph_id, last: graph_id };
+}
+
 function walk(
   ctx: WalkContext,
   node: FlowNode,
@@ -548,6 +698,9 @@ export function tree_to_graph(
     visited: new WeakSet(),
     expanded_composes: options?.expanded_composes ?? new Set<string>(),
   };
-  walk(ctx, tree.root, null, null);
+  // Use walk_for_chain so a root-level wrapper (e.g. a tree whose root is
+  // a pipe) gets the same lift-to-peers treatment as one nested under a
+  // sequence; the returned segment is unused at the root.
+  walk_for_chain(ctx, tree.root, null, null);
   return { nodes: ctx.nodes, edges: ctx.edges };
 }

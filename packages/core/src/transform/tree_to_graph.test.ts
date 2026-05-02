@@ -97,14 +97,18 @@ describe('tree_to_graph: containers and wrappers', () => {
     ]);
   });
 
-  it('wires retry and pipe wrapper children with parentId', () => {
+  it('wires retry wrapper children with parentId (still container)', () => {
     const tree = parse_fixture('full_primitive_set.json');
     const { nodes } = tree_to_graph(tree);
     const retry_node = find_by_id(nodes, 'seq:everything/retry:flaky');
     const retry_child = find_by_id(nodes, 'seq:everything/retry:flaky/step:flaky');
     expect(retry_node?.type).toBe('retry');
     expect(retry_child?.parentId).toBe('seq:everything/retry:flaky');
+  });
 
+  it('lifts pipe wrapper children to peers and emits a pipe-fn decoration edge', () => {
+    const tree = parse_fixture('full_primitive_set.json');
+    const { nodes, edges } = tree_to_graph(tree);
     const pipe_node = find_by_id(
       nodes,
       'seq:everything/scope:root/pipe:upper',
@@ -114,7 +118,16 @@ describe('tree_to_graph: containers and wrappers', () => {
       'seq:everything/scope:root/pipe:upper/use:greeting',
     );
     expect(pipe_node?.type).toBe('pipe');
-    expect(pipe_child?.parentId).toBe('seq:everything/scope:root/pipe:upper');
+    // Lift: pipe child's parentId is the pipe's parent (the scope), not the pipe.
+    expect(pipe_child?.parentId).toBe('seq:everything/scope:root');
+    // The pipe-fn decoration edge runs from the wrapped child to the pipe marker.
+    const pipe_fn_edges = edges.filter((e) => e.data?.kind === 'pipe-fn');
+    expect(pipe_fn_edges.length).toBeGreaterThan(0);
+    const pipe_fn_edge = pipe_fn_edges.find(
+      (e) => e.target === 'seq:everything/scope:root/pipe:upper',
+    );
+    expect(pipe_fn_edge?.source).toBe('seq:everything/scope:root/pipe:upper/use:greeting');
+    expect(typeof pipe_fn_edge?.label).toBe('string');
   });
 });
 
@@ -257,7 +270,13 @@ describe('tree_to_graph: edges carry a typed kind', () => {
   it('tags every edge in full_primitive_set.json with a known kind', () => {
     const tree = parse_fixture('full_primitive_set.json');
     const { edges } = tree_to_graph(tree);
-    const known = new Set(['structural', 'overlay', 'self-loop', 'loop-back']);
+    const known = new Set([
+      'structural',
+      'overlay',
+      'self-loop',
+      'loop-back',
+      'pipe-fn',
+    ]);
     for (const edge of edges) {
       expect(known.has(edge.data?.kind ?? '')).toBe(true);
     }

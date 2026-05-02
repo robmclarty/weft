@@ -98,7 +98,7 @@ describe('ParallelNode', () => {
 });
 
 describe('PipeNode and RetryNode', () => {
-  it('renders pipe chrome with the tail fn label', () => {
+  it('renders pipe as a marker chrome (the fn label rides on the edge, not the node)', () => {
     const nodes: WeftNode[] = [
       {
         id: 'pipe:1',
@@ -113,7 +113,12 @@ describe('PipeNode and RetryNode', () => {
     ];
     mounted = mount_canvas(nodes, []);
     const node = mounted.container.querySelector('[data-weft-kind="pipe"]');
-    expect(node?.textContent).toContain('upper');
+    expect(node).not.toBeNull();
+    // B-deluxe: pipe is now a marker (small dot with glyph). The fn label
+    // lives on the pipe-fn decoration edge from child → marker; the
+    // marker itself just renders the glyph.
+    expect(node?.getAttribute('data-weft-presentation')).toBe('marker');
+    expect(node?.classList.contains('weft-node-marker')).toBe(true);
   });
 
   it('renders retry chrome with attempts × backoff badge', () => {
@@ -345,20 +350,9 @@ describe('display_name from meta surfaces in container titles', () => {
           data: { kind: 'sequence', id: 'seq:1', meta: { display_name: 'main_pipeline' } },
         },
       ],
-      [
-        'pipe',
-        {
-          id: 'pipe:1',
-          type: 'pipe',
-          position: { x: 0, y: 0 },
-          data: {
-            kind: 'pipe',
-            id: 'pipe:1',
-            config: { fn: { kind: '<fn>', name: 'upper' } },
-            meta: { display_name: 'uppercase_pipe' },
-          },
-        },
-      ],
+      // pipe omitted: B-deluxe renders pipe as a marker glyph with no
+      // visible text. Its display_name surfaces in the inspector via the
+      // edge click, not on the node chrome itself.
       [
         'retry',
         {

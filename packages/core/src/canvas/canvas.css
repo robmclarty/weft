@@ -254,14 +254,14 @@
 .weft-node-checkpoint { border-left-color: var(--weft-checkpoint-accent); }
 
 /*
- * Wrappers are containers that hold a single (or near-single) child rather
- * than a full subgraph. Tighter min-size + zero-row padding lets them hug
- * the wrapped child as a labeled bracket instead of a 280px-wide bay. The
- * sequence/scope/branch/fallback/parallel containers (true subgraph
- * containers) keep the larger minimum from `:root`. ELK's per-container
- * `nodeSize.minimum` is set to match in `elk_runner.ts`.
+ * Wrappers that *still* render as containers (retry, loop, timeout, map,
+ * checkpoint, expanded-compose) hug their wrapped child as a labeled
+ * bracket instead of a 280×120 bay. Pipe has been lifted to a marker
+ * node and so is excluded from this rule. Real subgraph containers
+ * (sequence/scope/branch/fallback/parallel) keep the larger minimum
+ * from `:root`. ELK's per-container `nodeSize.minimum` is set to match
+ * in `elk_runner.ts`.
  */
-.weft-node-pipe,
 .weft-node-retry,
 .weft-node-timeout,
 .weft-node-loop,
@@ -271,6 +271,39 @@
   min-width: 212px;
   min-height: 114px;
   padding: calc(var(--weft-container-header-h) + 4px) 8px 8px;
+}
+
+/*
+ * Markers — wrapper kinds that render as a small dot on the line rather
+ * than a container around their child. The lifted child sits as a peer
+ * in ELK's layout; the marker gets a structural edge to/from the child
+ * carrying the wrapper's config (e.g. `<fn:name>` for pipe). This is
+ * the subway-station read: a small, single-glyph point that the line
+ * passes through.
+ */
+.weft-node-marker {
+  width: 44px;
+  height: 44px;
+  background: var(--weft-color-paper);
+  border: 2px solid var(--weft-color-fg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  position: relative;
+  /* SVG glyph fills most of the dot; per-kind tinting via currentColor */
+}
+
+.weft-node-marker .weft-node-marker-glyph {
+  width: 22px;
+  height: 22px;
+}
+
+.weft-node-marker.weft-node-pipe {
+  background: var(--weft-pipe-fill);
+  border-color: var(--weft-pipe-accent);
+  color: var(--weft-pipe-on);
 }
 
 /*
@@ -547,6 +580,16 @@
 .react-flow__edge.react-flow__edge-loop-back .react-flow__edge-path {
   stroke: var(--weft-hue-magenta);
   stroke-width: 3.5px;
+}
+
+/*
+ * Pipe decoration edge — connects a wrapped child to its pipe marker
+ * carrying the `<fn:name>` chip as the edge label. Stroke takes pipe's
+ * blue family hue so the data-transformation jump reads distinctly from
+ * a plain structural sequence edge.
+ */
+.react-flow__edge.weft-edge-pipe-fn .react-flow__edge-path {
+  stroke: var(--weft-hue-blue);
 }
 
 /*
