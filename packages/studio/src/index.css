@@ -1,27 +1,36 @@
 /* weft studio — global tokens and layout. */
 
 :root {
-  --weft-bg: #0f1115;
-  --weft-bg-panel: #161a22;
-  --weft-bg-elevated: #1f242e;
-  --weft-fg: #e6e8ee;
-  --weft-fg-muted: #8a92a3;
-  --weft-fg-faint: #5d6577;
-  --weft-border: #2a3040;
-  --weft-border-strong: #3a4458;
-  --weft-accent: #88baff;
-  --weft-accent-strong: #b6d2ff;
+  --weft-bg: #f4ecdd;
+  --weft-bg-panel: #fbf6ea;
+  --weft-bg-elevated: #fff8e8;
+  --weft-fg: #1a1611;
+  --weft-fg-muted: #6b5f4d;
+  --weft-fg-faint: #a89c84;
+  --weft-border: #1a1611;
+  --weft-border-strong: #1a1611;
+  --weft-accent: #3868d9;
+  --weft-accent-strong: #1a1611;
 
-  --weft-validation: #88baff;       /* info / parse-error: blue */
-  --weft-fetch-warn: #ffce7a;       /* network warning: amber */
-  --weft-connection: #ff8a8a;       /* disconnect / fatal: red */
-  --weft-success: #79e09a;
+  --weft-validation: #3868d9;       /* info / parse-error: blue */
+  --weft-fetch-warn: #f4c20d;       /* network warning: yellow */
+  --weft-connection: #d6347f;       /* disconnect / fatal: magenta */
+  --weft-success: #46a248;
+
+  /* family hues used by inspector kind pills */
+  --weft-hue-orange: #f25f1f;
+  --weft-hue-teal: #1f9b8e;
+  --weft-hue-yellow: #f4c20d;
+  --weft-hue-blue: #3868d9;
+  --weft-hue-magenta: #d6347f;
+  --weft-hue-green: #46a248;
+  --weft-hue-ink: #1a1611;
 
   --weft-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --weft-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  --weft-radius: 6px;
-  --weft-radius-sm: 4px;
+  --weft-radius: 4px;
+  --weft-radius-sm: 2px;
 }
 
 * {
@@ -54,7 +63,7 @@ input,
 button {
   background: var(--weft-bg-elevated);
   color: var(--weft-fg);
-  border: 1px solid var(--weft-border);
+  border: 1.5px solid var(--weft-border);
   border-radius: var(--weft-radius-sm);
   padding: 6px 10px;
   font-family: var(--weft-sans);
@@ -72,8 +81,7 @@ textarea {
 }
 
 button:hover {
-  border-color: var(--weft-border-strong);
-  background: color-mix(in srgb, var(--weft-bg-elevated) 80%, var(--weft-fg));
+  background: color-mix(in srgb, var(--weft-bg-elevated) 80%, var(--weft-fg) 6%);
 }
 
 button:focus-visible,
@@ -84,14 +92,18 @@ textarea:focus-visible {
 }
 
 button.weft-primary {
-  background: color-mix(in srgb, var(--weft-accent) 22%, var(--weft-bg-elevated));
-  border-color: color-mix(in srgb, var(--weft-accent) 50%, var(--weft-border));
-  color: var(--weft-accent-strong);
-  font-weight: 600;
+  background: var(--weft-fg);
+  border-color: var(--weft-fg);
+  color: var(--weft-bg-panel);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
 }
 
 button.weft-primary:hover {
-  background: color-mix(in srgb, var(--weft-accent) 32%, var(--weft-bg-elevated));
+  background: var(--weft-hue-blue);
+  border-color: var(--weft-hue-blue);
 }
 
 .weft-app {
@@ -106,40 +118,48 @@ button.weft-primary:hover {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 8px 16px;
-  background: var(--weft-bg-panel);
-  border-bottom: 1px solid var(--weft-border);
+  padding: 10px 16px;
+  background: var(--weft-fg);
+  color: var(--weft-bg-panel);
+  border-bottom: 2px solid var(--weft-fg);
   font-size: 13px;
 }
 
 .weft-header h1 {
   margin: 0;
   font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: var(--weft-mono);
+  color: var(--weft-bg-panel);
 }
 
 .weft-header nav {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   font-size: 12px;
 }
 
 .weft-header nav a {
-  color: var(--weft-fg-muted);
+  color: color-mix(in srgb, var(--weft-bg-panel) 70%, transparent);
   text-decoration: none;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: var(--weft-radius-sm);
+  font-family: var(--weft-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
 }
 
 .weft-header nav a:hover {
-  background: var(--weft-bg-elevated);
-  color: var(--weft-fg);
+  background: color-mix(in srgb, var(--weft-bg-panel) 14%, transparent);
+  color: var(--weft-bg-panel);
 }
 
 .weft-header nav a[aria-current="page"] {
   color: var(--weft-fg);
-  background: var(--weft-bg-elevated);
+  background: var(--weft-hue-yellow);
 }
 
 .weft-header .weft-search-wrap {
@@ -150,6 +170,9 @@ button.weft-primary:hover {
 .weft-header .weft-search-box {
   width: 220px;
   padding-right: 28px;
+  background: var(--weft-bg-panel);
+  color: var(--weft-fg);
+  border-color: var(--weft-bg-panel);
 }
 
 .weft-header .weft-search-count {
@@ -165,18 +188,20 @@ button.weft-primary:hover {
 
 .weft-header .weft-help-pill {
   font-size: 11px;
-  color: var(--weft-fg-muted);
-  background: var(--weft-bg-elevated);
-  border: 1px solid var(--weft-border);
+  color: var(--weft-bg-panel);
+  background: transparent;
+  border: 1.5px solid color-mix(in srgb, var(--weft-bg-panel) 50%, transparent);
   border-radius: var(--weft-radius-sm);
-  padding: 3px 7px;
+  padding: 3px 8px;
   cursor: pointer;
   font-family: var(--weft-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .weft-header .weft-help-pill:hover {
-  border-color: var(--weft-border-strong);
-  color: var(--weft-fg);
+  border-color: var(--weft-bg-panel);
+  background: color-mix(in srgb, var(--weft-bg-panel) 14%, transparent);
 }
 
 /* main grid */
@@ -201,10 +226,10 @@ button.weft-primary:hover {
 }
 
 .weft-side {
-  border-left: 1px solid var(--weft-border);
+  border-left: 2px solid var(--weft-fg);
   background: var(--weft-bg-panel);
   overflow-y: auto;
-  padding: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -214,25 +239,26 @@ button.weft-primary:hover {
 
 .weft-panel {
   background: var(--weft-bg-elevated);
-  border: 1px solid var(--weft-border);
+  border: 1.5px solid var(--weft-fg);
   border-radius: var(--weft-radius);
-  padding: 12px;
+  padding: 14px;
 }
 
 .weft-panel h2 {
-  margin: 0 0 10px;
-  font-size: 12px;
-  font-weight: 600;
+  margin: 0 0 12px;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--weft-fg-muted);
+  letter-spacing: 0.1em;
+  color: var(--weft-fg);
+  font-family: var(--weft-mono);
 }
 
 .weft-panel pre {
   margin: 0;
   padding: 8px 10px;
   background: var(--weft-bg);
-  border: 1px solid var(--weft-border);
+  border: 1px solid var(--weft-fg);
   border-radius: var(--weft-radius-sm);
   font-family: var(--weft-mono);
   font-size: 11px;
@@ -241,7 +267,7 @@ button.weft-primary:hover {
   word-break: break-word;
   max-height: 240px;
   overflow: auto;
-  color: var(--weft-fg-muted);
+  color: var(--weft-fg);
 }
 
 /* loader */
@@ -259,10 +285,12 @@ button.weft-primary:hover {
 }
 
 .weft-loader-actions label {
-  font-size: 11px;
-  color: var(--weft-fg-muted);
+  font-size: 10px;
+  color: var(--weft-fg);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  font-family: var(--weft-mono);
 }
 
 .weft-loader-actions button {
@@ -280,25 +308,29 @@ button.weft-primary:hover {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 10px;
-  background: var(--weft-bg-elevated);
-  border: 1px solid var(--weft-border);
+  padding: 8px 12px;
+  background: var(--weft-hue-yellow);
+  border: 1.5px solid var(--weft-fg);
   border-radius: var(--weft-radius);
-  font-size: 12px;
-  color: var(--weft-fg-muted);
+  font-size: 11px;
+  color: var(--weft-fg);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: var(--weft-mono);
 }
 
 .weft-loader-collapsed button {
   background: transparent;
   border-color: transparent;
   padding: 4px 8px;
-  font-size: 12px;
-  color: var(--weft-accent);
+  font-size: 11px;
+  color: var(--weft-fg);
+  text-decoration: underline;
 }
 
 .weft-loader-collapsed button:hover {
-  border-color: var(--weft-border);
-  background: var(--weft-bg);
+  background: color-mix(in srgb, var(--weft-fg) 12%, transparent);
 }
 
 [data-weft-dropzone="true"][data-weft-dragging="true"] {
@@ -327,46 +359,43 @@ button.weft-primary:hover {
 
 .weft-banner {
   background: var(--weft-bg-panel);
-  border: 1px solid var(--weft-border);
-  border-left: 3px solid var(--weft-accent);
+  border: 1.5px solid var(--weft-fg);
+  border-left: 4px solid var(--weft-accent);
   padding: 8px 12px;
   border-radius: var(--weft-radius-sm);
   font-size: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 12px rgba(26, 22, 17, 0.18);
+  color: var(--weft-fg);
 }
 
 .weft-banner strong {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .weft-banner[data-tone="info"],
 .weft-banner[data-tone="validation"] {
   border-left-color: var(--weft-validation);
-  color: color-mix(in srgb, var(--weft-validation) 85%, white);
 }
 
 .weft-banner[data-tone="warn"],
 .weft-banner[data-tone="fetch"] {
   border-left-color: var(--weft-fetch-warn);
-  color: color-mix(in srgb, var(--weft-fetch-warn) 85%, white);
 }
 
 .weft-banner[data-tone="error"],
 .weft-banner[data-tone="connection"] {
   border-left-color: var(--weft-connection);
-  color: color-mix(in srgb, var(--weft-connection) 85%, white);
 }
 
 .weft-banner[data-tone="success"] {
   border-left-color: var(--weft-success);
-  color: color-mix(in srgb, var(--weft-success) 85%, white);
 }
 
 .weft-banner[data-emphasis="urgent"] {
-  background: color-mix(in srgb, var(--weft-connection) 15%, var(--weft-bg-panel));
+  background: color-mix(in srgb, var(--weft-connection) 18%, var(--weft-bg-panel));
 }
 
 .weft-banner-detail {
@@ -380,11 +409,15 @@ button.weft-primary:hover {
 .weft-banner-action {
   margin-left: auto;
   background: transparent;
-  border: 1px solid currentColor;
-  color: inherit;
+  border: 1.5px solid var(--weft-fg);
+  color: var(--weft-fg);
   padding: 3px 8px;
-  font-size: 11px;
+  font-size: 10px;
   border-radius: var(--weft-radius-sm);
+  font-family: var(--weft-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
 }
 
 .weft-error-text {
@@ -426,42 +459,57 @@ button.weft-primary:hover {
 
 .weft-inspector h2 {
   margin: 0;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--weft-fg-muted);
-}
-
-.weft-inspector-kind-pill {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: lowercase;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--weft-bg);
-  border: 1px solid var(--weft-border);
+  letter-spacing: 0.1em;
   color: var(--weft-fg);
   font-family: var(--weft-mono);
 }
 
-.weft-inspector-kind-pill[data-weft-pill-kind="step"]       { color: #c0c8d8; border-color: #3a4458; }
-.weft-inspector-kind-pill[data-weft-pill-kind="sequence"]   { color: #b6acff; border-color: #5b4dbf; }
-.weft-inspector-kind-pill[data-weft-pill-kind="parallel"]   { color: #79e0c9; border-color: #1f7a6e; }
-.weft-inspector-kind-pill[data-weft-pill-kind="pipe"]       { color: #88baff; border-color: #2c5fa8; }
-.weft-inspector-kind-pill[data-weft-pill-kind="retry"]      { color: #ffce7a; border-color: #a26a1c; }
-.weft-inspector-kind-pill[data-weft-pill-kind="scope"]      { color: #79e09a; border-color: #2f8a52; }
-.weft-inspector-kind-pill[data-weft-pill-kind="stash"]      { color: #a4e9be; border-color: #4ca271; }
-.weft-inspector-kind-pill[data-weft-pill-kind="use"]        { color: #8cc8a8; border-color: #357c52; }
-.weft-inspector-kind-pill[data-weft-pill-kind="branch"]     { color: #a8b6ff; border-color: #5b6dbf; }
-.weft-inspector-kind-pill[data-weft-pill-kind="fallback"]   { color: #f5b3bf; border-color: #b06070; }
-.weft-inspector-kind-pill[data-weft-pill-kind="timeout"]    { color: #ffd07a; border-color: #b59034; }
-.weft-inspector-kind-pill[data-weft-pill-kind="loop"]       { color: #d8b6ff; border-color: #7a4ea8; }
-.weft-inspector-kind-pill[data-weft-pill-kind="map"]        { color: #88c8ff; border-color: #2a7aa8; }
-.weft-inspector-kind-pill[data-weft-pill-kind="compose"]    { color: #a8d6e6; border-color: #4a8aa6; }
-.weft-inspector-kind-pill[data-weft-pill-kind="checkpoint"] { color: #f5c891; border-color: #a8723a; }
-.weft-inspector-kind-pill[data-weft-pill-kind="suspend"]    { color: #c8c8c8; border-color: #6e6e6e; }
-.weft-inspector-kind-pill[data-weft-pill-kind="<cycle>"]    { color: #ff9aa6; border-color: #c8334a; }
+.weft-inspector-kind-pill {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--weft-bg-panel);
+  border: 1.5px solid var(--weft-fg);
+  color: var(--weft-fg);
+  font-family: var(--weft-mono);
+}
+
+/*
+ * inspector kind pills — family hues
+ *
+ *  ink:     step, suspend                     (neutral structural)
+ *  green:   scope, stash, use                 (variable scoping)
+ *  teal:    parallel, map                     (concurrent multi-track)
+ *  orange:  branch, fallback                  (decision / divergence)
+ *  yellow:  retry, timeout                    (timing / reliability)
+ *  blue:    pipe, compose, checkpoint         (transforms / save points)
+ *  magenta: loop, <cycle>                     (looping / recursion)
+ */
+
+.weft-inspector-kind-pill[data-weft-pill-kind="step"]       { background: var(--weft-hue-ink); color: var(--weft-bg-panel); border-color: var(--weft-hue-ink); }
+.weft-inspector-kind-pill[data-weft-pill-kind="suspend"]    { background: var(--weft-hue-ink); color: var(--weft-bg-panel); border-color: var(--weft-hue-ink); }
+.weft-inspector-kind-pill[data-weft-pill-kind="sequence"]   { background: var(--weft-bg-panel); color: var(--weft-hue-ink); border-color: var(--weft-hue-ink); }
+.weft-inspector-kind-pill[data-weft-pill-kind="scope"]      { background: var(--weft-hue-green); color: var(--weft-bg-panel); border-color: var(--weft-hue-green); }
+.weft-inspector-kind-pill[data-weft-pill-kind="stash"]      { background: var(--weft-hue-green); color: var(--weft-bg-panel); border-color: var(--weft-hue-green); }
+.weft-inspector-kind-pill[data-weft-pill-kind="use"]        { background: var(--weft-hue-green); color: var(--weft-bg-panel); border-color: var(--weft-hue-green); }
+.weft-inspector-kind-pill[data-weft-pill-kind="parallel"]   { background: var(--weft-hue-teal); color: var(--weft-bg-panel); border-color: var(--weft-hue-teal); }
+.weft-inspector-kind-pill[data-weft-pill-kind="map"]        { background: var(--weft-hue-teal); color: var(--weft-bg-panel); border-color: var(--weft-hue-teal); }
+.weft-inspector-kind-pill[data-weft-pill-kind="branch"]     { background: var(--weft-hue-orange); color: var(--weft-bg-panel); border-color: var(--weft-hue-orange); }
+.weft-inspector-kind-pill[data-weft-pill-kind="fallback"]   { background: var(--weft-hue-orange); color: var(--weft-bg-panel); border-color: var(--weft-hue-orange); }
+.weft-inspector-kind-pill[data-weft-pill-kind="retry"]      { background: var(--weft-hue-yellow); color: var(--weft-hue-ink); border-color: var(--weft-hue-ink); }
+.weft-inspector-kind-pill[data-weft-pill-kind="timeout"]    { background: var(--weft-hue-yellow); color: var(--weft-hue-ink); border-color: var(--weft-hue-ink); }
+.weft-inspector-kind-pill[data-weft-pill-kind="pipe"]       { background: var(--weft-hue-blue); color: var(--weft-bg-panel); border-color: var(--weft-hue-blue); }
+.weft-inspector-kind-pill[data-weft-pill-kind="compose"]    { background: var(--weft-hue-blue); color: var(--weft-bg-panel); border-color: var(--weft-hue-blue); }
+.weft-inspector-kind-pill[data-weft-pill-kind="checkpoint"] { background: var(--weft-hue-blue); color: var(--weft-bg-panel); border-color: var(--weft-hue-blue); }
+.weft-inspector-kind-pill[data-weft-pill-kind="loop"]       { background: var(--weft-hue-magenta); color: var(--weft-bg-panel); border-color: var(--weft-hue-magenta); }
+.weft-inspector-kind-pill[data-weft-pill-kind="<cycle>"]    { background: var(--weft-hue-magenta); color: var(--weft-bg-panel); border-color: var(--weft-hue-magenta); }
+.weft-inspector-kind-pill[data-weft-pill-kind="generic"]    { background: var(--weft-hue-yellow); color: var(--weft-hue-ink); border-color: var(--weft-hue-orange); }
 
 .weft-inspector-id {
   font-family: var(--weft-mono);
@@ -481,10 +529,10 @@ button.weft-primary:hover {
   color: var(--weft-fg);
   font-size: 12px;
   line-height: 1.45;
-  padding: 6px 8px;
+  padding: 8px 10px;
   background: var(--weft-bg);
-  border: 1px solid var(--weft-border);
-  border-left: 2px solid var(--weft-accent);
+  border: 1.5px solid var(--weft-fg);
+  border-left-width: 3px;
   border-radius: var(--weft-radius-sm);
 }
 
@@ -498,9 +546,11 @@ button.weft-primary:hover {
 
 .weft-inspector-label {
   color: var(--weft-fg-muted);
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  font-family: var(--weft-mono);
 }
 
 .weft-inspector-value {
@@ -518,6 +568,7 @@ button.weft-primary:hover {
   font-family: var(--weft-mono);
   font-size: 11px;
   color: var(--weft-fg);
+  border: 1px solid var(--weft-fg);
 }
 
 .weft-inspector-list ul {
@@ -540,10 +591,12 @@ button.weft-primary:hover {
 
 .weft-inspector-raw summary {
   cursor: pointer;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--weft-fg-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  font-family: var(--weft-mono);
 }
 
 /* shortcuts modal */
@@ -551,7 +604,7 @@ button.weft-primary:hover {
 .weft-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(8, 9, 12, 0.8);
+  background: rgba(26, 22, 17, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -561,18 +614,21 @@ button.weft-primary:hover {
 
 .weft-modal {
   background: var(--weft-bg-panel);
-  border: 1px solid var(--weft-border-strong);
+  border: 2px solid var(--weft-fg);
   border-radius: var(--weft-radius);
   padding: 18px 22px;
   max-width: 480px;
   width: 100%;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 16px 48px rgba(26, 22, 17, 0.35);
 }
 
 .weft-modal h2 {
   margin: 0 0 14px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: var(--weft-mono);
 }
 
 .weft-shortcut-list {
@@ -586,14 +642,16 @@ button.weft-primary:hover {
 
 .weft-shortcut-list dt {
   font-family: var(--weft-mono);
-  color: var(--weft-accent);
-  background: var(--weft-bg);
-  border: 1px solid var(--weft-border);
+  color: var(--weft-bg-panel);
+  background: var(--weft-fg);
+  border: 1.5px solid var(--weft-fg);
   border-radius: var(--weft-radius-sm);
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 700;
   justify-self: start;
   align-self: center;
+  letter-spacing: 0.04em;
 }
 
 .weft-shortcut-list dd {

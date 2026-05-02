@@ -1,9 +1,10 @@
 /**
  * Shared layout option defaults and resolver.
  *
- * The defaults match spec.md §4.1: direction `'LR'`, node spacing `40`,
- * rank spacing `80`. Both ELK and the fallback share the same vocabulary so a
- * caller swapping engines does not need to relearn parameters.
+ * Both ELK and the fallback share the same vocabulary so a caller swapping
+ * engines does not need to relearn parameters. The defaults reserve enough
+ * gutter for thick orthogonal subway-style edges to route between siblings
+ * without crowding the chrome.
  */
 
 export type LayoutDirection = 'LR' | 'TB';
@@ -16,8 +17,8 @@ export type LayoutOptions = {
 
 export const DEFAULT_LAYOUT_OPTIONS: LayoutOptions = {
   direction: 'LR',
-  node_spacing: 24,
-  rank_spacing: 56,
+  node_spacing: 56,
+  rank_spacing: 96,
 };
 
 export function resolve_options(input?: Partial<LayoutOptions>): LayoutOptions {

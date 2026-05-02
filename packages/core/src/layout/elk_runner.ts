@@ -115,13 +115,15 @@ function ports_for(node: WeftNode, fan_out_targets: ReadonlyArray<string>): ElkN
   return ports;
 }
 
-// Header band reserved at the top of every container chrome (see canvas.css
-// `--weft-container-header-h` plus the 4px body padding). ELK's child rect
-// origin must clear this band so the title row never overlaps a child.
-const CONTAINER_HEADER_BAND = 32;
-const CONTAINER_PADDING = 10;
-const CONTAINER_MIN_WIDTH = 240;
-const CONTAINER_MIN_HEIGHT = 96;
+// Header tab + body padding reserved at the top of every container chrome
+// (see canvas.css `--weft-container-header-h: 32px` plus the 8px body
+// padding above the first child). ELK's child rect origin must clear this
+// band so the title flag never overlaps a child. Side/bottom padding match
+// the CSS container body padding (14px).
+const CONTAINER_HEADER_BAND = 40;
+const CONTAINER_PADDING = 14;
+const CONTAINER_MIN_WIDTH = 280;
+const CONTAINER_MIN_HEIGHT = 120;
 
 function build_subtree(
   parent: string | null,
@@ -192,6 +194,11 @@ export function build_elk_graph(
       'elk.direction': ELK_DIRECTION[options.direction],
       'elk.spacing.nodeNode': String(options.node_spacing),
       'elk.layered.spacing.nodeNodeBetweenLayers': String(options.rank_spacing),
+      // Orthogonal edge routing gives the subway-line read: edges run in
+      // straight horizontal and vertical segments with right-angle turns
+      // instead of bezier soup, so they stay legible at the new 4.5px
+      // stroke weight.
+      'elk.edgeRouting': 'ORTHOGONAL',
       // Recurse into subflows so container nodes are sized to enclose their
       // children (and edges between siblings inside a parent are routed
       // intra-container instead of through the root).

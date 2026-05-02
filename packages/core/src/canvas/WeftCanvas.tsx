@@ -21,7 +21,9 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  MarkerType,
   MiniMap,
+  type DefaultEdgeOptions,
   type ReactFlowInstance,
   type Viewport,
 } from '@xyflow/react';
@@ -57,6 +59,20 @@ import './canvas.css';
 
 const LAYOUT_DEBOUNCE_MS = 200;
 const DEFAULT_LARGE_THRESHOLD = 200;
+
+// Subway-style edge routing: smoothstep gives the right-angle "track" look
+// that pairs with ELK's ORTHOGONAL routing. The closed arrowhead is sized
+// to read at the new 4.5px stroke weight; ink color matches
+// --weft-color-edge-default in canvas.css.
+const DEFAULT_EDGE_OPTIONS: DefaultEdgeOptions = {
+  type: 'smoothstep',
+  markerEnd: {
+    type: MarkerType.ArrowClosed,
+    width: 18,
+    height: 18,
+    color: '#1a1611',
+  },
+};
 
 export type FlowTreeEnvelope = FlowTree;
 
@@ -285,6 +301,7 @@ function CanvasInner({
         nodes={nodes}
         edges={edges}
         nodeTypes={node_types}
+        defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={true}
@@ -295,14 +312,14 @@ function CanvasInner({
         onlyRenderVisibleElements={is_large}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={18} size={1.2} />
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} color="#c8b896" />
         <Controls showInteractive={false} position="bottom-left" />
         {show_minimap ? (
           <MiniMap
             pannable
             zoomable
             position="top-right"
-            maskColor="rgba(15, 17, 21, 0.7)"
+            maskColor="rgba(244, 236, 221, 0.6)"
           />
         ) : null}
       </ReactFlow>
