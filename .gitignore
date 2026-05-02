@@ -4,6 +4,9 @@ dist/
 .fallow/
 .stryker-tmp/
 coverage/
+.screenshots/
+.serena/
+.playwright-mcp/
 *.log
 .DS_Store
 .claude/settings.local.json

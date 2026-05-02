@@ -10,6 +10,7 @@
     "package.json"
   ],
   "words": [
+    "affordances",
     "agnix",
     "behaviour",
     "chokidar",
@@ -24,13 +25,16 @@
     "FNV",
     "frontmatter",
     "Graphviz",
+    "hierarchyHandling",
     "interceptable",
     "hotspots",
     "markdownlint",
+    "minZoom",
     "noclient",
     "noemit",
     "oxlint",
     "oxlintrc",
+    "pannable",
     "parentid",
     "playwright",
     "pnpm",
@@ -40,12 +44,15 @@
     "sgconfig",
     "stabilise",
     "stryker",
+    "subflow",
+    "subflows",
     "tldraw",
     "TOCTOU",
     "tsconfig",
     "tsgolint",
     "unrefs",
     "vitest",
-    "xyflow"
+    "xyflow",
+    "zoomable"
   ]
 }

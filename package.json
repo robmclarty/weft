@@ -22,6 +22,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test --config test/e2e/playwright.config.ts",
     "test:agent-browser": "node scripts/agent-browser-smoke.mjs",
+    "screenshots": "node scripts/screenshot-scenarios.mjs",
     "types": "tsc --noEmit"
   },
   "devDependencies": {

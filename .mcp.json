@@ -7,6 +7,10 @@
     "ast-grep": {
       "command": "uvx",
       "args": ["--from", "git+https://github.com/ast-grep/ast-grep-mcp", "ast-grep-server"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest", "--headless"]
     }
   }
 }
