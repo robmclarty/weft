@@ -13,32 +13,79 @@ import {
 import type { CliHandle } from './bin.js';
 import type { WeftWatchMessage } from './messages.js';
 
-type WsClient = WebSocket;
+/**
+ * Test client wrapper that buffers incoming messages from the moment the
+ * underlying WebSocket is constructed. Without buffering, the test had a
+ * race: the `bin.ts` server fires `send_to(client, current)` on its
+ * `connection` event the instant the upgrade completes, and that message
+ * could land on the client before the test got around to attaching a
+ * `'message'` listener (after awaiting `'open'`). EventEmitter drops
+ * unhandled events, so the message disappeared and `next_envelope`
+ * timed out.
+ *
+ * Capturing every message from construction time onwards into a queue,
+ * then having `next_envelope` consume the queue (or await the next
+ * arrival), removes the race entirely.
+ */
+type EnvelopeBuffer = {
+  readonly queue: WeftWatchMessage[];
+  resolver: ((msg: WeftWatchMessage) => void) | null;
+};
+
+type WsClient = {
+  readonly ws: WebSocket;
+  readonly buffer: EnvelopeBuffer;
+  readonly close: () => void;
+};
+
+function decode_message(data: Buffer | ArrayBuffer | Buffer[]): WeftWatchMessage {
+  const text = Buffer.isBuffer(data)
+    ? data.toString('utf8')
+    : Array.isArray(data)
+      ? Buffer.concat(data).toString('utf8')
+      : Buffer.from(data).toString('utf8');
+  return JSON.parse(text) as WeftWatchMessage;
+}
 
 function open_client(url: string): Promise<WsClient> {
   return new Promise<WsClient>((resolve, reject) => {
-    const client = new WebSocket(url);
-    client.once('open', () => {
-      resolve(client);
+    const ws = new WebSocket(url);
+    const buffer: EnvelopeBuffer = { queue: [], resolver: null };
+    ws.on('message', (data: Buffer | ArrayBuffer | Buffer[]) => {
+      const msg = decode_message(data);
+      if (buffer.resolver !== null) {
+        const r = buffer.resolver;
+        buffer.resolver = null;
+        r(msg);
+      } else {
+        buffer.queue.push(msg);
+      }
     });
-    client.once('error', reject);
+    ws.once('error', reject);
+    ws.once('open', () => {
+      resolve({
+        ws,
+        buffer,
+        close: () => { ws.close(); },
+      });
+    });
   });
 }
 
 function next_envelope(client: WsClient, timeout_ms = 2000): Promise<WeftWatchMessage> {
+  // Drain the queue first — buffered messages take precedence over a
+  // fresh wait so the test reads them in arrival order.
+  const queued = client.buffer.queue.shift();
+  if (queued !== undefined) return Promise.resolve(queued);
   return new Promise<WeftWatchMessage>((resolve, reject) => {
     const timer = setTimeout(() => {
+      client.buffer.resolver = null;
       reject(new Error('timeout waiting for ws message'));
     }, timeout_ms);
-    const handler = (data: Buffer | ArrayBuffer | Buffer[]): void => {
+    client.buffer.resolver = (msg) => {
       clearTimeout(timer);
-      client.off('message', handler);
-      const text = Buffer.isBuffer(data)
-        ? data.toString('utf8')
-        : Buffer.from(data as ArrayBuffer).toString('utf8');
-      resolve(JSON.parse(text) as WeftWatchMessage);
+      resolve(msg);
     };
-    client.on('message', handler);
   });
 }
 

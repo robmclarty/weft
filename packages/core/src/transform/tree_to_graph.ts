@@ -361,40 +361,6 @@ function walk_sequence_children(
   }
 }
 
-function walk_parallel_children(
-  ctx: WalkContext,
-  parent_node: FlowNode,
-  parent_graph_id: string,
-): void {
-  const children = parent_node.children ?? [];
-  const keys = read_string_array(parent_node.config?.['keys']) ?? [];
-  for (let i = 0; i < children.length; i += 1) {
-    const child = children[i];
-    if (child === undefined) continue;
-    const segment = walk_for_chain(ctx, child, parent_graph_id, parent_graph_id);
-    const label = keys[i];
-    const source_handle = label === undefined ? undefined : `out:${label}`;
-    ctx.edges.push(structural_edge(parent_graph_id, segment.first, label, source_handle));
-  }
-}
-
-function walk_labeled_children(
-  ctx: WalkContext,
-  parent_node: FlowNode,
-  parent_graph_id: string,
-  labels: ReadonlyArray<string>,
-): void {
-  const children = parent_node.children ?? [];
-  for (let i = 0; i < children.length; i += 1) {
-    const child = children[i];
-    if (child === undefined) continue;
-    const segment = walk_for_chain(ctx, child, parent_graph_id, parent_graph_id);
-    const label = labels[i];
-    const source_handle = label === undefined ? undefined : `out:${label}`;
-    ctx.edges.push(structural_edge(parent_graph_id, segment.first, label, source_handle));
-  }
-}
-
 function format_retry_label(config: FlowNode['config']): string {
   const attempts = read_number(config?.['max_attempts']);
   const backoff = read_number(config?.['backoff_ms']);
@@ -985,20 +951,11 @@ function walk(
       walk_sequence_children(ctx, node, graph_id);
       return;
     }
-    if (node.kind === 'parallel') {
-      walk_parallel_children(ctx, node, graph_id);
-      return;
-    }
+    // parallel / branch / fallback are intercepted by walk_for_chain
+    // before reaching walk(); their case handlers in this branch were
+    // dead code post-C-deluxe and have been removed.
     if (node.kind === 'scope') {
       walk_scope_children(ctx, node, graph_id);
-      return;
-    }
-    if (node.kind === 'branch') {
-      walk_labeled_children(ctx, node, graph_id, ['then', 'otherwise']);
-      return;
-    }
-    if (node.kind === 'fallback') {
-      walk_labeled_children(ctx, node, graph_id, ['primary', 'backup']);
       return;
     }
   }

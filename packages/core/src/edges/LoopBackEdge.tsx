@@ -4,40 +4,23 @@
  * left-in handle, sweeping above the node like a subway track curving
  * back to the platform. The loop config (`↺ ≤ 5`) labels the arc's apex.
  *
- * Both endpoints are real handle positions — `tree_to_graph.ts` sets
- * `sourceHandle: 'out'` and `targetHandle: 'in'` so React Flow gives us
- * distinct sourceX (right-out) and targetX (left-in) coordinates, even
- * though source and target share a graph id. The arc apex height scales
- * to the source node's measured bounds so a loop over a wide wrapper
- * doesn't get a flat line that vanishes into the chrome above.
+ * Path geometry lives in `edge_paths.ts` so it stays unit-testable in
+ * the Node environment; this component is the thin React wrapper.
  */
 
 import { BaseEdge, EdgeLabelRenderer, useInternalNode, type EdgeProps } from '@xyflow/react';
 import type { JSX } from 'react';
 
-const FALLBACK_NODE_H = 60;
-const MIN_ARC_H = 56;
+import { compute_loop_back_path } from './edge_paths.js';
 
 export function LoopBackEdge(props: EdgeProps): JSX.Element {
   const { id, source, sourceX, sourceY, targetX, targetY, label, markerEnd, style } = props;
   const node = useInternalNode(source);
-  const node_h = node?.measured?.height ?? FALLBACK_NODE_H;
-  // Sweep above the wrapped node by at least the node's own height — that
-  // clears typical wrapper container chrome (40px header band + body).
-  const arc_h = Math.max(node_h * 1.0, MIN_ARC_H);
-  const peak_y = Math.min(sourceY, targetY) - arc_h;
-
-  // Cubic bezier from sourceX,sourceY (right-out) to targetX,targetY
-  // (left-in) with control points pulled UP to the apex height. The
-  // outboard control offsets make the curve bulge outward before
-  // returning instead of cutting straight across.
-  const span = Math.abs(sourceX - targetX);
-  const outreach = Math.max(span * 0.4, 32);
-  const mid_x = (sourceX + targetX) / 2;
-  const path = `M ${String(sourceX)} ${String(sourceY)} `
-    + `C ${String(sourceX + outreach)} ${String(peak_y)}, `
-    + `${String(targetX - outreach)} ${String(peak_y)}, `
-    + `${String(targetX)} ${String(targetY)}`;
+  const { path, peak } = compute_loop_back_path(
+    { x: sourceX, y: sourceY },
+    { x: targetX, y: targetY },
+    node?.measured,
+  );
   // exactOptionalPropertyTypes: pass markerEnd only when defined to keep
   // BaseEdge's `string` (not `string | undefined`) prop signature happy.
   const base_props = markerEnd === undefined
@@ -52,7 +35,7 @@ export function LoopBackEdge(props: EdgeProps): JSX.Element {
             className="weft-edge-loop-back-label"
             style={{
               position: 'absolute',
-              transform: `translate(-50%, -50%) translate(${String(mid_x)}px, ${String(peak_y - 6)}px)`,
+              transform: `translate(-50%, -50%) translate(${String(peak.x)}px, ${String(peak.y - 6)}px)`,
               pointerEvents: 'all',
             }}
           >

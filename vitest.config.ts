@@ -72,6 +72,7 @@ const projects: NonNullable<NonNullable<Parameters<typeof defineConfig>[0]['test
       exclude: [
         'packages/core/src/canvas/**/*.{test,spec}.tsx',
         'packages/core/src/nodes/**/*.{test,spec}.tsx',
+        'packages/core/src/edges/**/*.{test,spec}.tsx',
         'packages/studio/src/**/*.{test,spec}.tsx',
         'packages/studio/src/state/use_*.{test,spec}.{ts,tsx}',
       ],
@@ -85,6 +86,7 @@ const projects: NonNullable<NonNullable<Parameters<typeof defineConfig>[0]['test
       include: [
         'packages/core/src/canvas/**/*.{test,spec}.tsx',
         'packages/core/src/nodes/**/*.{test,spec}.tsx',
+        'packages/core/src/edges/**/*.{test,spec}.tsx',
         'packages/studio/src/**/*.{test,spec}.tsx',
         'packages/studio/src/state/use_*.{test,spec}.{ts,tsx}',
       ],
@@ -102,6 +104,7 @@ if (include_browser) {
       include: [
         'packages/core/src/canvas/**/*.{test,spec}.tsx',
         'packages/core/src/nodes/**/*.{test,spec}.tsx',
+        'packages/core/src/edges/**/*.{test,spec}.tsx',
       ],
       browser: {
         enabled: true,

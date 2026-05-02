@@ -100,7 +100,7 @@ describe('ParallelNode', () => {
   });
 });
 
-describe('PipeNode and RetryNode', () => {
+describe('PipeNode', () => {
   it('renders pipe as a marker chrome (the fn label rides on the edge, not the node)', () => {
     const nodes: WeftNode[] = [
       {
@@ -124,24 +124,10 @@ describe('PipeNode and RetryNode', () => {
     expect(node?.classList.contains('weft-node-marker')).toBe(true);
   });
 
-  it('renders retry chrome with attempts × backoff badge', () => {
-    const nodes: WeftNode[] = [
-      {
-        id: 'retry:1',
-        type: 'retry',
-        position: { x: 0, y: 0 },
-        data: {
-          kind: 'retry',
-          id: 'retry:1',
-          config: { max_attempts: 3, backoff_ms: 250 },
-        },
-      },
-    ];
-    mounted = mount_canvas(nodes, []);
-    const node = mounted.container.querySelector('[data-weft-kind="retry"]');
-    expect(node?.textContent).toContain('3');
-    expect(node?.textContent).toContain('250');
-  });
+  // retry/loop dropped from B-deluxe (commit f5ef7c3): they no longer
+  // appear as nodes — only as a self-loop / loop-back edge on the
+  // wrapped child. No renderer to test here; coverage moves to
+  // tree_to_graph + edge components.
 });
 
 describe('ScopeNode + StashNode + UseNode', () => {
@@ -225,7 +211,6 @@ describe('Registry covers every transform-tagged type', () => {
       { id: 'b', type: 'sequence', position: { x: 220, y: 0 }, data: { kind: 'sequence', id: 'b' } },
       { id: 'c', type: 'parallel', position: { x: 440, y: 0 }, data: { kind: 'parallel', id: 'c', config: { keys: [] } } },
       { id: 'd', type: 'pipe', position: { x: 660, y: 0 }, data: { kind: 'pipe', id: 'd' } },
-      { id: 'e', type: 'retry', position: { x: 0, y: 220 }, data: { kind: 'retry', id: 'e' } },
       { id: 'f', type: 'scope', position: { x: 220, y: 220 }, data: { kind: 'scope', id: 'f' } },
       { id: 'g', type: 'stash', position: { x: 440, y: 220 }, data: { kind: 'stash', id: 'g', config: { key: 'k' } } },
       { id: 'h', type: 'use', position: { x: 660, y: 220 }, data: { kind: 'use', id: 'h', config: { keys: ['k'] } } },
@@ -242,7 +227,7 @@ describe('Registry covers every transform-tagged type', () => {
 });
 
 describe('New primitive renderers', () => {
-  it('renders branch, fallback, timeout, loop, map, compose, checkpoint, suspend without crashing', () => {
+  it('renders branch, fallback, timeout, map, compose, checkpoint, suspend without crashing', () => {
     const nodes: WeftNode[] = [
       {
         id: 'branch_1',
@@ -261,12 +246,6 @@ describe('New primitive renderers', () => {
         type: 'timeout',
         position: { x: 440, y: 0 },
         data: { kind: 'timeout', id: 'timeout_1', config: { ms: 5000 } },
-      },
-      {
-        id: 'loop_1',
-        type: 'loop',
-        position: { x: 660, y: 0 },
-        data: { kind: 'loop', id: 'loop_1', config: { max_rounds: 5 } },
       },
       {
         id: 'map_1',
@@ -311,7 +290,6 @@ describe('New primitive renderers', () => {
       'branch',
       'fallback',
       'timeout',
-      'loop',
       'map',
       'compose',
       'checkpoint',
@@ -321,11 +299,9 @@ describe('New primitive renderers', () => {
     }
     // Kind-specific labels: marker-shaped kinds (timeout, map,
     // checkpoint) carry their config on the decoration edge — not in
-    // the node textContent — so we only assert the still-container
-    // kinds (loop, compose) and the leaf (suspend) here.
-    expect(
-      mounted.container.querySelector('[data-weft-kind="loop"]')?.textContent,
-    ).toContain('5');
+    // the node textContent — so only the still-container compose and
+    // the leaf suspend assert visible text here. (Loop dropped — it
+    // no longer renders as a node.)
     expect(
       mounted.container.querySelector('[data-weft-kind="compose"]')?.textContent,
     ).toContain('agent_pipeline');
@@ -352,18 +328,9 @@ describe('display_name from meta surfaces in container titles', () => {
           data: { kind: 'sequence', id: 'seq:1', meta: { display_name: 'main_pipeline' } },
         },
       ],
-      // pipe omitted: B-deluxe renders pipe as a marker glyph with no
-      // visible text. Its display_name surfaces in the inspector via the
-      // edge click, not on the node chrome itself.
-      [
-        'retry',
-        {
-          id: 'retry:1',
-          type: 'retry',
-          position: { x: 0, y: 0 },
-          data: { kind: 'retry', id: 'retry:1', meta: { display_name: 'retry_flaky' } },
-        },
-      ],
+      // pipe / retry / loop omitted: B-deluxe renders pipe as a marker
+      // (no visible text), and retry/loop don't render as nodes at all
+      // — their config rides on the self-loop / loop-back edges.
       [
         'scope',
         {
@@ -376,25 +343,9 @@ describe('display_name from meta surfaces in container titles', () => {
       // parallel/branch/fallback omitted: C-deluxe renders all three as
       // small diamond junctions (no visible text). Their display_name
       // surfaces in the inspector; the junction only carries the glyph.
-      // timeout omitted: B-deluxe renders timeout as a marker (no
-      // visible text). The deadline rides on the timeout-deadline edge.
-      [
-        'loop',
-        {
-          id: 'loop:1',
-          type: 'loop',
-          position: { x: 0, y: 0 },
-          data: {
-            kind: 'loop',
-            id: 'loop:1',
-            config: { max_rounds: 3 },
-            meta: { display_name: 'refine' },
-          },
-        },
-      ],
-      // map and checkpoint omitted: B-deluxe renders both as markers
-      // (no visible text). Their config rides on their respective
-      // map-cardinality / checkpoint-key decoration edges.
+      // timeout / map / checkpoint omitted: B-deluxe renders them as
+      // markers (no visible text). loop / retry omitted: dropped from
+      // the registry entirely.
       [
         'suspend',
         {

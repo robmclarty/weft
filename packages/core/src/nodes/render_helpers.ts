@@ -8,6 +8,7 @@ import { ReactFlow, ReactFlowProvider } from '@xyflow/react';
 import { act, createElement, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
+import { edge_types } from '../edges/registry.js';
 import type { WeftEdge, WeftNode } from '../transform/tree_to_graph.js';
 import { node_types } from './registry.js';
 
@@ -40,6 +41,7 @@ export function mount_canvas(
         nodes: [...nodes],
         edges: [...edges],
         nodeTypes: node_types,
+        edgeTypes: edge_types,
         nodesDraggable: false,
         nodesConnectable: false,
         proOptions: { hideAttribution: true },
