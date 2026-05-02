@@ -33,7 +33,7 @@ Full `pnpm check` is for the final verification.
 - **No classes.** Enforced by `rules/no-class.yml`.
 - **Named exports only.** Enforced by `rules/no-default-export.yml`.
 - **File extensions:** import with `.js` from `.ts` files (NodeNext resolution).
-- **Tests colocated:** `foo.ts` and `foo.test.ts` in the same directory.
+- **Tests colocated:** `foo.ts` lives next to a `__tests__/foo.test.ts` (one `__tests__/` folder per source dir, so the main folders stay quiet).
 - **Markdown is linted.** Every fenced code block needs a language tag (use `text` for ascii diagrams or untyped content). Leave a blank line before and after headings, fenced code blocks, and lists (markdownlint MD022 / MD031 / MD032).
 
 ## Monorepo layout
