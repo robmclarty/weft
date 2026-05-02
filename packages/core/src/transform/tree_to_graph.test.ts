@@ -276,6 +276,9 @@ describe('tree_to_graph: edges carry a typed kind', () => {
       'self-loop',
       'loop-back',
       'pipe-fn',
+      'timeout-deadline',
+      'checkpoint-key',
+      'map-cardinality',
     ]);
     for (const edge of edges) {
       expect(known.has(edge.data?.kind ?? '')).toBe(true);
@@ -330,9 +333,35 @@ describe('tree_to_graph: new primitive kinds', () => {
     ]);
   });
 
-  it('wires loop, map, timeout, checkpoint as wrappers over their children', () => {
-    const wrappers = ['loop', 'map', 'timeout', 'checkpoint'] as const;
-    for (const kind of wrappers) {
+  it('wires loop wrapper as a container over its children (still nested)', () => {
+    const tree: FlowTree = {
+      version: 1,
+      root: {
+        kind: 'loop',
+        id: 'loop_1',
+        children: [{ kind: 'step', id: 'inner' }],
+      },
+    };
+    const { nodes } = tree_to_graph(tree);
+    const wrapper = find_by_id(nodes, 'loop_1');
+    const child = find_by_id(nodes, 'loop_1/inner');
+    expect(wrapper?.type).toBe('loop');
+    expect(child?.parentId).toBe('loop_1');
+  });
+
+  it('lifts timeout/checkpoint/map wrapper children to peers and emits decoration edges', () => {
+    const cases: Array<{
+      kind: 'timeout' | 'checkpoint' | 'map';
+      edge_kind: 'timeout-deadline' | 'checkpoint-key' | 'map-cardinality';
+      // Where the marker sits in the chain: 'after' = downstream of child,
+      // 'before' = upstream of child. Decoration edge runs upstream → downstream.
+      position: 'after' | 'before';
+    }> = [
+      { kind: 'timeout', edge_kind: 'timeout-deadline', position: 'after' },
+      { kind: 'checkpoint', edge_kind: 'checkpoint-key', position: 'before' },
+      { kind: 'map', edge_kind: 'map-cardinality', position: 'before' },
+    ];
+    for (const { kind, edge_kind, position } of cases) {
       const tree: FlowTree = {
         version: 1,
         root: {
@@ -341,11 +370,24 @@ describe('tree_to_graph: new primitive kinds', () => {
           children: [{ kind: 'step', id: 'inner' }],
         },
       };
-      const { nodes } = tree_to_graph(tree);
+      const { nodes, edges } = tree_to_graph(tree);
       const wrapper = find_by_id(nodes, `${kind}_1`);
       const child = find_by_id(nodes, `${kind}_1/inner`);
+      // The wrapper is still in the graph (as a marker leaf).
       expect(wrapper?.type).toBe(kind);
-      expect(child?.parentId).toBe(`${kind}_1`);
+      // The child has been LIFTED — its parentId is the marker's parent
+      // (the root, undefined here), not the marker itself.
+      expect(child?.parentId).toBeUndefined();
+      // Decoration edge connects marker and child in the right direction.
+      const decoration = edges.find((e) => e.data?.kind === edge_kind);
+      expect(decoration).toBeDefined();
+      if (position === 'after') {
+        expect(decoration?.source).toBe(`${kind}_1/inner`);
+        expect(decoration?.target).toBe(`${kind}_1`);
+      } else {
+        expect(decoration?.source).toBe(`${kind}_1`);
+        expect(decoration?.target).toBe(`${kind}_1/inner`);
+      }
     }
   });
 

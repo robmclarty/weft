@@ -1,49 +1,35 @@
 /**
- * Wrapper node for `checkpoint` composers.
+ * Checkpoint wrapper renders as a **marker** — a small glyph dot
+ * positioned upstream of its wrapped child. The checkpoint key (`■
+ * key_name`) rides on the checkpoint-key decoration edge from marker →
+ * child. Subway-map convention: a station marker numbered with its key.
  *
- * Visual: container chrome with a flag glyph and the checkpoint key when it is
- * a static string. Function-derived keys render as `<fn>`.
+ * Topologically the wrapped child is now a peer of the marker (lifted
+ * by `tree_to_graph`); ELK lays them out as siblings.
  */
 
-import type { NodeProps } from '@xyflow/react';
+import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { JSX } from 'react';
 import { memo } from 'react';
 
-import type { FlowValue } from '../schemas.js';
 import type { WeftNode } from '../transform/tree_to_graph.js';
 import { CheckpointGlyph } from './glyphs.js';
 import { runtime_class } from './node_helpers.js';
 import { RuntimeOverlay } from './RuntimeOverlay.js';
 
-function format_key(value: FlowValue | undefined): string {
-  if (typeof value === 'string') return value;
-  if (
-    value !== null &&
-    typeof value === 'object' &&
-    !Array.isArray(value) &&
-    'kind' in value &&
-    value.kind === '<fn>'
-  ) {
-    return '<fn>';
-  }
-  return '?';
-}
-
 function CheckpointNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
-  const key = format_key(data.config?.['key']);
-  const display_name = data.meta?.display_name;
   return (
     <div
-      className={`weft-node weft-node-container weft-node-checkpoint ${runtime_class(data.runtime)}`}
+      className={`weft-node weft-node-marker weft-node-checkpoint ${runtime_class(data.runtime)}`}
       data-weft-kind="checkpoint"
+      data-weft-presentation="marker"
     >
-      <div className="weft-node-header">
-        <span className="weft-node-badge">
-          <CheckpointGlyph />checkpoint · {key}
-        </span>
-        <div className="weft-node-title">{display_name ?? data.id}</div>
-      </div>
+      <Handle type="target" position={Position.Left} id="in" />
+      <span className="weft-node-marker-glyph" aria-hidden="true">
+        <CheckpointGlyph />
+      </span>
       <RuntimeOverlay runtime={data.runtime} />
+      <Handle type="source" position={Position.Right} id="out" />
     </div>
   );
 }

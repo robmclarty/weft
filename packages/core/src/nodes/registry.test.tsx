@@ -316,25 +316,24 @@ describe('New primitive renderers', () => {
     ]) {
       expect(mounted.container.querySelector(`[data-weft-kind="${kind}"]`)).not.toBeNull();
     }
-    // Spot-check the kind-specific labels surface useful detail.
-    expect(
-      mounted.container.querySelector('[data-weft-kind="timeout"]')?.textContent,
-    ).toContain('5s');
+    // Kind-specific labels: marker-shaped kinds (timeout, map,
+    // checkpoint) carry their config on the decoration edge — not in
+    // the node textContent — so we only assert the still-container
+    // kinds (loop, compose) and the leaf (suspend) here.
     expect(
       mounted.container.querySelector('[data-weft-kind="loop"]')?.textContent,
     ).toContain('5');
     expect(
-      mounted.container.querySelector('[data-weft-kind="map"]')?.textContent,
-    ).toContain('4');
-    expect(
       mounted.container.querySelector('[data-weft-kind="compose"]')?.textContent,
     ).toContain('agent_pipeline');
     expect(
-      mounted.container.querySelector('[data-weft-kind="checkpoint"]')?.textContent,
-    ).toContain('cache_brief');
-    expect(
       mounted.container.querySelector('[data-weft-kind="suspend"]')?.textContent,
     ).toContain('approval_gate');
+    // Marker kinds: confirm presentation, not textContent.
+    for (const kind of ['timeout', 'checkpoint', 'map']) {
+      const el = mounted.container.querySelector(`[data-weft-kind="${kind}"]`);
+      expect(el?.getAttribute('data-weft-presentation')).toBe('marker');
+    }
   });
 });
 
@@ -403,20 +402,8 @@ describe('display_name from meta surfaces in container titles', () => {
           data: { kind: 'fallback', id: 'fb:1', meta: { display_name: 'cloud_or_local' } },
         },
       ],
-      [
-        'timeout',
-        {
-          id: 'to:1',
-          type: 'timeout',
-          position: { x: 0, y: 0 },
-          data: {
-            kind: 'timeout',
-            id: 'to:1',
-            config: { ms: 8000 },
-            meta: { display_name: 'time_box' },
-          },
-        },
-      ],
+      // timeout omitted: B-deluxe renders timeout as a marker (no
+      // visible text). The deadline rides on the timeout-deadline edge.
       [
         'loop',
         {
@@ -431,29 +418,9 @@ describe('display_name from meta surfaces in container titles', () => {
           },
         },
       ],
-      [
-        'map',
-        {
-          id: 'map:1',
-          type: 'map',
-          position: { x: 0, y: 0 },
-          data: { kind: 'map', id: 'map:1', meta: { display_name: 'per_paragraph' } },
-        },
-      ],
-      [
-        'checkpoint',
-        {
-          id: 'cp:1',
-          type: 'checkpoint',
-          position: { x: 0, y: 0 },
-          data: {
-            kind: 'checkpoint',
-            id: 'cp:1',
-            config: { key: { kind: '<fn>', name: 'key_for' } },
-            meta: { display_name: 'cache_brief' },
-          },
-        },
-      ],
+      // map and checkpoint omitted: B-deluxe renders both as markers
+      // (no visible text). Their config rides on their respective
+      // map-cardinality / checkpoint-key decoration edges.
       [
         'suspend',
         {

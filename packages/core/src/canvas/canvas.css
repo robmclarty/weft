@@ -306,6 +306,24 @@
   color: var(--weft-pipe-on);
 }
 
+.weft-node-marker.weft-node-timeout {
+  background: var(--weft-timeout-fill);
+  border-color: var(--weft-timeout-accent);
+  color: var(--weft-timeout-on);
+}
+
+.weft-node-marker.weft-node-checkpoint {
+  background: var(--weft-checkpoint-fill);
+  border-color: var(--weft-checkpoint-accent);
+  color: var(--weft-checkpoint-on);
+}
+
+.weft-node-marker.weft-node-map {
+  background: var(--weft-map-fill);
+  border-color: var(--weft-map-accent);
+  color: var(--weft-map-on);
+}
+
 /*
  * Collapsed compose: the compose renders as a single solid block with
  * the display_name as its label. This is the abstraction the user opted
@@ -583,13 +601,30 @@
 }
 
 /*
- * Pipe decoration edge — connects a wrapped child to its pipe marker
- * carrying the `<fn:name>` chip as the edge label. Stroke takes pipe's
- * blue family hue so the data-transformation jump reads distinctly from
- * a plain structural sequence edge.
+ * Pipe / timeout / checkpoint / map decoration edges connect a wrapped
+ * child to its marker (or marker to child) carrying the wrapper's
+ * config as the edge label. Stroke takes the wrapper kind's family hue
+ * so the semantic jump reads distinctly from a plain structural edge:
+ * pipe = blue (transform), timeout = yellow (timing), checkpoint =
+ * blue (save point), map = teal (multi-track).
  */
 .react-flow__edge.weft-edge-pipe-fn .react-flow__edge-path {
   stroke: var(--weft-hue-blue);
+}
+
+.react-flow__edge.weft-edge-timeout-deadline .react-flow__edge-path {
+  stroke: var(--weft-hue-yellow);
+}
+
+.react-flow__edge.weft-edge-checkpoint-key .react-flow__edge-path {
+  stroke: var(--weft-hue-blue);
+}
+
+.react-flow__edge.weft-edge-map-cardinality .react-flow__edge-path {
+  stroke: var(--weft-hue-teal);
+  /* Two-line "track" reads as the per-item fan: dasharray creates a
+   * subtle railroad-tie texture without obscuring the route. */
+  stroke-dasharray: 14 4;
 }
 
 /*

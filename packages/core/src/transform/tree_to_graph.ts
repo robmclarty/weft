@@ -51,7 +51,15 @@ export type WeftNodeData = {
 };
 
 export type WeftEdgeData = {
-  kind: 'structural' | 'overlay' | 'self-loop' | 'loop-back' | 'pipe-fn';
+  kind:
+    | 'structural'
+    | 'overlay'
+    | 'self-loop'
+    | 'loop-back'
+    | 'pipe-fn'
+    | 'timeout-deadline'
+    | 'checkpoint-key'
+    | 'map-cardinality';
   /**
    * For wrapper-derived edges (`self-loop`, `loop-back`, `pipe-fn`), the
    * wrapper's graph id so the edge click handler can route the inspector
@@ -477,8 +485,12 @@ function walk_wrapper_child(
   }
 }
 
-const PIPE_MARKER_W = 44;
-const PIPE_MARKER_H = 44;
+const MARKER_W = 44;
+const MARKER_H = 44;
+// (Backwards-compat aliases; the per-kind walker functions still use them
+// by name so a kind can later opt into a different size if needed.)
+const PIPE_MARKER_W = MARKER_W;
+const PIPE_MARKER_H = MARKER_H;
 
 function format_fn_chip(value: FlowValue | undefined): string {
   // Inline of nodes/node_helpers.format_fn_ref so the transform layer
@@ -511,6 +523,142 @@ function pipe_fn_edge(
     className: 'weft-edge-pipe-fn',
     data: { kind: 'pipe-fn', wrapper_id, wrapper_label: label },
   };
+}
+
+function format_timeout_chip(config: FlowNode['config']): string {
+  const ms = read_number(config?.['ms']);
+  if (ms === undefined) return '⏱ timeout';
+  if (ms >= 1000) {
+    const seconds = ms / 1000;
+    const formatted = ms % 1000 === 0 ? seconds.toFixed(0) : seconds.toFixed(1);
+    return `⏱ ${formatted}s`;
+  }
+  return `⏱ ${String(ms)}ms`;
+}
+
+function format_checkpoint_chip(config: FlowNode['config']): string {
+  const raw = config?.['key'];
+  if (typeof raw === 'string') return `■ ${raw}`;
+  if (raw !== null && raw !== undefined && typeof raw === 'object' && !Array.isArray(raw)
+    && 'kind' in raw && raw.kind === '<fn>') {
+    return '■ <fn>';
+  }
+  return '■ checkpoint';
+}
+
+function format_map_chip(config: FlowNode['config']): string {
+  const concurrency = read_number(config?.['concurrency']);
+  if (concurrency !== undefined) return `× n / ${String(concurrency)} at-once`;
+  return '× n';
+}
+
+function timeout_deadline_edge(
+  source: string,
+  target: string,
+  label: string,
+  wrapper_id: string,
+): WeftEdge {
+  return {
+    id: `e:timeout-deadline:${source}->${target}`,
+    source,
+    target,
+    label,
+    className: 'weft-edge-timeout-deadline',
+    data: { kind: 'timeout-deadline', wrapper_id, wrapper_label: label },
+  };
+}
+
+function checkpoint_key_edge(
+  source: string,
+  target: string,
+  label: string,
+  wrapper_id: string,
+): WeftEdge {
+  return {
+    id: `e:checkpoint-key:${source}->${target}`,
+    source,
+    target,
+    label,
+    className: 'weft-edge-checkpoint-key',
+    data: { kind: 'checkpoint-key', wrapper_id, wrapper_label: label },
+  };
+}
+
+function map_cardinality_edge(
+  source: string,
+  target: string,
+  label: string,
+  wrapper_id: string,
+): WeftEdge {
+  return {
+    id: `e:map-cardinality:${source}->${target}`,
+    source,
+    target,
+    label,
+    className: 'weft-edge-map-cardinality',
+    data: { kind: 'map-cardinality', wrapper_id, wrapper_label: label },
+  };
+}
+
+/**
+ * Generic helper for wrapper kinds that splice a marker around their
+ * wrapped child. The chain segment that the marker forms depends on
+ * `position`:
+ *
+ *   - `'after'`: chain becomes `[child, marker]` — the marker sits
+ *     downstream and acts as the chain's `last`. Used by pipe and
+ *     timeout (the marker is the "after the work" station).
+ *   - `'before'`: chain becomes `[marker, child]` — the marker sits
+ *     upstream as the chain's `first`. Used by checkpoint and map
+ *     (the marker is the "before the work" station).
+ *
+ * The decoration edge runs from the upstream end to the downstream end
+ * of the marker pair.
+ */
+function walk_wrapper_as_marker(
+  ctx: WalkContext,
+  node: FlowNode,
+  parent_graph_id: string | null,
+  graph_id: string,
+  position: 'before' | 'after',
+  edge_factory: (source: string, target: string, label: string, wrapper_id: string) => WeftEdge,
+  label: string,
+  marker_kind_class: string,
+): ChainSegment {
+  ctx.visited.add(node);
+
+  const inner = node.children?.[0];
+  let inner_segment: ChainSegment;
+  if (inner === undefined) {
+    inner_segment = { first: graph_id, last: graph_id };
+  } else {
+    inner_segment = walk_for_chain(ctx, inner, parent_graph_id, graph_id);
+  }
+
+  const data = build_node_data(node);
+  const rf_node: WeftNode = {
+    id: graph_id,
+    type: marker_kind_class,
+    position: { x: 0, y: 0 },
+    width: MARKER_W,
+    height: MARKER_H,
+    data,
+  };
+  if (parent_graph_id !== null) rf_node.parentId = parent_graph_id;
+  ctx.nodes.push(rf_node);
+
+  if (inner === undefined) {
+    return { first: graph_id, last: graph_id };
+  }
+
+  if (position === 'after') {
+    // child → marker — marker is downstream
+    ctx.edges.push(edge_factory(inner_segment.last, graph_id, label, graph_id));
+    return { first: inner_segment.first, last: graph_id };
+  }
+  // 'before': marker → child — marker is upstream
+  ctx.edges.push(edge_factory(graph_id, inner_segment.first, label, graph_id));
+  return { first: graph_id, last: inner_segment.last };
 }
 
 /**
@@ -606,6 +754,42 @@ function walk_for_chain(
   // Pipe: lift child to peer, emit pipe as marker, return [child, marker].
   if (node.kind === 'pipe') {
     return walk_pipe_as_marker(ctx, node, parent_graph_id, graph_id);
+  }
+  if (node.kind === 'timeout') {
+    return walk_wrapper_as_marker(
+      ctx,
+      node,
+      parent_graph_id,
+      graph_id,
+      'after',
+      timeout_deadline_edge,
+      format_timeout_chip(node.config),
+      'timeout',
+    );
+  }
+  if (node.kind === 'checkpoint') {
+    return walk_wrapper_as_marker(
+      ctx,
+      node,
+      parent_graph_id,
+      graph_id,
+      'before',
+      checkpoint_key_edge,
+      format_checkpoint_chip(node.config),
+      'checkpoint',
+    );
+  }
+  if (node.kind === 'map') {
+    return walk_wrapper_as_marker(
+      ctx,
+      node,
+      parent_graph_id,
+      graph_id,
+      'before',
+      map_cardinality_edge,
+      format_map_chip(node.config),
+      'map',
+    );
   }
 
   // Default: the regular walk, single-id segment.
