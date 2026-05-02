@@ -14,6 +14,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
+  trajectory_event_schema,
+  type ParsedTrajectoryEvent,
+} from '@repo/weft';
+
+import {
   BACKOFF_MAX_ATTEMPTS,
   next_backoff_delay,
 } from './backoff.js';
@@ -21,6 +26,8 @@ import {
   is_watch_envelope,
   type WatchEnvelope,
 } from './watch_envelope.js';
+
+const EVENT_BUFFER_LIMIT = 5_000;
 
 export type WatchStatus =
   | 'idle'
@@ -34,6 +41,7 @@ export type WatchSocketState = {
   readonly status: WatchStatus;
   readonly attempt: number;
   readonly last_envelope: WatchEnvelope | null;
+  readonly events: ReadonlyArray<ParsedTrajectoryEvent>;
 };
 
 export type SocketLike = {
@@ -96,6 +104,7 @@ export function use_watch_socket(
     status: 'idle',
     attempt: 0,
     last_envelope: null,
+    events: [],
   }));
 
   const cancelled_ref = useRef(false);
@@ -108,6 +117,7 @@ export function use_watch_socket(
         status: attempt === 0 ? 'connecting' : 'reconnecting',
         attempt,
         last_envelope: prev.last_envelope,
+        events: prev.events,
       }));
       const socket = factory(target_url);
       const handle_open = (): void => {
@@ -116,6 +126,7 @@ export function use_watch_socket(
           status: 'connected',
           attempt: 0,
           last_envelope: prev.last_envelope,
+          events: prev.events,
         }));
       };
       const handle_message = (event: Event): void => {
@@ -132,7 +143,19 @@ export function use_watch_socket(
           return;
         }
         if (!is_watch_envelope(parsed)) return;
-        set_state((prev) => ({ ...prev, last_envelope: parsed }));
+        set_state((prev) => {
+          if (parsed.kind !== 'event') {
+            return { ...prev, last_envelope: parsed };
+          }
+          const validated = trajectory_event_schema.safeParse(parsed.event);
+          if (!validated.success) {
+            return { ...prev, last_envelope: parsed };
+          }
+          const next_events = prev.events.length >= EVENT_BUFFER_LIMIT
+            ? [...prev.events.slice(prev.events.length - EVENT_BUFFER_LIMIT + 1), validated.data]
+            : [...prev.events, validated.data];
+          return { ...prev, last_envelope: parsed, events: next_events };
+        });
       };
       const handle_error = (): void => {
         // The browser will fire close immediately after; let that path
@@ -147,6 +170,7 @@ export function use_watch_socket(
             status: 'gave_up',
             attempt: next_attempt,
             last_envelope: prev.last_envelope,
+            events: prev.events,
           }));
           return;
         }
@@ -154,6 +178,7 @@ export function use_watch_socket(
           status: 'reconnecting',
           attempt: next_attempt,
           last_envelope: prev.last_envelope,
+          events: prev.events,
         }));
         const delay = next_backoff_delay(next_attempt);
         timer_ref.current = setTimeout(() => {
@@ -181,7 +206,7 @@ export function use_watch_socket(
   useEffect(() => {
     cancelled_ref.current = false;
     if (url === null) {
-      set_state({ status: 'idle', attempt: 0, last_envelope: null });
+      set_state({ status: 'idle', attempt: 0, last_envelope: null, events: [] });
       return undefined;
     }
     connect(url, 0);
@@ -210,7 +235,7 @@ export function use_watch_socket(
       detach(entry);
       entry_ref.current = null;
     }
-    set_state({ status: 'connecting', attempt: 0, last_envelope: null });
+    set_state({ status: 'connecting', attempt: 0, last_envelope: null, events: [] });
     connect(url, 0);
   }, [url, connect]);
 

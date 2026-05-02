@@ -12,7 +12,8 @@ import { memo } from 'react';
 
 import type { WeftNode } from '../transform/tree_to_graph.js';
 import { RetryGlyph } from './glyphs.js';
-import { read_number_field } from './node_helpers.js';
+import { read_number_field, runtime_class } from './node_helpers.js';
+import { RuntimeOverlay } from './RuntimeOverlay.js';
 
 function format_retry_badge(
   attempts: number | undefined,
@@ -30,17 +31,19 @@ function RetryNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
   const attempts = read_number_field(data.config, 'max_attempts');
   const backoff_ms = read_number_field(data.config, 'backoff_ms');
   const badge = format_retry_badge(attempts, backoff_ms);
+  const display_name = data.meta?.display_name;
   return (
     <div
-      className="weft-node weft-node-container weft-node-retry"
+      className={`weft-node weft-node-container weft-node-retry ${runtime_class(data.runtime)}`}
       data-weft-kind="retry"
     >
       <div className="weft-node-header">
         <span className="weft-node-badge">
           <RetryGlyph />retry {badge}
         </span>
-        <div className="weft-node-title">{data.id}</div>
+        <div className="weft-node-title">{display_name ?? data.id}</div>
       </div>
+      <RuntimeOverlay runtime={data.runtime} />
     </div>
   );
 }

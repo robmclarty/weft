@@ -66,19 +66,57 @@
   --weft-generic-border: #c89033;
   --weft-generic-accent: #ffd17a;
 
+  --weft-branch-bg: #1c1f30;
+  --weft-branch-border: #5b6dbf;
+  --weft-branch-accent: #a8b6ff;
+
+  --weft-fallback-bg: #2c1c20;
+  --weft-fallback-border: #b06070;
+  --weft-fallback-accent: #f5b3bf;
+
+  --weft-timeout-bg: #2a230f;
+  --weft-timeout-border: #b59034;
+  --weft-timeout-accent: #ffd07a;
+
+  --weft-loop-bg: #1f1d2e;
+  --weft-loop-border: #7a4ea8;
+  --weft-loop-accent: #d8b6ff;
+
+  --weft-map-bg: #102330;
+  --weft-map-border: #2a7aa8;
+  --weft-map-accent: #88c8ff;
+
+  --weft-compose-bg: #18242c;
+  --weft-compose-border: #4a8aa6;
+  --weft-compose-accent: #a8d6e6;
+
+  --weft-checkpoint-bg: #2a1d12;
+  --weft-checkpoint-border: #a8723a;
+  --weft-checkpoint-accent: #f5c891;
+
+  --weft-suspend-bg: #1f1f1f;
+  --weft-suspend-border: #6e6e6e;
+  --weft-suspend-accent: #c8c8c8;
+
   /* sizing */
-  --weft-leaf-width: 220px;
-  --weft-leaf-height: 72px;
-  --weft-container-min-width: 300px;
-  --weft-container-min-height: 140px;
-  --weft-container-header-h: 32px;
-  --weft-cycle-width: 200px;
-  --weft-cycle-height: 64px;
+  --weft-leaf-width: 184px;
+  --weft-leaf-height: 60px;
+  --weft-container-min-width: 240px;
+  --weft-container-min-height: 96px;
+  --weft-container-header-h: 28px;
+  --weft-cycle-width: 168px;
+  --weft-cycle-height: 56px;
 
   --weft-radius: 8px;
   --weft-radius-sm: 4px;
   --weft-pad-x: 14px;
   --weft-pad-y: 10px;
+
+  /* runtime-overlay tones — additive on top of per-kind colors */
+  --weft-runtime-active: #f7c873;
+  --weft-runtime-error: #f56b6b;
+  --weft-runtime-emit: #88d6ff;
+  --weft-runtime-cost: #d8c891;
 
   --weft-font-stack: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --weft-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -149,8 +187,8 @@
   border-style: dashed;
   /* Reserve top space for the header band so children laid out by ELK do not
    * overlap the title. The body padding below is the gap from header to first
-   * child. */
-  padding: calc(var(--weft-container-header-h) + 8px) 16px 16px;
+   * child; ELK is told the same numbers via `padding` in `elk_runner.ts`. */
+  padding: calc(var(--weft-container-header-h) + 4px) 10px 10px;
   display: block;
   position: relative;
   overflow: visible;
@@ -179,6 +217,46 @@
 .weft-node-scope {
   background: var(--weft-scope-bg);
   border-color: var(--weft-scope-border);
+}
+
+.weft-node-branch {
+  background: var(--weft-branch-bg);
+  border-color: var(--weft-branch-border);
+}
+
+.weft-node-fallback {
+  background: var(--weft-fallback-bg);
+  border-color: var(--weft-fallback-border);
+}
+
+.weft-node-timeout {
+  background: var(--weft-timeout-bg);
+  border-color: var(--weft-timeout-border);
+}
+
+.weft-node-loop {
+  background: var(--weft-loop-bg);
+  border-color: var(--weft-loop-border);
+}
+
+.weft-node-map {
+  background: var(--weft-map-bg);
+  border-color: var(--weft-map-border);
+}
+
+.weft-node-compose {
+  background: var(--weft-compose-bg);
+  border-color: var(--weft-compose-border);
+}
+
+.weft-node-checkpoint {
+  background: var(--weft-checkpoint-bg);
+  border-color: var(--weft-checkpoint-border);
+}
+
+.weft-node-suspend {
+  background: var(--weft-suspend-bg);
+  border-color: var(--weft-suspend-border);
 }
 
 /* container header band: a fixed-height strip pinned to the top inside the
@@ -221,16 +299,24 @@
   text-overflow: ellipsis;
   min-width: 0;
   flex: 1 1 auto;
+  font-family: var(--weft-font-mono);
+  letter-spacing: 0.01em;
+}
+
+.weft-node-container .weft-node-title {
+  font-size: 11px;
+  color: color-mix(in srgb, var(--weft-color-fg) 92%, transparent);
 }
 
 .weft-node-subtitle {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--weft-color-fg-muted);
   font-family: var(--weft-font-mono);
   margin-top: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: 0.02em;
 }
 
 /* badge: a small pill carrying glyph + label */
@@ -321,6 +407,54 @@
   background: color-mix(in srgb, var(--weft-generic-accent) 10%, var(--weft-color-surface-raised));
 }
 
+.weft-node-branch .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-branch-accent) 35%, transparent);
+  color: var(--weft-branch-accent);
+  background: color-mix(in srgb, var(--weft-branch-accent) 8%, var(--weft-color-surface-raised));
+}
+
+.weft-node-fallback .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-fallback-accent) 35%, transparent);
+  color: var(--weft-fallback-accent);
+  background: color-mix(in srgb, var(--weft-fallback-accent) 8%, var(--weft-color-surface-raised));
+}
+
+.weft-node-timeout .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-timeout-accent) 35%, transparent);
+  color: var(--weft-timeout-accent);
+  background: color-mix(in srgb, var(--weft-timeout-accent) 8%, var(--weft-color-surface-raised));
+}
+
+.weft-node-loop .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-loop-accent) 35%, transparent);
+  color: var(--weft-loop-accent);
+  background: color-mix(in srgb, var(--weft-loop-accent) 8%, var(--weft-color-surface-raised));
+}
+
+.weft-node-map .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-map-accent) 35%, transparent);
+  color: var(--weft-map-accent);
+  background: color-mix(in srgb, var(--weft-map-accent) 8%, var(--weft-color-surface-raised));
+}
+
+.weft-node-compose .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-compose-accent) 35%, transparent);
+  color: var(--weft-compose-accent);
+  background: color-mix(in srgb, var(--weft-compose-accent) 8%, var(--weft-color-surface-raised));
+}
+
+.weft-node-checkpoint .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-checkpoint-accent) 35%, transparent);
+  color: var(--weft-checkpoint-accent);
+  background: color-mix(in srgb, var(--weft-checkpoint-accent) 8%, var(--weft-color-surface-raised));
+}
+
+.weft-node-suspend .weft-node-badge {
+  border-color: color-mix(in srgb, var(--weft-suspend-accent) 35%, transparent);
+  color: var(--weft-suspend-accent);
+  background: color-mix(in srgb, var(--weft-suspend-accent) 8%, var(--weft-color-surface-raised));
+}
+
 /* selection ring + hover affordance */
 
 .react-flow__node.selected .weft-node {
@@ -367,6 +501,38 @@
   box-shadow: 0 0 0 2px var(--weft-generic-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
 }
 
+.react-flow__node.selected .weft-node-branch {
+  box-shadow: 0 0 0 2px var(--weft-branch-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-fallback {
+  box-shadow: 0 0 0 2px var(--weft-fallback-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-timeout {
+  box-shadow: 0 0 0 2px var(--weft-timeout-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-loop {
+  box-shadow: 0 0 0 2px var(--weft-loop-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-map {
+  box-shadow: 0 0 0 2px var(--weft-map-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-compose {
+  box-shadow: 0 0 0 2px var(--weft-compose-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-checkpoint {
+  box-shadow: 0 0 0 2px var(--weft-checkpoint-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.react-flow__node.selected .weft-node-suspend {
+  box-shadow: 0 0 0 2px var(--weft-suspend-accent), 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
 /* search filter affordance: nodes outside the active search match get dimmed.
  * Studio toggles this via a body data attribute when search is active. */
 [data-weft-search="active"] .react-flow__node:not(.weft-search-match) .weft-node {
@@ -393,6 +559,14 @@
 .weft-node-use .react-flow__handle { background: var(--weft-use-accent); }
 .weft-node-cycle .react-flow__handle { background: var(--weft-cycle-accent); }
 .weft-node-generic .react-flow__handle { background: var(--weft-generic-accent); }
+.weft-node-branch .react-flow__handle { background: var(--weft-branch-accent); }
+.weft-node-fallback .react-flow__handle { background: var(--weft-fallback-accent); }
+.weft-node-timeout .react-flow__handle { background: var(--weft-timeout-accent); }
+.weft-node-loop .react-flow__handle { background: var(--weft-loop-accent); }
+.weft-node-map .react-flow__handle { background: var(--weft-map-accent); }
+.weft-node-compose .react-flow__handle { background: var(--weft-compose-accent); }
+.weft-node-checkpoint .react-flow__handle { background: var(--weft-checkpoint-accent); }
+.weft-node-suspend .react-flow__handle { background: var(--weft-suspend-accent); }
 
 /* edges */
 
@@ -424,6 +598,101 @@
 
 .weft-edge-overlay .react-flow__edge-text {
   fill: var(--weft-scope-accent);
+}
+
+/* runtime overlay: active pulse, error scar, emit flash, cost badge.
+ *
+ * Each is opt-in via a class set on the chrome element (.weft-runtime-active,
+ * .weft-runtime-errored, .weft-runtime-has-cost) plus inline children rendered
+ * by RuntimeOverlay (.weft-runtime-cost, .weft-runtime-error-tag,
+ * .weft-runtime-emit-pulse). The leaf and container chromes both opt in;
+ * absolute children are pinned relative to the chrome so they survive ELK's
+ * layout sizing. */
+
+@keyframes weft-runtime-pulse {
+  0%   { box-shadow: 0 0 0 0   color-mix(in srgb, var(--weft-runtime-active) 60%, transparent); }
+  50%  { box-shadow: 0 0 0 6px color-mix(in srgb, var(--weft-runtime-active) 0%,  transparent); }
+  100% { box-shadow: 0 0 0 0   color-mix(in srgb, var(--weft-runtime-active) 0%,  transparent); }
+}
+
+@keyframes weft-runtime-emit-flash {
+  0%   { opacity: 0.95; transform: translate(-50%, -50%) scale(0.4); }
+  60%  { opacity: 0.4;  transform: translate(-50%, -50%) scale(1.4); }
+  100% { opacity: 0;    transform: translate(-50%, -50%) scale(1.8); }
+}
+
+.weft-node.weft-runtime-active {
+  border-color: var(--weft-runtime-active);
+  animation: weft-runtime-pulse 1.6s ease-in-out infinite;
+}
+
+.weft-node.weft-runtime-errored {
+  border-color: var(--weft-runtime-error);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--weft-runtime-error) 40%, transparent),
+    inset 0 -3px 0 0 var(--weft-runtime-error);
+}
+
+.weft-runtime-error-tag {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--weft-color-bg);
+  background: var(--weft-runtime-error);
+  padding: 1px 6px;
+  border-radius: 999px;
+  pointer-events: auto;
+  z-index: 2;
+}
+
+.weft-runtime-cost {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-family: var(--weft-font-mono);
+  font-size: 10px;
+  color: var(--weft-runtime-cost);
+  background: color-mix(in srgb, var(--weft-color-bg) 80%, transparent);
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--weft-runtime-cost) 35%, transparent);
+  pointer-events: none;
+  z-index: 2;
+  white-space: nowrap;
+}
+
+/* Container chromes already absolutely position the header band; cost goes in
+ * the bottom-right corner of the header band so it doesn't fight ELK-laid
+ * children for vertical space. */
+.weft-node-container .weft-runtime-cost {
+  bottom: auto;
+  top: 6px;
+  right: 6px;
+}
+
+.weft-node-container .weft-runtime-error-tag {
+  top: 6px;
+  right: 56px;
+}
+
+.weft-runtime-emit-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--weft-runtime-emit) 75%, transparent);
+  pointer-events: none;
+  z-index: 1;
+  /* The data-weft-runtime-emit attribute (timestamp) changes whenever a new
+   * emit arrives, which rekeys the element via React and replays the animation
+   * even when the ts is the only thing that differs. */
+  animation: weft-runtime-emit-flash 600ms ease-out;
 }
 
 /* canvas frame */
@@ -471,6 +740,11 @@
   background: var(--weft-color-surface);
   border: 1px solid var(--weft-color-border);
   border-radius: var(--weft-radius-sm);
+  /* React Flow's default minimap is ~200x150; trim it so it does not occupy
+   * a quarter of the canvas in a tall flow. */
+  width: 160px !important;
+  height: 110px !important;
+  margin: 8px;
 }
 
 .weft-canvas .react-flow__minimap-mask {

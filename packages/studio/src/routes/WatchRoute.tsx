@@ -81,6 +81,7 @@ export function WatchRoute({ socket_factory }: WatchRouteProps = {}): JSX.Elemen
     <main className="weft-main" data-weft-route="watch">
       <CanvasShell
         tree={tree}
+        events={socket_state.events}
         empty_message={
           url === null
             ? 'pass ?ws=<port> to connect to weft-watch.'

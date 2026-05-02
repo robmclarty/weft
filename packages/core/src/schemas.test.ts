@@ -33,6 +33,30 @@ describe('flow_tree_schema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts all_primitives.json', () => {
+    const result = flow_tree_schema.safeParse(load_fixture_raw('all_primitives.json'));
+    expect(result.success).toBe(true);
+  });
+
+  it('preserves the meta field when present', () => {
+    const result = flow_tree_schema.safeParse({
+      version: 1,
+      root: {
+        kind: 'step',
+        id: 'a',
+        meta: {
+          display_name: 'fetch user',
+          description: 'reads from the user repo',
+          port_labels: { in: 'user_id', out: 'user' },
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.root.meta?.display_name).toBe('fetch user');
+    expect(result.data.root.meta?.port_labels?.out).toBe('user');
+  });
+
   it('rejects a missing version', () => {
     const result = flow_tree_schema.safeParse({
       root: { kind: 'step', id: 'a' },

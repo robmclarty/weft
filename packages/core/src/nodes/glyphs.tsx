@@ -117,3 +117,80 @@ export function WarnGlyph(): JSX.Element {
     </svg>
   );
 }
+
+export function BranchGlyph(): JSX.Element {
+  return (
+    <svg {...SVG} aria-hidden="true">
+      <line x1="2" y1="6" x2="5" y2="6" />
+      <line x1="5" y1="6" x2="10" y2="3" />
+      <line x1="5" y1="6" x2="10" y2="9" />
+      <circle cx="5" cy="6" r="1.1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function MapGlyph(): JSX.Element {
+  return (
+    <svg {...SVG} aria-hidden="true">
+      <rect x="2" y="2.5" width="3" height="3" rx="0.5" />
+      <rect x="2" y="6.5" width="3" height="3" rx="0.5" />
+      <line x1="6" y1="4" x2="9" y2="4" />
+      <line x1="6" y1="8" x2="9" y2="8" />
+    </svg>
+  );
+}
+
+export function FallbackGlyph(): JSX.Element {
+  return (
+    <svg {...SVG} aria-hidden="true">
+      <path d="M 2 4 L 6 4 L 6 8 L 10 8" />
+      <path d="M 2 4 L 2 8 L 6 8" strokeDasharray="1.6 1.6" />
+    </svg>
+  );
+}
+
+export function TimeoutGlyph(): JSX.Element {
+  return (
+    <svg {...SVG} aria-hidden="true">
+      <circle cx="6" cy="6.5" r="3.5" />
+      <line x1="6" y1="4" x2="6" y2="6.5" />
+      <line x1="6" y1="6.5" x2="8" y2="6.5" />
+      <line x1="4.5" y1="2" x2="7.5" y2="2" />
+    </svg>
+  );
+}
+
+export function LoopGlyph(): JSX.Element {
+  return (
+    <svg {...SVG} aria-hidden="true">
+      <path d="M 3 5.5 A 3 3 0 1 1 3 6.5" />
+      <polyline points="2 4, 3 5.5, 4.5 5" />
+    </svg>
+  );
+}
+
+export function ComposeGlyph(): JSX.Element {
+  return (
+    <svg {...SVG} aria-hidden="true">
+      <rect x="2" y="2.5" width="4" height="4" rx="0.6" />
+      <rect x="6" y="5.5" width="4" height="4" rx="0.6" />
+    </svg>
+  );
+}
+
+export function CheckpointGlyph(): JSX.Element {
+  return (
+    <svg {...SVG} aria-hidden="true">
+      <path d="M 2.5 3 V 10 L 5 8 L 7.5 10 V 3 Z" />
+    </svg>
+  );
+}
+
+export function SuspendGlyph(): JSX.Element {
+  return (
+    <svg {...SVG} aria-hidden="true">
+      <line x1="4" y1="3" x2="4" y2="9" />
+      <line x1="8" y1="3" x2="8" y2="9" />
+    </svg>
+  );
+}

@@ -19,16 +19,16 @@ describe('resolve_options', () => {
   it('uses the spec defaults when called without arguments', () => {
     expect(resolve_options()).toEqual({
       direction: 'LR',
-      node_spacing: 40,
-      rank_spacing: 80,
+      node_spacing: 24,
+      rank_spacing: 56,
     });
   });
 
   it('overrides individual fields without touching the others', () => {
     expect(resolve_options({ direction: 'TB' })).toEqual({
       direction: 'TB',
-      node_spacing: 40,
-      rank_spacing: 80,
+      node_spacing: 24,
+      rank_spacing: 56,
     });
     expect(resolve_options({ node_spacing: 12, rank_spacing: 7 })).toEqual({
       direction: 'LR',

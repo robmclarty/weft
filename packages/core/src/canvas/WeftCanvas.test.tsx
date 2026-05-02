@@ -228,3 +228,69 @@ describe('WeftCanvas: F6 unknown-kind tolerance', () => {
     expect(generic?.textContent).toContain('fresh_kind_from_future_fascicle');
   });
 });
+
+describe('WeftCanvas: runtime_state overlay', () => {
+  it('attaches runtime data and applies the active class on the matching node', async () => {
+    const tree = flow_tree_schema.parse(simple_sequence_fixture);
+    const runtime_state = new Map([
+      [
+        'step:greet',
+        {
+          active: true,
+          error: null,
+          last_emit_ts: null,
+          cost_usd: 0.012,
+          last_run_id: 'r-1',
+          span_count: 1,
+        },
+      ],
+    ]);
+    mounted = mount(
+      createElement(WeftCanvas, {
+        tree,
+        layout_options: { worker_factory: null },
+        runtime_state,
+      }),
+    );
+    await wait_for_nodes(mounted.container, 4);
+    // Wait a beat so the post-layout overlay effect runs.
+    await delay(60);
+    const greet = Array.from(
+      mounted.container.querySelectorAll('.react-flow__node'),
+    ).find((n) => n.getAttribute('data-id')?.endsWith('step:greet'));
+    expect(greet).toBeDefined();
+    const inner = greet?.querySelector('[data-weft-kind="step"]');
+    expect(inner?.classList.contains('weft-runtime-active')).toBe(true);
+    expect(inner?.querySelector('[data-weft-runtime-cost]')?.textContent).toContain(
+      '$',
+    );
+  });
+});
+
+describe('WeftCanvas: respects an initial_viewport', () => {
+  it('skips auto-fit when the caller pins a viewport', async () => {
+    const tree = flow_tree_schema.parse(simple_sequence_fixture);
+    let api: CanvasApi | null = null;
+    mounted = mount(
+      createElement(WeftCanvas, {
+        tree,
+        layout_options: { worker_factory: null },
+        initial_viewport: { x: 50, y: 100, zoom: 1.5 },
+        on_ready: (got) => {
+          api = got;
+        },
+      }),
+    );
+    await wait_for_nodes(mounted.container, 4);
+    for (let i = 0; i < 30; i += 1) {
+      if (api !== null) break;
+      // eslint-disable-next-line no-await-in-loop -- polling for callback
+      await delay(50);
+    }
+    if (api === null) throw new Error('api never delivered');
+    const v = (api as CanvasApi).get_viewport();
+    expect(Math.round(v.zoom * 100) / 100).toBe(1.5);
+    expect(Math.round(v.x)).toBe(50);
+    expect(Math.round(v.y)).toBe(100);
+  });
+});

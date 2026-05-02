@@ -40,6 +40,7 @@ import {
   type LayoutGraphOptions,
 } from '../layout/layout_graph.js';
 import type { FlowNode, FlowTree } from '../schemas.js';
+import type { NodeRuntimeState } from '../runtime_state.js';
 import {
   tree_to_graph,
   type WeftEdge,
@@ -59,6 +60,10 @@ const DEFAULT_LARGE_THRESHOLD = 200;
 
 export type FlowTreeEnvelope = FlowTree;
 
+/**
+ * Kept for backwards compatibility with v0 callers; now superseded by
+ * `runtime_state` driven by `derive_runtime_state` in `@repo/core`.
+ */
 export type TrajectoryEvent = unknown;
 
 export type WeftCanvasProps = {
@@ -66,7 +71,14 @@ export type WeftCanvasProps = {
   readonly on_node_click?: (node: FlowNode) => void;
   readonly on_ready?: (api: CanvasApi) => void;
   readonly initial_viewport?: CanvasViewport;
+  /** Optional reserved hook for future async event subscription. Ignored. */
   readonly events?: AsyncIterable<TrajectoryEvent>;
+  /**
+   * Per-step runtime overlay state (active / error / cost / last_emit_ts).
+   * The canvas does not derive this itself; callers compose it with
+   * `derive_runtime_state(events, tree)` and re-pass on every event tick.
+   */
+  readonly runtime_state?: ReadonlyMap<string, NodeRuntimeState>;
   readonly layout_options?: LayoutGraphOptions;
   readonly large_threshold?: number;
 };
@@ -93,6 +105,7 @@ function CanvasInner({
   on_node_click,
   on_ready,
   initial_viewport,
+  runtime_state,
   layout_options,
   large_threshold = DEFAULT_LARGE_THRESHOLD,
 }: CanvasInternalProps): JSX.Element {
@@ -135,19 +148,47 @@ function CanvasInner({
     };
   }, [tree, layout_options, debounced_layout]);
 
-  // After each layout settles, if the user did not pre-supply an
-  // initial_viewport, fit the tree once so it lands centered. Subsequent
-  // re-layouts of the same tree leave the viewport alone so user pan/zoom
-  // sticks. New trees reset the guard via the effect above.
-  //
-  // The fit must wait for React Flow to mount and measure every node — its
-  // bounds calculation reads `node.measured.{width,height}` and returns a
-  // clipped result if measurement hasn't happened yet. Two `rAF` ticks is
-  // empirically enough to clear both the React commit and the React Flow
-  // internal measurement pass; one tick raced the layout commit at start.
+  // Overlay runtime state onto the already-laid-out nodes without triggering
+  // a re-layout. The id segment after the last `/` is the FlowNode.id (the key
+  // the runtime_state map uses); container-rolled-up state cascades naturally
+  // because derive_runtime_state already rolls cost up the parent chain.
+  // Re-run when either the runtime_state reference changes *or* the layout
+  // commits a new node set (otherwise runtime_state supplied at mount time
+  // never lands, since the layout effect's set_nodes overwrites the data).
   useEffect(() => {
-    if (nodes.length === 0) return;
+    if (runtime_state === undefined) return;
+    set_nodes((current) =>
+      current.map((node) => {
+        const idx = node.id.lastIndexOf('/');
+        const local_id = idx === -1 ? node.id : node.id.slice(idx + 1);
+        const runtime = runtime_state.get(local_id);
+        if (runtime === node.data.runtime) return node;
+        const { runtime: _existing, ...rest } = node.data;
+        const next_data: WeftNode['data'] =
+          runtime === undefined ? rest : { ...rest, runtime };
+        return { ...node, data: next_data };
+      }),
+    );
+  }, [runtime_state, nodes.length]);
+
+  // After React Flow finishes mounting and measuring every node, fit the
+  // graph once so it lands centered. `useNodesInitialized` flips to true
+  // exactly when every node's measured.{width,height} is available, which is
+  // the moment fitView's bounding-box calculation becomes correct.
+  // `has_auto_fit_ref` ensures we only fit on first load — subsequent
+  // runtime-state overlays leave the user's pan/zoom alone. New trees reset
+  // the guard via the tree-change effect above.
+  // After the first non-empty layout commit, fit the graph once so it lands
+  // centered. Refs survive StrictMode's double-invocation, so the guard
+  // ensures we only fit on first load — runtime-state overlays leave the
+  // user's pan/zoom alone. New trees reset the guard above. The retry fan
+  // catches React Flow's late measurement pass on deeply-nested subflows;
+  // useNodesInitialized() proved unreliable here because ELK-provided sizes
+  // bypass its ResizeObserver path.
+  const fit_timers_ref = useRef<ReadonlyArray<ReturnType<typeof setTimeout>>>([]);
+  useEffect(() => {
     if (has_auto_fit_ref.current) return;
+    if (nodes.length === 0) return;
     if (initial_viewport !== undefined) {
       has_auto_fit_ref.current = true;
       return;
@@ -155,12 +196,18 @@ function CanvasInner({
     const instance = instance_ref.current;
     if (instance === null) return;
     has_auto_fit_ref.current = true;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        void instance.fitView({ duration: 250, padding: 0.08, minZoom: 0.1 });
-      });
-    });
-  }, [nodes, initial_viewport]);
+    const fit = (): void => {
+      void instance.fitView({ duration: 220, padding: 0.12, minZoom: 0.1 });
+    };
+    fit_timers_ref.current = [80, 220, 480].map((ms) => setTimeout(fit, ms));
+  }, [nodes.length, initial_viewport]);
+
+  useEffect(
+    () => () => {
+      for (const t of fit_timers_ref.current) clearTimeout(t);
+    },
+    [],
+  );
 
   useEffect(
     () => () => {
@@ -249,8 +296,15 @@ function CanvasInner({
         proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={18} size={1.2} />
-        <Controls showInteractive={false} />
-        {show_minimap ? <MiniMap pannable zoomable maskColor="rgba(15, 17, 21, 0.7)" /> : null}
+        <Controls showInteractive={false} position="bottom-left" />
+        {show_minimap ? (
+          <MiniMap
+            pannable
+            zoomable
+            position="top-right"
+            maskColor="rgba(15, 17, 21, 0.7)"
+          />
+        ) : null}
       </ReactFlow>
     </div>
   );

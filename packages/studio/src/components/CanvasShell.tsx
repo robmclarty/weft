@@ -28,10 +28,13 @@ import {
 
 import {
   WeftCanvas,
+  derive_runtime_state,
   tree_id as compute_tree_id,
   type CanvasApi,
   type FlowNode,
   type FlowTree,
+  type NodeRuntimeState,
+  type ParsedTrajectoryEvent,
 } from '@repo/weft';
 
 import { apply_collapse } from '../state/collapse.js';
@@ -49,6 +52,7 @@ export type CanvasShellProps = {
   readonly search_input_id?: string;
   readonly side_top?: ReactNode | undefined;
   readonly banners?: ReactNode | undefined;
+  readonly events?: ReadonlyArray<ParsedTrajectoryEvent>;
 };
 
 export function CanvasShell({
@@ -57,6 +61,7 @@ export function CanvasShell({
   search_input_id,
   side_top,
   banners,
+  events,
 }: CanvasShellProps): JSX.Element {
   const tid = useMemo(
     () => (tree === null ? null : compute_tree_id(tree.root)),
@@ -74,6 +79,11 @@ export function CanvasShell({
     if (tree === null) return null;
     return apply_collapse(tree, state.collapsed_node_ids);
   }, [tree, state.collapsed_node_ids]);
+
+  const runtime_state = useMemo<ReadonlyMap<string, NodeRuntimeState> | undefined>(() => {
+    if (events === undefined || events.length === 0) return undefined;
+    return derive_runtime_state(events, tree);
+  }, [events, tree]);
 
   const handle_node_click = useCallback(
     (node: FlowNode) => {
@@ -208,7 +218,8 @@ export function CanvasShell({
             tree={projected_tree}
             on_node_click={handle_node_click}
             on_ready={handle_ready}
-            {...(hydrated
+            {...(runtime_state !== undefined ? { runtime_state } : {})}
+            {...(hydrated && is_meaningful_viewport(state)
               ? {
                   initial_viewport: {
                     x: state.viewport.x,
@@ -232,6 +243,23 @@ export function CanvasShell({
 function strip_path(graph_id: string): string {
   const idx = graph_id.lastIndexOf('/');
   return idx === -1 ? graph_id : graph_id.slice(idx + 1);
+}
+
+/**
+ * Persistence "hydrates" with the default viewport {zoom:1,x:0,y:0} the first
+ * time a tree is touched (the LRU-touch path stores the default to register
+ * the entry). That is *not* a viewport the user pinned — restoring it would
+ * skip the auto-fit and bury the graph at zoom 1.0 with no pan. Treat the
+ * default as "no preference" and let the canvas auto-fit instead.
+ */
+function is_meaningful_viewport(state: {
+  zoom: number;
+  viewport: { x: number; y: number };
+}): boolean {
+  if (state.zoom !== 1) return true;
+  if (state.viewport.x !== 0) return true;
+  if (state.viewport.y !== 0) return true;
+  return false;
 }
 
 type PngExportButtonProps = {

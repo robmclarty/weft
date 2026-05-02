@@ -16,8 +16,8 @@ export type LayoutOptions = {
 
 export const DEFAULT_LAYOUT_OPTIONS: LayoutOptions = {
   direction: 'LR',
-  node_spacing: 40,
-  rank_spacing: 80,
+  node_spacing: 24,
+  rank_spacing: 56,
 };
 
 export function resolve_options(input?: Partial<LayoutOptions>): LayoutOptions {

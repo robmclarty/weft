@@ -263,6 +263,114 @@ describe('tree_to_graph: edges carry a structural/overlay tag', () => {
   });
 });
 
+describe('tree_to_graph: new primitive kinds', () => {
+  it('renders branch as a labeled-edge container with then/otherwise', () => {
+    const tree: FlowTree = {
+      version: 1,
+      root: {
+        kind: 'branch',
+        id: 'branch_1',
+        children: [
+          { kind: 'step', id: 'step:then' },
+          { kind: 'step', id: 'step:otherwise' },
+        ],
+      },
+    };
+    const { nodes, edges } = tree_to_graph(tree);
+    expect(find_by_id(nodes, 'branch_1')?.type).toBe('branch');
+    const labeled = edges
+      .filter((e) => e.source === 'branch_1' && e.data?.kind === 'structural')
+      .map((e) => `${e.target}|${typeof e.label === 'string' ? e.label : ''}`);
+    expect(labeled).toEqual([
+      'branch_1/step:then|then',
+      'branch_1/step:otherwise|otherwise',
+    ]);
+  });
+
+  it('renders fallback as a labeled-edge container with primary/backup', () => {
+    const tree: FlowTree = {
+      version: 1,
+      root: {
+        kind: 'fallback',
+        id: 'fallback_1',
+        children: [
+          { kind: 'step', id: 'step:primary' },
+          { kind: 'step', id: 'step:backup' },
+        ],
+      },
+    };
+    const { nodes, edges } = tree_to_graph(tree);
+    expect(find_by_id(nodes, 'fallback_1')?.type).toBe('fallback');
+    const labeled = edges
+      .filter((e) => e.source === 'fallback_1' && e.data?.kind === 'structural')
+      .map((e) => `${e.target}|${typeof e.label === 'string' ? e.label : ''}`);
+    expect(labeled).toEqual([
+      'fallback_1/step:primary|primary',
+      'fallback_1/step:backup|backup',
+    ]);
+  });
+
+  it('wires loop, map, timeout, checkpoint, compose as wrappers over their children', () => {
+    const wrappers = ['loop', 'map', 'timeout', 'checkpoint', 'compose'] as const;
+    for (const kind of wrappers) {
+      const tree: FlowTree = {
+        version: 1,
+        root: {
+          kind,
+          id: `${kind}_1`,
+          children: [{ kind: 'step', id: 'inner' }],
+        },
+      };
+      const { nodes } = tree_to_graph(tree);
+      const wrapper = find_by_id(nodes, `${kind}_1`);
+      const child = find_by_id(nodes, `${kind}_1/inner`);
+      expect(wrapper?.type).toBe(kind);
+      expect(child?.parentId).toBe(`${kind}_1`);
+    }
+  });
+
+  it('renders suspend as a leaf with no children', () => {
+    const tree: FlowTree = {
+      version: 1,
+      root: {
+        kind: 'suspend',
+        id: 'approval_gate',
+        config: { id: 'approval_gate' },
+      },
+    };
+    const { nodes } = tree_to_graph(tree);
+    const node = find_by_id(nodes, 'approval_gate');
+    expect(node?.type).toBe('suspend');
+    expect(nodes.length).toBe(1);
+  });
+
+  it('preserves meta on the WeftNode data', () => {
+    const tree: FlowTree = {
+      version: 1,
+      root: {
+        kind: 'step',
+        id: 'fetch',
+        meta: {
+          display_name: 'fetch user',
+          description: 'reads from the user repo',
+          port_labels: { in: 'user_id', out: 'user' },
+        },
+      },
+    };
+    const { nodes } = tree_to_graph(tree);
+    expect(nodes[0]?.data.meta?.display_name).toBe('fetch user');
+    expect(nodes[0]?.data.meta?.port_labels?.out).toBe('user');
+  });
+
+  it('renders the all_primitives.json fixture without unknown kinds', () => {
+    const tree = parse_fixture('all_primitives.json');
+    const { nodes } = tree_to_graph(tree);
+    for (const node of nodes) {
+      expect(node.data.generic).not.toBe(true);
+    }
+  });
+});
+
 describe('tree_to_graph: function and schema reference rendering', () => {
   it('passes function and schema references through on data.config for downstream rendering', () => {
     const tree: FlowTree = {

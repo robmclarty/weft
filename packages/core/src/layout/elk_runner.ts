@@ -59,8 +59,8 @@ const ELK_DIRECTION: Record<LayoutDirection, string> = {
 };
 
 // Mirrors --weft-leaf-width / --weft-leaf-height in canvas.css.
-const DEFAULT_NODE_WIDTH = 220;
-const DEFAULT_NODE_HEIGHT = 72;
+const DEFAULT_NODE_WIDTH = 184;
+const DEFAULT_NODE_HEIGHT = 60;
 
 const PARALLEL_KIND = 'parallel';
 const PARALLEL_INPUT_PORT = 'in';
@@ -115,6 +115,14 @@ function ports_for(node: WeftNode, fan_out_targets: ReadonlyArray<string>): ElkN
   return ports;
 }
 
+// Header band reserved at the top of every container chrome (see canvas.css
+// `--weft-container-header-h` plus the 4px body padding). ELK's child rect
+// origin must clear this band so the title row never overlaps a child.
+const CONTAINER_HEADER_BAND = 32;
+const CONTAINER_PADDING = 10;
+const CONTAINER_MIN_WIDTH = 240;
+const CONTAINER_MIN_HEIGHT = 96;
+
 function build_subtree(
   parent: string | null,
   nodes: ReadonlyArray<WeftNode>,
@@ -128,20 +136,30 @@ function build_subtree(
         .filter((e) => e.source === n.id && e.data?.kind === 'structural')
         .map((e) => e.target)
       : [];
-    const child: ElkNode = {
-      id: n.id,
-      width: n.width ?? DEFAULT_NODE_WIDTH,
-      height: n.height ?? DEFAULT_NODE_HEIGHT,
-      layoutOptions: elk_options_for(n),
-    };
     const sub = build_subtree(n.id, nodes, edges);
-    if (sub.length > 0) {
+    const has_children = sub.length > 0;
+    const child: ElkNode = has_children
+      ? {
+          id: n.id,
+          // Containers: let ELK compute the width/height from children. The
+          // minimum-size constraint pins the floor so an empty container still
+          // shows its header band.
+          layoutOptions: {
+            ...elk_options_for(n),
+            'org.eclipse.elk.nodeSize.constraints':
+              '[NODE_LABELS, PORTS, MINIMUM_SIZE]',
+            'org.eclipse.elk.nodeSize.minimum': `(${String(CONTAINER_MIN_WIDTH)}, ${String(CONTAINER_MIN_HEIGHT)})`,
+            'org.eclipse.elk.padding': `[top=${String(CONTAINER_HEADER_BAND)},left=${String(CONTAINER_PADDING)},bottom=${String(CONTAINER_PADDING)},right=${String(CONTAINER_PADDING)}]`,
+          },
+        }
+      : {
+          id: n.id,
+          width: n.width ?? DEFAULT_NODE_WIDTH,
+          height: n.height ?? DEFAULT_NODE_HEIGHT,
+          layoutOptions: elk_options_for(n),
+        };
+    if (has_children) {
       child.children = sub;
-      // Container constraints: grow extents to fit children + label bands.
-      child.layoutOptions = {
-        ...child.layoutOptions,
-        'org.eclipse.elk.nodeSize.constraints': '[NODE_LABELS, PORTS]',
-      };
     }
     const ports = ports_for(n, fan_out);
     if (ports !== undefined) child.ports = ports;
@@ -174,6 +192,10 @@ export function build_elk_graph(
       'elk.direction': ELK_DIRECTION[options.direction],
       'elk.spacing.nodeNode': String(options.node_spacing),
       'elk.layered.spacing.nodeNodeBetweenLayers': String(options.rank_spacing),
+      // Recurse into subflows so container nodes are sized to enclose their
+      // children (and edges between siblings inside a parent are routed
+      // intra-container instead of through the root).
+      'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
     },
     children: build_subtree(null, nodes, edges),
     edges: build_elk_edges(edges),
@@ -207,8 +229,11 @@ export function apply_positions(
     const p = positions.get(n.id);
     if (p === undefined) return { ...n };
     const next: WeftNode = { ...n, position: { x: p.x, y: p.y } };
-    if (p.width !== undefined && n.parentId !== undefined) next.width = p.width;
-    if (p.height !== undefined && n.parentId !== undefined) next.height = p.height;
+    // Containers (any node with descendants) must take ELK's computed bounds
+    // so React Flow renders them tall/wide enough to enclose their children.
+    // Leaves keep CSS-driven sizing for crisp typography.
+    if (p.width !== undefined) next.width = p.width;
+    if (p.height !== undefined) next.height = p.height;
     return next;
   });
 }

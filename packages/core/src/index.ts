@@ -4,9 +4,10 @@ export {
   flow_node_schema,
   flow_tree_schema,
   flow_value_schema,
+  step_metadata_schema,
 } from './schemas.js';
 
-export type { FlowNode, FlowTree, FlowValue } from './schemas.js';
+export type { FlowNode, FlowTree, FlowValue, StepMetadata } from './schemas.js';
 
 export { tree_id } from './tree_id.js';
 
@@ -34,3 +35,24 @@ export type { WeftCanvasProps, TrajectoryEvent } from './canvas/WeftCanvas.js';
 export type { CanvasApi, CanvasViewport } from './canvas/canvas_api.js';
 
 export { node_types } from './nodes/registry.js';
+
+export {
+  trajectory_event_schema,
+  span_start_event_schema,
+  span_end_event_schema,
+  emit_event_schema,
+  custom_event_schema,
+} from './trajectory.js';
+export type {
+  ParsedTrajectoryEvent,
+  SpanStartEvent,
+  SpanEndEvent,
+  EmitEvent,
+  CustomTrajectoryEvent,
+} from './trajectory.js';
+
+export { derive_runtime_state, empty_runtime_state } from './runtime_state.js';
+export type {
+  NodeRuntimeState,
+  DeriveRuntimeStateOptions,
+} from './runtime_state.js';

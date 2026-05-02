@@ -54,6 +54,9 @@ export function InspectorPanel({ selected }: InspectorPanelProps): JSX.Element {
         </span>
         <code className="weft-inspector-id">{summary.id}</code>
       </div>
+      {summary.description !== null ? (
+        <p className="weft-inspector-description">{summary.description}</p>
+      ) : null}
       <KindBody summary={summary} />
       {summary.config_pretty !== null ? (
         <details className="weft-inspector-raw">
@@ -183,6 +186,96 @@ function KindBody({ summary }: { readonly summary: InspectorSummary }): JSX.Elem
     return (
       <Field label="target">
         <code>{summary.cycle.target}</code>
+      </Field>
+    );
+  }
+  if (summary.branch !== undefined) {
+    return (
+      <>
+        <Field label="when">
+          <code>{summary.branch.when_label}</code>
+        </Field>
+        <Field label="then">
+          <code>{summary.branch.then_kind ?? '—'}</code>
+        </Field>
+        <Field label="otherwise">
+          <code>{summary.branch.otherwise_kind ?? '—'}</code>
+        </Field>
+      </>
+    );
+  }
+  if (summary.fallback !== undefined) {
+    return (
+      <>
+        <Field label="primary">
+          <code>{summary.fallback.primary_kind ?? '—'}</code>
+        </Field>
+        <Field label="backup">
+          <code>{summary.fallback.backup_kind ?? '—'}</code>
+        </Field>
+      </>
+    );
+  }
+  if (summary.timeout !== undefined) {
+    return (
+      <>
+        <Field label="deadline">
+          <code>{summary.timeout.ms === null ? '—' : `${summary.timeout.ms} ms`}</code>
+        </Field>
+        {summary.wrapper !== undefined ? <WrappedRow wrapper={summary.wrapper} /> : null}
+      </>
+    );
+  }
+  if (summary.loop !== undefined) {
+    return (
+      <>
+        <Field label="max rounds">
+          <code>{summary.loop.max_rounds ?? '—'}</code>
+        </Field>
+        <Field label="guard">
+          <code>{summary.loop.has_guard ? 'present' : 'none'}</code>
+        </Field>
+      </>
+    );
+  }
+  if (summary.map !== undefined) {
+    return (
+      <>
+        <Field label="concurrency">
+          <code>
+            {summary.map.concurrency === null
+              ? 'unlimited'
+              : `${summary.map.concurrency}/at-once`}
+          </code>
+        </Field>
+        {summary.wrapper !== undefined ? <WrappedRow wrapper={summary.wrapper} /> : null}
+      </>
+    );
+  }
+  if (summary.checkpoint !== undefined) {
+    return (
+      <>
+        <Field label="key">
+          <code>{summary.checkpoint.key_label}</code>
+        </Field>
+        {summary.wrapper !== undefined ? <WrappedRow wrapper={summary.wrapper} /> : null}
+      </>
+    );
+  }
+  if (summary.compose !== undefined) {
+    return (
+      <>
+        <Field label="name">
+          <code>{summary.compose.display_name ?? '(unnamed)'}</code>
+        </Field>
+        {summary.wrapper !== undefined ? <WrappedRow wrapper={summary.wrapper} /> : null}
+      </>
+    );
+  }
+  if (summary.suspend !== undefined) {
+    return (
+      <Field label="resume id">
+        <code>{summary.suspend.resume_id ?? '(unset)'}</code>
       </Field>
     );
   }

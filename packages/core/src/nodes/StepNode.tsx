@@ -14,18 +14,24 @@ import { memo } from 'react';
 
 import type { WeftNode } from '../transform/tree_to_graph.js';
 import { StepGlyph } from './glyphs.js';
-import { format_fn_ref } from './node_helpers.js';
+import { format_fn_ref, runtime_class } from './node_helpers.js';
+import { RuntimeOverlay } from './RuntimeOverlay.js';
 
 function StepNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
   const fn_label = format_fn_ref(data.config?.['fn']);
+  const display_name = data.meta?.display_name;
   return (
-    <div className="weft-node weft-node-leaf weft-node-step" data-weft-kind="step">
+    <div
+      className={`weft-node weft-node-leaf weft-node-step ${runtime_class(data.runtime)}`}
+      data-weft-kind="step"
+    >
       <Handle type="target" position={Position.Left} id="in" />
       <div className="weft-node-header">
         <span className="weft-node-badge"><StepGlyph />step</span>
-        <div className="weft-node-title">{data.id}</div>
+        <div className="weft-node-title">{display_name ?? data.id}</div>
       </div>
       <div className="weft-node-subtitle">{fn_label}</div>
+      <RuntimeOverlay runtime={data.runtime} />
       <Handle type="source" position={Position.Right} id="out" />
     </div>
   );

@@ -7,6 +7,7 @@
  */
 
 import type { FlowValue } from '../schemas.js';
+import type { NodeRuntimeState } from '../runtime_state.js';
 
 function as_object(value: unknown): { readonly [k: string]: unknown } | undefined {
   if (value === null || typeof value !== 'object') return undefined;
@@ -66,4 +67,29 @@ export function read_string_array_field(
     out.push(entry);
   }
   return out;
+}
+
+/**
+ * Compose the className string for a node's outer chrome from the runtime
+ * overlay state. Centralized here so every node renderer can opt in by
+ * appending `runtime_class(runtime)` without re-implementing the logic.
+ */
+export function runtime_class(runtime: NodeRuntimeState | undefined): string {
+  if (runtime === undefined) return '';
+  const parts: string[] = [];
+  if (runtime.active) parts.push('weft-runtime-active');
+  if (runtime.error !== null) parts.push('weft-runtime-errored');
+  if (runtime.cost_usd > 0) parts.push('weft-runtime-has-cost');
+  return parts.join(' ');
+}
+
+/**
+ * Format a USD amount for the cost badge. Sub-cent amounts show 4 decimals
+ * so a $0.0034 model call is legible; everything else uses 2.
+ */
+export function format_cost(usd: number): string {
+  if (usd <= 0) return '';
+  if (usd < 0.01) return `$${usd.toFixed(4)}`;
+  if (usd < 100) return `$${usd.toFixed(2)}`;
+  return `$${usd.toFixed(0)}`;
 }

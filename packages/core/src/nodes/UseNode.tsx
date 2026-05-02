@@ -11,12 +11,16 @@ import { memo } from 'react';
 
 import type { WeftNode } from '../transform/tree_to_graph.js';
 import { UseGlyph } from './glyphs.js';
-import { read_string_array_field } from './node_helpers.js';
+import { read_string_array_field, runtime_class } from './node_helpers.js';
+import { RuntimeOverlay } from './RuntimeOverlay.js';
 
 function UseNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
   const keys = read_string_array_field(data.config, 'keys') ?? [];
   return (
-    <div className="weft-node weft-node-leaf weft-node-use" data-weft-kind="use">
+    <div
+      className={`weft-node weft-node-leaf weft-node-use ${runtime_class(data.runtime)}`}
+      data-weft-kind="use"
+    >
       <Handle type="target" position={Position.Left} id="in" />
       <div className="weft-node-header">
         <span className="weft-node-badge">
@@ -24,6 +28,7 @@ function UseNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
         </span>
         <div className="weft-node-title">{data.id}</div>
       </div>
+      <RuntimeOverlay runtime={data.runtime} />
       <Handle type="source" position={Position.Right} id="out" />
     </div>
   );

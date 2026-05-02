@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "root": {
+    "kind": "sequence",
+    "id": "seq:root",
+    "children": [
+      {
+        "kind": "step",
+        "id": "step:greet",
+        "config": {
+          "fn": { "kind": "<fn>", "name": "greet" }
+        }
+      },
+      {
+        "kind": "step",
+        "id": "step:farewell",
+        "config": {
+          "fn": { "kind": "<fn>", "name": "farewell" }
+        }
+      },
+      {
+        "kind": "step",
+        "id": "step:cleanup",
+        "config": {
+          "fn": { "kind": "<fn>" }
+        }
+      }
+    ]
+  }
+}

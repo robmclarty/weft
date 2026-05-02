@@ -23,8 +23,9 @@ describe('build_elk_graph', () => {
     expect(graph.id).toBe('__weft_root');
     expect(graph.layoutOptions?.['elk.algorithm']).toBe('layered');
     expect(graph.layoutOptions?.['elk.direction']).toBe('RIGHT');
-    expect(graph.layoutOptions?.['elk.spacing.nodeNode']).toBe('40');
-    expect(graph.layoutOptions?.['elk.layered.spacing.nodeNodeBetweenLayers']).toBe('80');
+    expect(graph.layoutOptions?.['elk.spacing.nodeNode']).toBe('24');
+    expect(graph.layoutOptions?.['elk.layered.spacing.nodeNodeBetweenLayers']).toBe('56');
+    expect(graph.layoutOptions?.['elk.hierarchyHandling']).toBe('INCLUDE_CHILDREN');
   });
 
   it('switches direction to DOWN for TB', () => {
@@ -51,12 +52,16 @@ describe('build_elk_graph', () => {
     ]);
   });
 
-  it('sets nodeSize.constraints on container nodes that have children', () => {
+  it('sets nodeSize constraints, minimum size, and padding on container nodes that have children', () => {
     const { nodes, edges } = graph_for('full_primitive_set.json');
     const graph = build_elk_graph(nodes, edges, resolve_options());
     const seq = graph.children?.find((c) => c.id === 'seq:everything');
     expect(seq?.children?.length).toBeGreaterThan(0);
-    expect(seq?.layoutOptions?.['org.eclipse.elk.nodeSize.constraints']).toBe('[NODE_LABELS, PORTS]');
+    expect(seq?.layoutOptions?.['org.eclipse.elk.nodeSize.constraints']).toBe(
+      '[NODE_LABELS, PORTS, MINIMUM_SIZE]',
+    );
+    expect(seq?.layoutOptions?.['org.eclipse.elk.nodeSize.minimum']).toBeDefined();
+    expect(seq?.layoutOptions?.['org.eclipse.elk.padding']).toContain('top=');
   });
 
   it('produces sources/targets pairs for every weft edge', () => {

@@ -1,0 +1,209 @@
+{
+  "version": 1,
+  "root": {
+    "kind": "compose",
+    "id": "agent_pipeline_1",
+    "config": {
+      "display_name": "agent_pipeline"
+    },
+    "meta": {
+      "display_name": "agent_pipeline",
+      "description": "Top-level orchestration showing every primitive."
+    },
+    "children": [
+      {
+        "kind": "sequence",
+        "id": "sequence_1",
+        "children": [
+          {
+            "kind": "checkpoint",
+            "id": "checkpoint_1",
+            "config": {
+              "key": "research_brief",
+              "display_name": "cache_brief"
+            },
+            "children": [
+              {
+                "kind": "step",
+                "id": "fetch_brief",
+                "config": {
+                  "fn": { "kind": "<fn>", "name": "fetch_brief" }
+                }
+              }
+            ]
+          },
+          {
+            "kind": "branch",
+            "id": "branch_1",
+            "config": {
+              "when": { "kind": "<fn>", "name": "is_long" },
+              "display_name": "split_by_length"
+            },
+            "children": [
+              {
+                "kind": "map",
+                "id": "map_1",
+                "config": {
+                  "items": { "kind": "<fn>", "name": "to_paragraphs" },
+                  "concurrency": 4
+                },
+                "children": [
+                  {
+                    "kind": "retry",
+                    "id": "retry_1",
+                    "config": {
+                      "max_attempts": 3,
+                      "backoff_ms": 250
+                    },
+                    "children": [
+                      {
+                        "kind": "timeout",
+                        "id": "timeout_1",
+                        "config": {
+                          "ms": 8000
+                        },
+                        "children": [
+                          {
+                            "kind": "step",
+                            "id": "summarize_para",
+                            "config": {
+                              "fn": { "kind": "<fn>", "name": "summarize" }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "kind": "step",
+                "id": "summarize_short",
+                "config": {
+                  "fn": { "kind": "<fn>", "name": "summarize_short" }
+                }
+              }
+            ]
+          },
+          {
+            "kind": "scope",
+            "id": "scope_1",
+            "children": [
+              {
+                "kind": "stash",
+                "id": "stash_summary",
+                "config": { "key": "summary" },
+                "children": [
+                  {
+                    "kind": "step",
+                    "id": "step_collect",
+                    "config": {
+                      "fn": { "kind": "<fn>", "name": "collect" }
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "use",
+                "id": "use_summary",
+                "config": { "keys": ["summary"] },
+                "children": [
+                  {
+                    "kind": "fallback",
+                    "id": "fallback_1",
+                    "config": { "display_name": "claude_then_local" },
+                    "children": [
+                      {
+                        "kind": "step",
+                        "id": "format_claude",
+                        "config": {
+                          "fn": { "kind": "<fn>", "name": "format_claude" }
+                        }
+                      },
+                      {
+                        "kind": "step",
+                        "id": "format_local",
+                        "config": {
+                          "fn": { "kind": "<fn>", "name": "format_local" }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "kind": "loop",
+            "id": "loop_1",
+            "config": {
+              "max_rounds": 5,
+              "display_name": "refine_until_clean"
+            },
+            "children": [
+              {
+                "kind": "step",
+                "id": "refine",
+                "config": {
+                  "fn": { "kind": "<fn>", "name": "refine" }
+                }
+              },
+              {
+                "kind": "step",
+                "id": "is_clean",
+                "config": {
+                  "fn": { "kind": "<fn>", "name": "is_clean" }
+                }
+              }
+            ]
+          },
+          {
+            "kind": "parallel",
+            "id": "parallel_1",
+            "config": { "keys": ["typescript", "python", "rust"] },
+            "children": [
+              {
+                "kind": "pipe",
+                "id": "pipe_ts",
+                "config": {
+                  "fn": { "kind": "<fn>", "name": "to_typescript" }
+                },
+                "children": [
+                  {
+                    "kind": "step",
+                    "id": "translate_ts",
+                    "config": {
+                      "fn": { "kind": "<fn>", "name": "translate" }
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "step",
+                "id": "translate_py",
+                "config": {
+                  "fn": { "kind": "<fn>", "name": "translate_py" }
+                }
+              },
+              {
+                "kind": "step",
+                "id": "translate_rs",
+                "config": {
+                  "fn": { "kind": "<fn>", "name": "translate_rs" }
+                }
+              }
+            ]
+          },
+          {
+            "kind": "suspend",
+            "id": "approval_gate",
+            "config": {
+              "id": "approval_gate",
+              "display_name": "human_approval"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -3,16 +3,24 @@
  *
  * Per spec §5.3, the inspector is kind-aware:
  *   - Every node carries kind + id + (optional) raw config dump.
- *   - `step`        → function reference.
- *   - `sequence`    → child count.
- *   - `parallel`    → branch keys + child count.
- *   - `pipe`        → tail function + wrapped child.
- *   - `retry`       → max_attempts + backoff_ms + wrapped child.
- *   - `scope`       → stash and use summaries.
- *   - `stash`       → key.
- *   - `use`         → consumed keys.
- *   - `<cycle>`     → cycle target.
- *   - generic       → kind name + raw config (the fallback path).
+ *   - `step`         → function reference.
+ *   - `sequence`     → child count.
+ *   - `parallel`     → branch keys + child count.
+ *   - `pipe`         → tail function + wrapped child.
+ *   - `retry`        → max_attempts + backoff_ms + wrapped child.
+ *   - `scope`        → stash and use summaries.
+ *   - `stash`        → key.
+ *   - `use`          → consumed keys.
+ *   - `branch`       → predicate label + then/otherwise child kinds.
+ *   - `fallback`     → primary/backup child kinds.
+ *   - `timeout`      → ms + wrapped child.
+ *   - `loop`         → max_rounds + has_guard + wrapped child.
+ *   - `map`          → concurrency cap + wrapped child.
+ *   - `checkpoint`   → key + wrapped child.
+ *   - `compose`      → display_name + wrapped child.
+ *   - `suspend`      → resume id.
+ *   - `<cycle>`      → cycle target.
+ *   - generic        → kind name + raw config (the fallback path).
  *
  * Dispatch on kind is local to this module — the canvas itself does not
  * branch on kind anywhere (see taste principle 4).
@@ -20,7 +28,15 @@
 
 import type { FlowNode, FlowValue } from '@repo/weft';
 
-const WRAPPER_KINDS = new Set(['pipe', 'retry', 'timeout', 'checkpoint']);
+const WRAPPER_KINDS = new Set([
+  'pipe',
+  'retry',
+  'timeout',
+  'checkpoint',
+  'compose',
+  'map',
+  'loop',
+]);
 
 export type WrapperSummary = {
   readonly child_id: string;
@@ -76,10 +92,47 @@ export type CycleSummary = {
   readonly target: string;
 };
 
+export type BranchSummary = {
+  readonly when_label: string;
+  readonly then_kind: string | null;
+  readonly otherwise_kind: string | null;
+};
+
+export type FallbackSummary = {
+  readonly primary_kind: string | null;
+  readonly backup_kind: string | null;
+};
+
+export type TimeoutSummary = {
+  readonly ms: number | null;
+};
+
+export type LoopSummary = {
+  readonly max_rounds: number | null;
+  readonly has_guard: boolean;
+};
+
+export type MapSummary = {
+  readonly concurrency: number | null;
+};
+
+export type CheckpointSummary = {
+  readonly key_label: string;
+};
+
+export type ComposeSummary = {
+  readonly display_name: string | null;
+};
+
+export type SuspendSummary = {
+  readonly resume_id: string | null;
+};
+
 export type InspectorSummary = {
   readonly kind: string;
   readonly id: string;
   readonly config_pretty: string | null;
+  readonly description: string | null;
   readonly wrapper?: WrapperSummary;
   readonly step?: StepSummary;
   readonly pipe?: PipeSummary;
@@ -90,6 +143,14 @@ export type InspectorSummary = {
   readonly stash?: StashSummary;
   readonly use?: UseSummary;
   readonly cycle?: CycleSummary;
+  readonly branch?: BranchSummary;
+  readonly fallback?: FallbackSummary;
+  readonly timeout?: TimeoutSummary;
+  readonly loop?: LoopSummary;
+  readonly map?: MapSummary;
+  readonly checkpoint?: CheckpointSummary;
+  readonly compose?: ComposeSummary;
+  readonly suspend?: SuspendSummary;
 };
 
 export function summarize_for_inspector(node: FlowNode): InspectorSummary {
@@ -100,6 +161,7 @@ export function summarize_for_inspector(node: FlowNode): InspectorSummary {
     kind: node.kind,
     id: node.id,
     config_pretty,
+    description: node.meta?.description ?? null,
   };
 
   if (WRAPPER_KINDS.has(node.kind)) {
@@ -158,6 +220,95 @@ export function summarize_for_inspector(node: FlowNode): InspectorSummary {
 
   if (node.kind === '<cycle>') {
     return { ...summary, cycle: { target: node.id } };
+  }
+
+  if (node.kind === 'branch') {
+    const when = node.config?.['when'];
+    const when_label =
+      when !== null &&
+      typeof when === 'object' &&
+      !Array.isArray(when) &&
+      'kind' in when &&
+      when.kind === '<fn>' &&
+      'name' in when &&
+      typeof when.name === 'string' &&
+      when.name.length > 0
+        ? `<fn:${when.name}>`
+        : '<fn>';
+    const then_child = node.children?.[0];
+    const otherwise_child = node.children?.[1];
+    return {
+      ...summary,
+      branch: {
+        when_label,
+        then_kind: then_child?.kind ?? null,
+        otherwise_kind: otherwise_child?.kind ?? null,
+      },
+    };
+  }
+
+  if (node.kind === 'fallback') {
+    const primary_child = node.children?.[0];
+    const backup_child = node.children?.[1];
+    return {
+      ...summary,
+      fallback: {
+        primary_kind: primary_child?.kind ?? null,
+        backup_kind: backup_child?.kind ?? null,
+      },
+    };
+  }
+
+  if (node.kind === 'timeout') {
+    return { ...summary, timeout: { ms: read_number(node.config?.['ms']) } };
+  }
+
+  if (node.kind === 'loop') {
+    return {
+      ...summary,
+      loop: {
+        max_rounds: read_number(node.config?.['max_rounds']),
+        has_guard: (node.children?.length ?? 0) >= 2,
+      },
+    };
+  }
+
+  if (node.kind === 'map') {
+    return { ...summary, map: { concurrency: read_number(node.config?.['concurrency']) } };
+  }
+
+  if (node.kind === 'checkpoint') {
+    const key_value = node.config?.['key'];
+    let key_label = '?';
+    if (typeof key_value === 'string') {
+      key_label = key_value;
+    } else if (
+      key_value !== null &&
+      typeof key_value === 'object' &&
+      !Array.isArray(key_value) &&
+      'kind' in key_value &&
+      key_value.kind === '<fn>'
+    ) {
+      key_label = '<fn>';
+    }
+    return { ...summary, checkpoint: { key_label } };
+  }
+
+  if (node.kind === 'compose') {
+    return {
+      ...summary,
+      compose: {
+        display_name:
+          node.meta?.display_name ?? read_string(node.config?.['display_name']),
+      },
+    };
+  }
+
+  if (node.kind === 'suspend') {
+    return {
+      ...summary,
+      suspend: { resume_id: read_string(node.config?.['id']) },
+    };
   }
 
   return summary;

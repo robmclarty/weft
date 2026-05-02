@@ -232,3 +232,334 @@ describe('Registry covers every transform-tagged type', () => {
     }
   });
 });
+
+describe('New primitive renderers', () => {
+  it('renders branch, fallback, timeout, loop, map, compose, checkpoint, suspend without crashing', () => {
+    const nodes: WeftNode[] = [
+      {
+        id: 'branch_1',
+        type: 'branch',
+        position: { x: 0, y: 0 },
+        data: { kind: 'branch', id: 'branch_1' },
+      },
+      {
+        id: 'fallback_1',
+        type: 'fallback',
+        position: { x: 220, y: 0 },
+        data: { kind: 'fallback', id: 'fallback_1' },
+      },
+      {
+        id: 'timeout_1',
+        type: 'timeout',
+        position: { x: 440, y: 0 },
+        data: { kind: 'timeout', id: 'timeout_1', config: { ms: 5000 } },
+      },
+      {
+        id: 'loop_1',
+        type: 'loop',
+        position: { x: 660, y: 0 },
+        data: { kind: 'loop', id: 'loop_1', config: { max_rounds: 5 } },
+      },
+      {
+        id: 'map_1',
+        type: 'map',
+        position: { x: 0, y: 220 },
+        data: { kind: 'map', id: 'map_1', config: { concurrency: 4 } },
+      },
+      {
+        id: 'compose_1',
+        type: 'compose',
+        position: { x: 220, y: 220 },
+        data: {
+          kind: 'compose',
+          id: 'compose_1',
+          config: { display_name: 'agent_pipeline' },
+          meta: { display_name: 'agent_pipeline' },
+        },
+      },
+      {
+        id: 'checkpoint_1',
+        type: 'checkpoint',
+        position: { x: 440, y: 220 },
+        data: {
+          kind: 'checkpoint',
+          id: 'checkpoint_1',
+          config: { key: 'cache_brief' },
+        },
+      },
+      {
+        id: 'suspend_1',
+        type: 'suspend',
+        position: { x: 660, y: 220 },
+        data: {
+          kind: 'suspend',
+          id: 'suspend_1',
+          config: { id: 'approval_gate' },
+        },
+      },
+    ];
+    mounted = mount_canvas(nodes, []);
+    for (const kind of [
+      'branch',
+      'fallback',
+      'timeout',
+      'loop',
+      'map',
+      'compose',
+      'checkpoint',
+      'suspend',
+    ]) {
+      expect(mounted.container.querySelector(`[data-weft-kind="${kind}"]`)).not.toBeNull();
+    }
+    // Spot-check the kind-specific labels surface useful detail.
+    expect(
+      mounted.container.querySelector('[data-weft-kind="timeout"]')?.textContent,
+    ).toContain('5s');
+    expect(
+      mounted.container.querySelector('[data-weft-kind="loop"]')?.textContent,
+    ).toContain('5');
+    expect(
+      mounted.container.querySelector('[data-weft-kind="map"]')?.textContent,
+    ).toContain('4');
+    expect(
+      mounted.container.querySelector('[data-weft-kind="compose"]')?.textContent,
+    ).toContain('agent_pipeline');
+    expect(
+      mounted.container.querySelector('[data-weft-kind="checkpoint"]')?.textContent,
+    ).toContain('cache_brief');
+    expect(
+      mounted.container.querySelector('[data-weft-kind="suspend"]')?.textContent,
+    ).toContain('approval_gate');
+  });
+});
+
+describe('display_name from meta surfaces in container titles', () => {
+  it('uses meta.display_name on every kind that supports it', () => {
+    const cases: Array<[string, WeftNode]> = [
+      [
+        'sequence',
+        {
+          id: 'seq:1',
+          type: 'sequence',
+          position: { x: 0, y: 0 },
+          data: { kind: 'sequence', id: 'seq:1', meta: { display_name: 'main_pipeline' } },
+        },
+      ],
+      [
+        'pipe',
+        {
+          id: 'pipe:1',
+          type: 'pipe',
+          position: { x: 0, y: 0 },
+          data: {
+            kind: 'pipe',
+            id: 'pipe:1',
+            config: { fn: { kind: '<fn>', name: 'upper' } },
+            meta: { display_name: 'uppercase_pipe' },
+          },
+        },
+      ],
+      [
+        'retry',
+        {
+          id: 'retry:1',
+          type: 'retry',
+          position: { x: 0, y: 0 },
+          data: { kind: 'retry', id: 'retry:1', meta: { display_name: 'retry_flaky' } },
+        },
+      ],
+      [
+        'scope',
+        {
+          id: 'scope:1',
+          type: 'scope',
+          position: { x: 0, y: 0 },
+          data: { kind: 'scope', id: 'scope:1', meta: { display_name: 'shared_state' } },
+        },
+      ],
+      [
+        'parallel',
+        {
+          id: 'par:1',
+          type: 'parallel',
+          position: { x: 0, y: 0 },
+          data: {
+            kind: 'parallel',
+            id: 'par:1',
+            config: { keys: [] },
+            meta: { display_name: 'fan_out' },
+          },
+        },
+      ],
+      [
+        'branch',
+        {
+          id: 'branch:1',
+          type: 'branch',
+          position: { x: 0, y: 0 },
+          data: { kind: 'branch', id: 'branch:1', meta: { display_name: 'split_input' } },
+        },
+      ],
+      [
+        'fallback',
+        {
+          id: 'fb:1',
+          type: 'fallback',
+          position: { x: 0, y: 0 },
+          data: { kind: 'fallback', id: 'fb:1', meta: { display_name: 'cloud_or_local' } },
+        },
+      ],
+      [
+        'timeout',
+        {
+          id: 'to:1',
+          type: 'timeout',
+          position: { x: 0, y: 0 },
+          data: {
+            kind: 'timeout',
+            id: 'to:1',
+            config: { ms: 8000 },
+            meta: { display_name: 'time_box' },
+          },
+        },
+      ],
+      [
+        'loop',
+        {
+          id: 'loop:1',
+          type: 'loop',
+          position: { x: 0, y: 0 },
+          data: {
+            kind: 'loop',
+            id: 'loop:1',
+            config: { max_rounds: 3 },
+            meta: { display_name: 'refine' },
+          },
+        },
+      ],
+      [
+        'map',
+        {
+          id: 'map:1',
+          type: 'map',
+          position: { x: 0, y: 0 },
+          data: { kind: 'map', id: 'map:1', meta: { display_name: 'per_paragraph' } },
+        },
+      ],
+      [
+        'checkpoint',
+        {
+          id: 'cp:1',
+          type: 'checkpoint',
+          position: { x: 0, y: 0 },
+          data: {
+            kind: 'checkpoint',
+            id: 'cp:1',
+            config: { key: { kind: '<fn>', name: 'key_for' } },
+            meta: { display_name: 'cache_brief' },
+          },
+        },
+      ],
+      [
+        'suspend',
+        {
+          id: 'sus:1',
+          type: 'suspend',
+          position: { x: 0, y: 0 },
+          data: {
+            kind: 'suspend',
+            id: 'sus:1',
+            config: { id: 'gate_a' },
+            meta: { display_name: 'human_gate' },
+          },
+        },
+      ],
+    ];
+    for (const [kind, node] of cases) {
+      mounted = mount_canvas([node], []);
+      const el = mounted.container.querySelector(`[data-weft-kind="${kind}"]`);
+      const label = node.data.meta?.display_name ?? node.id;
+      expect(el?.textContent).toContain(label);
+      mounted.unmount();
+      mounted = null;
+    }
+  });
+});
+
+describe('Runtime overlay rendering', () => {
+  it('shows the cost badge when runtime.cost_usd > 0', () => {
+    const nodes: WeftNode[] = [
+      {
+        id: 'step:1',
+        type: 'step',
+        position: { x: 0, y: 0 },
+        data: {
+          kind: 'step',
+          id: 'step:1',
+          runtime: {
+            active: false,
+            error: null,
+            last_emit_ts: null,
+            cost_usd: 0.012345,
+            last_run_id: 'r-1',
+            span_count: 1,
+          },
+        },
+      },
+    ];
+    mounted = mount_canvas(nodes, []);
+    const cost = mounted.container.querySelector('[data-weft-runtime-cost]');
+    expect(cost).not.toBeNull();
+    expect(cost?.textContent).toContain('$');
+  });
+
+  it('shows the error tag when runtime.error is set', () => {
+    const nodes: WeftNode[] = [
+      {
+        id: 'step:1',
+        type: 'step',
+        position: { x: 0, y: 0 },
+        data: {
+          kind: 'step',
+          id: 'step:1',
+          runtime: {
+            active: false,
+            error: 'network down',
+            last_emit_ts: null,
+            cost_usd: 0,
+            last_run_id: null,
+            span_count: 1,
+          },
+        },
+      },
+    ];
+    mounted = mount_canvas(nodes, []);
+    const tag = mounted.container.querySelector('[data-weft-runtime-error]');
+    expect(tag).not.toBeNull();
+  });
+
+  it('flags the chrome with weft-runtime-active while a span is open', () => {
+    const nodes: WeftNode[] = [
+      {
+        id: 'step:1',
+        type: 'step',
+        position: { x: 0, y: 0 },
+        data: {
+          kind: 'step',
+          id: 'step:1',
+          runtime: {
+            active: true,
+            error: null,
+            last_emit_ts: null,
+            cost_usd: 0,
+            last_run_id: 'r-1',
+            span_count: 1,
+          },
+        },
+      },
+    ];
+    mounted = mount_canvas(nodes, []);
+    const node = mounted.container.querySelector('[data-weft-kind="step"]');
+    expect(node?.classList.contains('weft-runtime-active')).toBe(true);
+  });
+});

@@ -18,20 +18,22 @@ import { memo } from 'react';
 
 import type { WeftNode } from '../transform/tree_to_graph.js';
 import { ParallelGlyph } from './glyphs.js';
-import { read_string_array_field } from './node_helpers.js';
+import { read_string_array_field, runtime_class } from './node_helpers.js';
+import { RuntimeOverlay } from './RuntimeOverlay.js';
 
 function ParallelNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
   const keys = read_string_array_field(data.config, 'keys') ?? [];
+  const display_name = data.meta?.display_name;
   return (
     <div
-      className="weft-node weft-node-container weft-node-parallel"
+      className={`weft-node weft-node-container weft-node-parallel ${runtime_class(data.runtime)}`}
       data-weft-kind="parallel"
     >
       <div className="weft-node-header">
         <span className="weft-node-badge">
           <ParallelGlyph />parallel × {keys.length}
         </span>
-        <div className="weft-node-title">{data.id}</div>
+        <div className="weft-node-title">{display_name ?? data.id}</div>
       </div>
       <Handle type="target" position={Position.Left} id="in" />
       {keys.map((key) => (
@@ -43,6 +45,7 @@ function ParallelNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
           data-weft-port-key={key}
         />
       ))}
+      <RuntimeOverlay runtime={data.runtime} />
     </div>
   );
 }

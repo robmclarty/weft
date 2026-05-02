@@ -22,12 +22,14 @@ import { memo } from 'react';
 
 import type { WeftNode } from '../transform/tree_to_graph.js';
 import { CycleGlyph, WarnGlyph } from './glyphs.js';
+import { runtime_class } from './node_helpers.js';
+import { RuntimeOverlay } from './RuntimeOverlay.js';
 
 function GenericNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
   const is_cycle_guard = data.warning === 'cycle-guard';
   return (
     <div
-      className="weft-node weft-node-leaf weft-node-generic"
+      className={`weft-node weft-node-leaf weft-node-generic ${runtime_class(data.runtime)}`}
       data-weft-kind={data.kind}
       data-weft-generic="true"
     >
@@ -39,6 +41,7 @@ function GenericNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
         </span>
         <div className="weft-node-title">{data.id}</div>
       </div>
+      <RuntimeOverlay runtime={data.runtime} />
       <Handle type="source" position={Position.Right} id="out" />
     </div>
   );

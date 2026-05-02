@@ -12,17 +12,21 @@ import { memo } from 'react';
 
 import type { WeftNode } from '../transform/tree_to_graph.js';
 import { SequenceGlyph } from './glyphs.js';
+import { runtime_class } from './node_helpers.js';
+import { RuntimeOverlay } from './RuntimeOverlay.js';
 
 function SequenceNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
+  const display_name = data.meta?.display_name;
   return (
     <div
-      className="weft-node weft-node-container weft-node-sequence"
+      className={`weft-node weft-node-container weft-node-sequence ${runtime_class(data.runtime)}`}
       data-weft-kind="sequence"
     >
       <div className="weft-node-header">
         <span className="weft-node-badge"><SequenceGlyph />sequence</span>
-        <div className="weft-node-title">{data.id}</div>
+        <div className="weft-node-title">{display_name ?? data.id}</div>
       </div>
+      <RuntimeOverlay runtime={data.runtime} />
     </div>
   );
 }

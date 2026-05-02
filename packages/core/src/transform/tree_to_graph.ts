@@ -9,32 +9,38 @@
  *   - Every graph node id is parent-prefixed: `<parent_path>/<node.id>`.
  *   - The flat `nodes` array is sorted depth-first so parents always precede
  *     children. Workaround for xyflow Discussion #4830 (research F15).
- *   - Containers (`sequence`, `scope`, `parallel`) link children via
- *     `parentId`. Wrappers (`retry`, `pipe`) link their single child the same
+ *   - Containers (`sequence`, `parallel`, `scope`, `branch`, `fallback`) link
+ *     children via `parentId`. Wrappers (`pipe`, `retry`, `timeout`,
+ *     `checkpoint`, `compose`, `map`, `loop`) link their child(ren) the same
  *     way.
  *   - `sequence` emits one edge per adjacent child pair.
  *   - `parallel` emits one edge per child, labeled with `config.keys[i]`.
+ *   - `branch` emits one edge per child labeled `then` / `otherwise`.
+ *   - `fallback` emits one edge per child labeled `primary` / `backup`.
  *   - `scope` emits dashed overlay edges from each `stash` to every downstream
  *     `use` whose `config.keys` contains that stash key.
  *   - `<cycle>` sentinel renders as a dedicated cycle node, its `id` field
  *     naming the upstream node it points back to.
- *   - Unknown kinds render through the generic-fallback component (phase 3);
- *     children still recurse.
+ *   - Unknown kinds render through the generic-fallback component; children
+ *     still recurse.
  *
  * The transform never mutates its input (constraints §5.7).
  */
 
 import type { Edge, Node } from '@xyflow/react';
 
-import type { FlowNode, FlowTree, FlowValue } from '../schemas.js';
+import type { FlowNode, FlowTree, FlowValue, StepMetadata } from '../schemas.js';
+import type { NodeRuntimeState } from '../runtime_state.js';
 
 export type WeftNodeData = {
   kind: string;
   id: string;
   config?: FlowNode['config'];
+  meta?: StepMetadata;
   cycle_target?: string;
   generic?: true;
   warning?: 'cycle-guard';
+  runtime?: NodeRuntimeState;
 };
 
 export type WeftEdgeData = {
@@ -53,15 +59,31 @@ const KNOWN_KINDS = new Set([
   'step',
   'sequence',
   'parallel',
+  'branch',
+  'map',
   'pipe',
   'retry',
+  'fallback',
+  'timeout',
+  'loop',
+  'compose',
+  'checkpoint',
+  'suspend',
   'scope',
   'stash',
   'use',
 ]);
 
-const CONTAINER_KINDS = new Set(['sequence', 'parallel', 'scope']);
-const WRAPPER_KINDS = new Set(['pipe', 'retry']);
+const CONTAINER_KINDS = new Set(['sequence', 'parallel', 'scope', 'branch', 'fallback']);
+const WRAPPER_KINDS = new Set([
+  'pipe',
+  'retry',
+  'timeout',
+  'checkpoint',
+  'compose',
+  'map',
+  'loop',
+]);
 const CYCLE_KIND = '<cycle>';
 const GENERIC_TYPE = 'generic';
 const CYCLE_TYPE = 'cycle';
@@ -104,6 +126,7 @@ type WalkContext = {
 function build_node_data(node: FlowNode): WeftNodeData {
   const data: WeftNodeData = { kind: node.kind, id: node.id };
   if (node.config !== undefined) data.config = node.config;
+  if (node.meta !== undefined) data.meta = node.meta;
   return data;
 }
 
@@ -129,7 +152,12 @@ function emit_warning_node(
   ctx.nodes.push(rf_node);
 }
 
-function structural_edge(source: string, target: string, label?: string): WeftEdge {
+function structural_edge(
+  source: string,
+  target: string,
+  label?: string,
+  source_handle?: string,
+): WeftEdge {
   const id = label === undefined
     ? `e:${source}->${target}`
     : `e:${source}->${target}:${label}`;
@@ -140,6 +168,7 @@ function structural_edge(source: string, target: string, label?: string): WeftEd
     data: { kind: 'structural' },
   };
   if (label !== undefined) edge.label = label;
+  if (source_handle !== undefined) edge.sourceHandle = source_handle;
   return edge;
 }
 
@@ -276,7 +305,26 @@ function walk_parallel_children(
     const child_graph_id = child_path(parent_graph_id, child.id);
     walk(ctx, child, parent_graph_id, parent_graph_id);
     const label = keys[i];
-    ctx.edges.push(structural_edge(parent_graph_id, child_graph_id, label));
+    const source_handle = label === undefined ? undefined : `out:${label}`;
+    ctx.edges.push(structural_edge(parent_graph_id, child_graph_id, label, source_handle));
+  }
+}
+
+function walk_labeled_children(
+  ctx: WalkContext,
+  parent_node: FlowNode,
+  parent_graph_id: string,
+  labels: ReadonlyArray<string>,
+): void {
+  const children = parent_node.children ?? [];
+  for (let i = 0; i < children.length; i += 1) {
+    const child = children[i];
+    if (child === undefined) continue;
+    const child_graph_id = child_path(parent_graph_id, child.id);
+    walk(ctx, child, parent_graph_id, parent_graph_id);
+    const label = labels[i];
+    const source_handle = label === undefined ? undefined : `out:${label}`;
+    ctx.edges.push(structural_edge(parent_graph_id, child_graph_id, label, source_handle));
   }
 }
 
@@ -325,6 +373,14 @@ function walk(
     }
     if (node.kind === 'scope') {
       walk_scope_children(ctx, node, graph_id);
+      return;
+    }
+    if (node.kind === 'branch') {
+      walk_labeled_children(ctx, node, graph_id, ['then', 'otherwise']);
+      return;
+    }
+    if (node.kind === 'fallback') {
+      walk_labeled_children(ctx, node, graph_id, ['primary', 'backup']);
       return;
     }
   }

@@ -25,6 +25,10 @@ export type WatchEnvelope =
       readonly path: string;
       readonly zod_path: string;
       readonly message: string;
+    }
+  | {
+      readonly kind: 'event';
+      readonly event: Readonly<Record<string, unknown>>;
     };
 
 function get(value: object, key: string): unknown {
@@ -49,6 +53,10 @@ export function is_watch_envelope(raw: unknown): raw is WatchEnvelope {
       typeof get(raw, 'zod_path') === 'string' &&
       typeof get(raw, 'message') === 'string'
     );
+  }
+  if (kind === 'event') {
+    const event = get(raw, 'event');
+    return typeof event === 'object' && event !== null;
   }
   return false;
 }
