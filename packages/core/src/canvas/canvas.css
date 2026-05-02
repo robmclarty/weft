@@ -306,6 +306,39 @@
   color: var(--weft-pipe-on);
 }
 
+/*
+ * Junctions — branch / fallback / parallel render as small SVG diamonds
+ * (drawn inside an axis-aligned 56×56 bounding box so React Flow handles
+ * still attach at left/right). The container chrome is gone; children
+ * are lifted to peers in `tree_to_graph` and flow out via labeled
+ * outgoing edges.
+ */
+.weft-node-junction {
+  width: 56px;
+  height: 56px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  display: block;
+  position: relative;
+}
+
+.weft-node-junction svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.weft-node-junction .weft-node-junction-glyph {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
 .weft-node-marker.weft-node-timeout {
   background: var(--weft-timeout-fill);
   border-color: var(--weft-timeout-accent);

@@ -1,8 +1,11 @@
 /**
- * Container node for `branch` composers — predicate-routed two-way fan-out.
+ * Branch renders as a diamond junction — the wrapped `then` and
+ * `otherwise` children are lifted to peers by `tree_to_graph`, and two
+ * role-tagged outgoing edges fan out from the junction. Subway-map
+ * convention: a labeled junction point, not a bay around the branches.
  *
- * Children are the `then` and `otherwise` steps; the transform tags their
- * inbound edges with the matching label so the canvas reads at a glance.
+ * The SVG polygon draws the diamond inside an axis-aligned 56×56 box so
+ * React Flow handles still anchor at logical left / right of the box.
  */
 
 import { Handle, Position, type NodeProps } from '@xyflow/react';
@@ -15,20 +18,27 @@ import { runtime_class } from './node_helpers.js';
 import { RuntimeOverlay } from './RuntimeOverlay.js';
 
 function BranchNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
-  const display_name = data.meta?.display_name;
   return (
     <div
-      className={`weft-node weft-node-container weft-node-branch ${runtime_class(data.runtime)}`}
+      className={`weft-node weft-node-junction weft-node-branch ${runtime_class(data.runtime)}`}
       data-weft-kind="branch"
+      data-weft-presentation="junction"
     >
-      <div className="weft-node-header">
-        <span className="weft-node-badge"><BranchGlyph />branch</span>
-        <div className="weft-node-title">{display_name ?? data.id}</div>
-      </div>
       <Handle type="target" position={Position.Left} id="in" />
+      <svg viewBox="0 0 56 56" aria-hidden="true">
+        <polygon
+          points="28,2 54,28 28,54 2,28"
+          fill="var(--weft-branch-fill)"
+          stroke="var(--weft-branch-accent)"
+          strokeWidth="2"
+        />
+      </svg>
+      <span className="weft-node-junction-glyph" style={{ color: 'var(--weft-branch-on)' }}>
+        <BranchGlyph />
+      </span>
+      <RuntimeOverlay runtime={data.runtime} />
       <Handle type="source" position={Position.Right} id="out:then" data-weft-port-key="then" />
       <Handle type="source" position={Position.Right} id="out:otherwise" data-weft-port-key="otherwise" />
-      <RuntimeOverlay runtime={data.runtime} />
     </div>
   );
 }

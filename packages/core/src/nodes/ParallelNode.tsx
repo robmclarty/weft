@@ -1,15 +1,12 @@
 /**
- * Container node for `parallel` composers — fan-out.
+ * Parallel renders as a teal diamond junction — the per-key children are
+ * lifted to peers by `tree_to_graph`, with one outgoing port per branch
+ * preserving declaration order via ELK's FIXED_ORDER constraint
+ * (`elk_options_for` in `elk_runner.ts` keys on `data.kind === 'parallel'`).
  *
- * Declares per-handle ports (`in` and one `out:<key>` per branch) so ELK's
- * `FIXED_ORDER` port constraint preserves declaration order on re-layout
- * (research F5, F15). The transform tags this node with the same port ids;
- * the layout adapter mirrors them onto the ELK graph.
- *
- * Documented escape hatch (see `tree_to_graph.ts` parallel-ordering note): if
- * xyflow Discussion #4830 ever bites again, set `node.zIndex` from
- * declaration order on the transform side. Today, FIXED_ORDER + parent-id
- * subflows + depth-first ordering is enough.
+ * The handles still emit `out:<key>` so the layout adapter can mirror
+ * them onto the ELK graph; the JSX just no longer wraps a container
+ * chrome around the children.
  */
 
 import { Handle, Position, type NodeProps } from '@xyflow/react';
@@ -23,19 +20,25 @@ import { RuntimeOverlay } from './RuntimeOverlay.js';
 
 function ParallelNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
   const keys = read_string_array_field(data.config, 'keys') ?? [];
-  const display_name = data.meta?.display_name;
   return (
     <div
-      className={`weft-node weft-node-container weft-node-parallel ${runtime_class(data.runtime)}`}
+      className={`weft-node weft-node-junction weft-node-parallel ${runtime_class(data.runtime)}`}
       data-weft-kind="parallel"
+      data-weft-presentation="junction"
     >
-      <div className="weft-node-header">
-        <span className="weft-node-badge">
-          <ParallelGlyph />parallel × {keys.length}
-        </span>
-        <div className="weft-node-title">{display_name ?? data.id}</div>
-      </div>
       <Handle type="target" position={Position.Left} id="in" />
+      <svg viewBox="0 0 56 56" aria-hidden="true">
+        <polygon
+          points="28,2 54,28 28,54 2,28"
+          fill="var(--weft-parallel-fill)"
+          stroke="var(--weft-parallel-accent)"
+          strokeWidth="2"
+        />
+      </svg>
+      <span className="weft-node-junction-glyph" style={{ color: 'var(--weft-parallel-on)' }}>
+        <ParallelGlyph />
+      </span>
+      <RuntimeOverlay runtime={data.runtime} />
       {keys.map((key) => (
         <Handle
           key={key}
@@ -45,7 +48,6 @@ function ParallelNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
           data-weft-port-key={key}
         />
       ))}
-      <RuntimeOverlay runtime={data.runtime} />
     </div>
   );
 }

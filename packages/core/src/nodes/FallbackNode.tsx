@@ -1,8 +1,8 @@
 /**
- * Container node for `fallback` composers — primary-or-backup.
- *
- * Renders as a dashed-border subflow with two outbound branches labeled
- * `primary` / `backup` by the transform.
+ * Fallback renders as a diamond junction — the `primary` and `backup`
+ * children are lifted to peers by `tree_to_graph`, and two role-tagged
+ * outgoing edges fan out from the junction (primary solid, backup
+ * dashed). Subway-map convention: a labeled junction point, not a bay.
  */
 
 import { Handle, Position, type NodeProps } from '@xyflow/react';
@@ -15,20 +15,27 @@ import { runtime_class } from './node_helpers.js';
 import { RuntimeOverlay } from './RuntimeOverlay.js';
 
 function FallbackNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
-  const display_name = data.meta?.display_name;
   return (
     <div
-      className={`weft-node weft-node-container weft-node-fallback ${runtime_class(data.runtime)}`}
+      className={`weft-node weft-node-junction weft-node-fallback ${runtime_class(data.runtime)}`}
       data-weft-kind="fallback"
+      data-weft-presentation="junction"
     >
-      <div className="weft-node-header">
-        <span className="weft-node-badge"><FallbackGlyph />fallback</span>
-        <div className="weft-node-title">{display_name ?? data.id}</div>
-      </div>
       <Handle type="target" position={Position.Left} id="in" />
+      <svg viewBox="0 0 56 56" aria-hidden="true">
+        <polygon
+          points="28,2 54,28 28,54 2,28"
+          fill="var(--weft-fallback-fill)"
+          stroke="var(--weft-fallback-accent)"
+          strokeWidth="2"
+        />
+      </svg>
+      <span className="weft-node-junction-glyph" style={{ color: 'var(--weft-fallback-on)' }}>
+        <FallbackGlyph />
+      </span>
+      <RuntimeOverlay runtime={data.runtime} />
       <Handle type="source" position={Position.Right} id="out:primary" data-weft-port-key="primary" />
       <Handle type="source" position={Position.Right} id="out:backup" data-weft-port-key="backup" />
-      <RuntimeOverlay runtime={data.runtime} />
     </div>
   );
 }

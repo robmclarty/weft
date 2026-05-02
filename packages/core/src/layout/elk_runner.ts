@@ -126,14 +126,13 @@ const CONTAINER_MIN_WIDTH = 280;
 const CONTAINER_MIN_HEIGHT = 120;
 
 /*
- * Wrapper kinds (single-child containers like retry, pipe, timeout, loop,
- * map, checkpoint, compose) get tighter min-size + tighter padding so they
- * read as labeled brackets around their child rather than half-empty bays.
- * Kept in sync with the matching CSS rules in `canvas.css`.
+ * Wrapper-style containers — only expanded compose remains in the
+ * post-deluxe world. pipe/timeout/checkpoint/map became peer markers,
+ * retry/loop got dropped entirely, branch/fallback/parallel became
+ * junctions. Compose (when expanded) is still the labeled-bracket
+ * around its inner subgraph.
  */
-const WRAPPER_KINDS_FOR_LAYOUT = new Set([
-  'pipe', 'retry', 'timeout', 'loop', 'map', 'compose', 'checkpoint',
-]);
+const WRAPPER_KINDS_FOR_LAYOUT = new Set(['compose']);
 const WRAPPER_MIN_WIDTH = 212;
 const WRAPPER_MIN_HEIGHT = 114;
 const WRAPPER_PADDING = 8;

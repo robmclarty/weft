@@ -52,18 +52,23 @@ describe('fallback_layout (deterministic naive grid)', () => {
     for (const n of nodes) expect(seen.has(n.id)).toBe(true);
   });
 
-  it('emits parent-relative coordinates: child positions never include parent offsets', () => {
+  it('emits parent-relative coordinates: a true container child sits inside its parent', () => {
     const { nodes, edges } = graph_for('full_primitive_set.json');
     const result = fallback_layout(nodes, edges);
     const by_id = new Map(result.nodes.map((n) => [n.id, n]));
-    const par = by_id.get('seq:everything/par:report');
-    const first_child = by_id.get('seq:everything/par:report/step:summary');
-    expect(par).toBeDefined();
-    expect(first_child).toBeDefined();
-    if (par === undefined || first_child === undefined) throw new Error('missing');
-    expect(first_child.parentId).toBe('seq:everything/par:report');
-    expect(first_child.position.x).toBeLessThan((par.width ?? 0) + 1);
-    expect(first_child.position.y).toBeLessThan((par.height ?? 0) + 1);
+    // Sequence is still a container post-deluxe; its direct step
+    // children retain `parentId === 'seq:everything'` and their
+    // positions are parent-relative.
+    const seq = by_id.get('seq:everything');
+    const par_junction = by_id.get('seq:everything/par:report');
+    expect(seq).toBeDefined();
+    expect(par_junction).toBeDefined();
+    if (seq === undefined || par_junction === undefined) throw new Error('missing');
+    // The parallel is now a junction (peer of the sequence's other
+    // children, parented to the sequence).
+    expect(par_junction.parentId).toBe('seq:everything');
+    expect(par_junction.position.x).toBeGreaterThanOrEqual(0);
+    expect(par_junction.position.y).toBeGreaterThanOrEqual(0);
   });
 });
 
@@ -90,11 +95,17 @@ describe('layout_graph (ELK happy path, in-thread)', () => {
     const { nodes: n2, edges: e2 } = graph_for('parallel_ordering.json');
     const r2 = await layout_graph(n2, e2, { worker_factory: null });
 
+    // C-deluxe: parallel children are lifted to peers, so `parentId`
+    // is no longer the parallel id. Filter on path-prefix to capture
+    // the four parallel branches in declaration order.
+    const par_prefix = 'par:ordered/';
+    const direct = (id: string): boolean =>
+      id.startsWith(par_prefix) && !id.slice(par_prefix.length).includes('/');
     const par_children_1 = r1.nodes
-      .filter((n) => n.parentId === 'par:ordered')
+      .filter((n) => direct(n.id))
       .map((n) => n.id);
     const par_children_2 = r2.nodes
-      .filter((n) => n.parentId === 'par:ordered')
+      .filter((n) => direct(n.id))
       .map((n) => n.id);
 
     expect(par_children_1).toEqual([

@@ -86,15 +86,19 @@ describe('tree_to_graph: depth-first parent-before-child ordering', () => {
 });
 
 describe('tree_to_graph: containers and wrappers', () => {
-  it('wires sequence/parallel/scope children with parentId', () => {
+  it('wires parallel children as peers of the parallel junction (C-deluxe)', () => {
     const tree = parse_fixture('nested_parallel.json');
     const { nodes } = tree_to_graph(tree);
-    const par_outer_children = nodes.filter((n) => n.parentId === 'seq:fanout/par:outer');
-    expect(par_outer_children.length).toBe(2);
-    expect(par_outer_children.map((n) => n.id)).toEqual([
-      'seq:fanout/par:outer/par:alpha',
-      'seq:fanout/par:outer/step:beta',
-    ]);
+    // C-deluxe: parallel is a junction; its children are lifted to be
+    // peers of the parallel itself, not nested inside.
+    const par_outer = find_by_id(nodes, 'seq:fanout/par:outer');
+    expect(par_outer?.type).toBe('parallel');
+    // Children of par:outer share the parallel's parent (the sequence).
+    const peers = nodes.filter((n) => n.parentId === 'seq:fanout');
+    const peer_ids = peers.map((n) => n.id);
+    expect(peer_ids).toContain('seq:fanout/par:outer');
+    expect(peer_ids).toContain('seq:fanout/par:outer/par:alpha');
+    expect(peer_ids).toContain('seq:fanout/par:outer/step:beta');
   });
 
   it('drops the retry wrapper from the graph and emits a self-loop on the wrapped child', () => {
@@ -228,8 +232,13 @@ describe('tree_to_graph: unknown kinds', () => {
 });
 
 function child_order(g: { nodes: ReadonlyArray<WeftNode>; edges: ReadonlyArray<WeftEdge> }) {
+  // C-deluxe: parallel is a junction with children lifted to peers.
+  // The "parallel children" the ordering test cares about are now nodes
+  // whose graph_id is path-prefixed by 'par:ordered/' but whose
+  // parentId is the parallel's parent (or unset at root). Filter on
+  // path prefix to capture them.
   const children = g.nodes
-    .filter((n) => n.parentId === 'par:ordered')
+    .filter((n) => n.id.startsWith('par:ordered/') && !n.id.slice('par:ordered/'.length).includes('/'))
     .map((n) => n.id);
   const fan_out = g.edges
     .filter((e) => e.source === 'par:ordered' && e.data?.kind === 'structural')

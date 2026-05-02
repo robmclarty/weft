@@ -583,6 +583,101 @@ function map_cardinality_edge(
   };
 }
 
+const JUNCTION_W = 56;
+const JUNCTION_H = 56;
+
+/**
+ * Walk a branch/fallback as a small diamond junction. The two children
+ * (then/otherwise or primary/backup) lift to peers; two role-tagged
+ * outgoing edges fan out from the junction and carry the existing
+ * solid/dashed orange styling shipped in phase C.
+ *
+ * Chain segment: { first: junction, last: junction } — the junction is
+ * its own input and (degenerate) output. A sequence after a branch
+ * connects to the junction; runtime only one branch is taken, so the
+ * "successor edge" semantically picks up wherever the chosen child's
+ * `last` ends up, but the v0/v1 graph model doesn't draw the
+ * convergence so the junction's last is the simplest stand-in.
+ */
+function walk_branching_as_junction(
+  ctx: WalkContext,
+  node: FlowNode,
+  parent_graph_id: string | null,
+  graph_id: string,
+  labels: ReadonlyArray<string>,
+): ChainSegment {
+  ctx.visited.add(node);
+
+  // Emit junction leaf (no children at the React Flow level — children
+  // are lifted to be peers below).
+  const data = build_node_data(node);
+  const rf_node: WeftNode = {
+    id: graph_id,
+    type: node.kind,
+    position: { x: 0, y: 0 },
+    width: JUNCTION_W,
+    height: JUNCTION_H,
+    data,
+  };
+  if (parent_graph_id !== null) rf_node.parentId = parent_graph_id;
+  ctx.nodes.push(rf_node);
+
+  // Lift children to peers; each gets its own chain segment, but the
+  // junction emits a fan-out edge to each child's `first`.
+  const children = node.children ?? [];
+  for (let i = 0; i < children.length; i += 1) {
+    const child = children[i];
+    if (child === undefined) continue;
+    const seg = walk_for_chain(ctx, child, parent_graph_id, graph_id);
+    const label = labels[i];
+    const source_handle = label === undefined ? undefined : `out:${label}`;
+    ctx.edges.push(structural_edge(graph_id, seg.first, label, source_handle));
+  }
+
+  return { first: graph_id, last: graph_id };
+}
+
+/**
+ * Walk parallel as a teal diamond junction with N port-keyed outgoing
+ * edges (one per child). Order is preserved by ELK's FIXED_ORDER
+ * constraint declared via `elk_options_for(parallel_node)` —
+ * `data.kind === 'parallel'` triggers the constraint regardless of
+ * whether the node was a container or a junction.
+ */
+function walk_parallel_as_junction(
+  ctx: WalkContext,
+  node: FlowNode,
+  parent_graph_id: string | null,
+  graph_id: string,
+): ChainSegment {
+  ctx.visited.add(node);
+
+  const data = build_node_data(node);
+  const rf_node: WeftNode = {
+    id: graph_id,
+    type: 'parallel',
+    position: { x: 0, y: 0 },
+    width: JUNCTION_W,
+    height: JUNCTION_H,
+    data,
+  };
+  if (parent_graph_id !== null) rf_node.parentId = parent_graph_id;
+  ctx.nodes.push(rf_node);
+
+  const children = node.children ?? [];
+  const keys = read_string_array(node.config?.['keys']) ?? [];
+  for (let i = 0; i < children.length; i += 1) {
+    const child = children[i];
+    if (child === undefined) continue;
+    const seg = walk_for_chain(ctx, child, parent_graph_id, graph_id);
+    const label = keys[i];
+    const source_handle = label === undefined ? undefined : `out:${label}`;
+    ctx.edges.push(structural_edge(graph_id, seg.first, label, source_handle));
+  }
+
+  return { first: graph_id, last: graph_id };
+}
+
 /**
  * Walk a `retry(child)` or `loop(child)` wrapper as a pure edge
  * decoration. The wrapper itself is NOT emitted as a node — only the
@@ -790,6 +885,30 @@ function walk_for_chain(
   // come from edge-click handling in a follow-up.
   if (node.kind === 'retry' || node.kind === 'loop') {
     return walk_retry_or_loop_as_edge(ctx, node, parent_graph_id, graph_id);
+  }
+  // Branch / fallback / parallel: emit as a 56px diamond junction with
+  // children lifted to peers, then fan out role-tagged or port-keyed
+  // edges from the junction. C-deluxe.
+  if (node.kind === 'branch') {
+    return walk_branching_as_junction(
+      ctx,
+      node,
+      parent_graph_id,
+      graph_id,
+      ['then', 'otherwise'],
+    );
+  }
+  if (node.kind === 'fallback') {
+    return walk_branching_as_junction(
+      ctx,
+      node,
+      parent_graph_id,
+      graph_id,
+      ['primary', 'backup'],
+    );
+  }
+  if (node.kind === 'parallel') {
+    return walk_parallel_as_junction(ctx, node, parent_graph_id, graph_id);
   }
 
   // Pipe: lift child to peer, emit pipe as marker, return [child, marker].

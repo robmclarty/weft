@@ -75,7 +75,7 @@ describe('SequenceNode', () => {
 });
 
 describe('ParallelNode', () => {
-  it('declares one source handle per key plus an input handle', () => {
+  it('declares one source handle per key plus an input handle (junction shape, no title text)', () => {
     const nodes: WeftNode[] = [
       {
         id: 'par:1',
@@ -87,7 +87,10 @@ describe('ParallelNode', () => {
     mounted = mount_canvas(nodes, []);
     const par = mounted.container.querySelector('[data-weft-kind="parallel"]');
     expect(par).not.toBeNull();
-    expect(par?.textContent).toContain('parallel × 3');
+    // C-deluxe: parallel renders as a diamond junction; the cardinality
+    // / display_name is no longer in node textContent. Confirm
+    // presentation + handle plumbing instead.
+    expect(par?.getAttribute('data-weft-presentation')).toBe('junction');
     const handles = par?.querySelectorAll('.react-flow__handle') ?? [];
     expect(handles.length).toBe(4);
     const port_keys = Array.from(par?.querySelectorAll('[data-weft-port-key]') ?? []).map(
@@ -370,38 +373,9 @@ describe('display_name from meta surfaces in container titles', () => {
           data: { kind: 'scope', id: 'scope:1', meta: { display_name: 'shared_state' } },
         },
       ],
-      [
-        'parallel',
-        {
-          id: 'par:1',
-          type: 'parallel',
-          position: { x: 0, y: 0 },
-          data: {
-            kind: 'parallel',
-            id: 'par:1',
-            config: { keys: [] },
-            meta: { display_name: 'fan_out' },
-          },
-        },
-      ],
-      [
-        'branch',
-        {
-          id: 'branch:1',
-          type: 'branch',
-          position: { x: 0, y: 0 },
-          data: { kind: 'branch', id: 'branch:1', meta: { display_name: 'split_input' } },
-        },
-      ],
-      [
-        'fallback',
-        {
-          id: 'fb:1',
-          type: 'fallback',
-          position: { x: 0, y: 0 },
-          data: { kind: 'fallback', id: 'fb:1', meta: { display_name: 'cloud_or_local' } },
-        },
-      ],
+      // parallel/branch/fallback omitted: C-deluxe renders all three as
+      // small diamond junctions (no visible text). Their display_name
+      // surfaces in the inspector; the junction only carries the glyph.
       // timeout omitted: B-deluxe renders timeout as a marker (no
       // visible text). The deadline rides on the timeout-deadline edge.
       [
