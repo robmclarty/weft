@@ -1,35 +1,43 @@
 /**
- * Loop-back edge — the visual signature of `loop`. Draws a wider arc that
- * returns from the wrapped node's right-side output back around to its
- * left-side input, sweeping above the node like a subway track curving
+ * Loop-back edge — the visual signature of `loop`. Draws an arc that
+ * returns from the wrapped node's right-out handle back around to its
+ * left-in handle, sweeping above the node like a subway track curving
  * back to the platform. The loop config (`↺ ≤ 5`) labels the arc's apex.
  *
- * Like SelfLoopEdge, source and target share a graph id. We synthesize
- * input-side coordinates from the source position so the arc reads as a
- * proper return loop rather than a self-arrow.
+ * Both endpoints are real handle positions — `tree_to_graph.ts` sets
+ * `sourceHandle: 'out'` and `targetHandle: 'in'` so React Flow gives us
+ * distinct sourceX (right-out) and targetX (left-in) coordinates, even
+ * though source and target share a graph id. The arc apex height scales
+ * to the source node's measured bounds so a loop over a wide wrapper
+ * doesn't get a flat line that vanishes into the chrome above.
  */
 
-import { BaseEdge, EdgeLabelRenderer, type EdgeProps } from '@xyflow/react';
+import { BaseEdge, EdgeLabelRenderer, useInternalNode, type EdgeProps } from '@xyflow/react';
 import type { JSX } from 'react';
 
-const ARC_HEIGHT = 56;
-const ARC_OUTREACH = 96;
+const FALLBACK_NODE_H = 60;
+const MIN_ARC_H = 56;
 
 export function LoopBackEdge(props: EdgeProps): JSX.Element {
-  const { id, sourceX, sourceY, label, markerEnd, style } = props;
-  // Source is the right-out handle position. Approximate the input handle
-  // by mirroring across the node — assume a typical 184px leaf width plus
-  // some margin so the arc clears the node body.
-  const node_width = 184;
-  const target_x = sourceX - node_width;
-  const target_y = sourceY;
-  // Peak sits above the midpoint, swept up enough to clear container chrome.
-  const mid_x = (sourceX + target_x) / 2;
-  const peak_y = sourceY - ARC_HEIGHT;
+  const { id, source, sourceX, sourceY, targetX, targetY, label, markerEnd, style } = props;
+  const node = useInternalNode(source);
+  const node_h = node?.measured?.height ?? FALLBACK_NODE_H;
+  // Sweep above the wrapped node by at least the node's own height — that
+  // clears typical wrapper container chrome (40px header band + body).
+  const arc_h = Math.max(node_h * 1.0, MIN_ARC_H);
+  const peak_y = Math.min(sourceY, targetY) - arc_h;
+
+  // Cubic bezier from sourceX,sourceY (right-out) to targetX,targetY
+  // (left-in) with control points pulled UP to the apex height. The
+  // outboard control offsets make the curve bulge outward before
+  // returning instead of cutting straight across.
+  const span = Math.abs(sourceX - targetX);
+  const outreach = Math.max(span * 0.4, 32);
+  const mid_x = (sourceX + targetX) / 2;
   const path = `M ${String(sourceX)} ${String(sourceY)} `
-    + `C ${String(sourceX + ARC_OUTREACH / 2)} ${String(peak_y)}, `
-    + `${String(target_x - ARC_OUTREACH / 2)} ${String(peak_y)}, `
-    + `${String(target_x)} ${String(target_y)}`;
+    + `C ${String(sourceX + outreach)} ${String(peak_y)}, `
+    + `${String(targetX - outreach)} ${String(peak_y)}, `
+    + `${String(targetX)} ${String(targetY)}`;
   // exactOptionalPropertyTypes: pass markerEnd only when defined to keep
   // BaseEdge's `string` (not `string | undefined`) prop signature happy.
   const base_props = markerEnd === undefined

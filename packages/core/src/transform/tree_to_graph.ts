@@ -395,22 +395,34 @@ function read_number(value: FlowValue | undefined): number | undefined {
 }
 
 function self_loop_edge(node_id: string, label: string, wrapper_id: string): WeftEdge {
+  // Self-loop: source and target are the same right-out handle. The edge
+  // component renders a tight arc returning to the same point; React Flow
+  // gives identical sourceX/sourceY and targetX/targetY which is what the
+  // arc math wants.
   return {
     id: `e:self-loop:${wrapper_id}->${node_id}`,
     type: 'self-loop',
     source: node_id,
     target: node_id,
+    sourceHandle: 'out',
+    targetHandle: 'out',
     label,
     data: { kind: 'self-loop', wrapper_id, wrapper_label: label },
   };
 }
 
 function loop_back_edge(node_id: string, label: string, wrapper_id: string): WeftEdge {
+  // Loop-back: edge sweeps from right-out handle back around to left-in
+  // handle of the same node. Distinct handle ids make React Flow compute
+  // distinct sourceX and targetX so the arc has real horizontal extent
+  // instead of collapsing to a single point.
   return {
     id: `e:loop-back:${wrapper_id}->${node_id}`,
     type: 'loop-back',
     source: node_id,
     target: node_id,
+    sourceHandle: 'out',
+    targetHandle: 'in',
     label,
     data: { kind: 'loop-back', wrapper_id, wrapper_label: label },
   };
