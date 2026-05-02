@@ -311,8 +311,8 @@ describe('tree_to_graph: new primitive kinds', () => {
     ]);
   });
 
-  it('wires loop, map, timeout, checkpoint, compose as wrappers over their children', () => {
-    const wrappers = ['loop', 'map', 'timeout', 'checkpoint', 'compose'] as const;
+  it('wires loop, map, timeout, checkpoint as wrappers over their children', () => {
+    const wrappers = ['loop', 'map', 'timeout', 'checkpoint'] as const;
     for (const kind of wrappers) {
       const tree: FlowTree = {
         version: 1,
@@ -328,6 +328,39 @@ describe('tree_to_graph: new primitive kinds', () => {
       expect(wrapper?.type).toBe(kind);
       expect(child?.parentId).toBe(`${kind}_1`);
     }
+  });
+
+  it('renders compose collapsed by default, omitting its inner subgraph', () => {
+    const tree: FlowTree = {
+      version: 1,
+      root: {
+        kind: 'compose',
+        id: 'compose_1',
+        children: [{ kind: 'step', id: 'inner' }],
+      },
+    };
+    const { nodes } = tree_to_graph(tree);
+    expect(find_by_id(nodes, 'compose_1')?.type).toBe('compose');
+    expect(find_by_id(nodes, 'compose_1')?.data.is_expanded).toBe(false);
+    expect(find_by_id(nodes, 'compose_1/inner')).toBeUndefined();
+  });
+
+  it('renders compose expanded when its graph id is passed in expanded_composes', () => {
+    const tree: FlowTree = {
+      version: 1,
+      root: {
+        kind: 'compose',
+        id: 'compose_1',
+        children: [{ kind: 'step', id: 'inner' }],
+      },
+    };
+    const { nodes } = tree_to_graph(tree, {
+      expanded_composes: new Set(['compose_1']),
+    });
+    const wrapper = find_by_id(nodes, 'compose_1');
+    const child = find_by_id(nodes, 'compose_1/inner');
+    expect(wrapper?.data.is_expanded).toBe(true);
+    expect(child?.parentId).toBe('compose_1');
   });
 
   it('renders suspend as a leaf with no children', () => {

@@ -132,6 +132,12 @@ function CanvasInner({
   const [nodes, set_nodes] = useState<WeftNode[]>([]);
   const [edges, set_edges] = useState<WeftEdge[]>([]);
   const [is_panning, set_is_panning] = useState(false);
+  // Compose nodes start collapsed — the abstraction the user opted into
+  // with phase D is what they see first. Clicking a compose toggles its
+  // graph id in this set, which re-runs tree_to_graph + layout.
+  const [expanded_composes, set_expanded_composes] = useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  );
 
   const debounced_layout = useMemo(
     () => make_latest_wins_debounce(layout_graph, LAYOUT_DEBOUNCE_MS),
@@ -146,7 +152,9 @@ function CanvasInner({
 
   useEffect(() => {
     let cancelled = false;
-    const { nodes: raw_nodes, edges: raw_edges } = tree_to_graph(tree);
+    const { nodes: raw_nodes, edges: raw_edges } = tree_to_graph(tree, {
+      expanded_composes,
+    });
     void debounced_layout
       .call(raw_nodes, raw_edges, layout_options)
       .then((laid) => {
@@ -163,7 +171,7 @@ function CanvasInner({
     return () => {
       cancelled = true;
     };
-  }, [tree, layout_options, debounced_layout]);
+  }, [tree, layout_options, debounced_layout, expanded_composes]);
 
   // Overlay runtime state onto the already-laid-out nodes without triggering
   // a re-layout. The id segment after the last `/` is the FlowNode.id (the key
@@ -271,7 +279,20 @@ function CanvasInner({
   );
 
   const handle_node_click = useCallback(
-    (_event: unknown, rf_node: { id: string; data: { id: string } }) => {
+    (_event: unknown, rf_node: { id: string; data: { id: string; kind?: string } }) => {
+      // Compose nodes also toggle expansion on click. This keeps the
+      // gesture single — one click both inspects the compose and reveals
+      // / hides its inner subgraph — instead of forcing a separate
+      // chevron hit-target.
+      if (rf_node.data?.kind === 'compose') {
+        const id = rf_node.id;
+        set_expanded_composes((prev) => {
+          const next = new Set(prev);
+          if (next.has(id)) next.delete(id);
+          else next.add(id);
+          return next;
+        });
+      }
       if (on_node_click === undefined) return;
       const flat_id = rf_node.data?.id ?? strip_graph_path(rf_node.id);
       const found = find_flow_node(tree.root, flat_id);

@@ -266,11 +266,36 @@
 .weft-node-timeout,
 .weft-node-loop,
 .weft-node-map,
-.weft-node-compose,
-.weft-node-checkpoint {
+.weft-node-checkpoint,
+.weft-node-container.weft-node-compose {
   min-width: 212px;
   min-height: 114px;
   padding: calc(var(--weft-container-header-h) + 4px) 8px 8px;
+}
+
+/*
+ * Collapsed compose: the compose renders as a single solid block with
+ * the display_name as its label. This is the abstraction the user opted
+ * into — they see one box, not a buried subgraph, until they click to
+ * expand. The block uses compose's blue family hue with paper text,
+ * mirroring the leaf-block read of step/parallel/etc.
+ */
+.weft-node-leaf.weft-node-compose-collapsed {
+  width: var(--weft-leaf-width);
+  height: var(--weft-leaf-height);
+  background: var(--weft-compose-fill);
+  border-color: var(--weft-compose-accent);
+  color: var(--weft-compose-on);
+  cursor: pointer;
+}
+
+.weft-compose-chevron {
+  font-family: var(--weft-font-mono);
+  font-size: 12px;
+  color: inherit;
+  margin-left: auto;
+  flex: 0 0 auto;
+  opacity: 0.85;
 }
 
 /*

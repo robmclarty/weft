@@ -41,6 +41,13 @@ export type WeftNodeData = {
   generic?: true;
   warning?: 'cycle-guard';
   runtime?: NodeRuntimeState;
+  /**
+   * For `compose` nodes only: whether the user has expanded this composite
+   * to reveal its inner subgraph. When `false`, the transform stops the
+   * walk at this node, so the compose renders as a single labeled block;
+   * when `true`, the inner children render as nested chrome (the v0 look).
+   */
+  is_expanded?: boolean;
 };
 
 export type WeftEdgeData = {
@@ -140,6 +147,14 @@ type WalkContext = {
   nodes: WeftNode[];
   edges: WeftEdge[];
   visited: WeakSet<FlowNode>;
+  /**
+   * Graph ids of `compose` nodes the user has expanded. A compose whose id
+   * is absent renders as a collapsed leaf-style block; a compose whose id
+   * is present recurses into its children. Defaults to empty so trees
+   * load with all composites collapsed — the abstraction the user opted
+   * into is what they see first.
+   */
+  expanded_composes: ReadonlySet<string>;
 };
 
 function build_node_data(node: FlowNode): WeftNodeData {
@@ -240,6 +255,9 @@ function emit_basic_node(
   const type_ = node_type_for(node.kind);
   const data = build_node_data(node);
   if (type_ === GENERIC_TYPE) data.generic = true;
+  if (node.kind === 'compose') {
+    data.is_expanded = ctx.expanded_composes.has(graph_id);
+  }
   const rf_node: WeftNode = {
     id: graph_id,
     type: type_,
@@ -479,6 +497,13 @@ function walk(
     }
   }
 
+  if (node.kind === 'compose' && !ctx.expanded_composes.has(graph_id)) {
+    // Collapsed compose: stop the walk here. The compose renders as a
+    // single labeled block (no children, no inner edges); clicking it
+    // toggles expansion via the canvas.
+    return;
+  }
+
   if (WRAPPER_KINDS.has(node.kind)) {
     walk_wrapper_child(ctx, node, graph_id);
     return;
@@ -491,11 +516,25 @@ function walk(
   }
 }
 
-export function tree_to_graph(tree: FlowTree): TreeToGraphResult {
+export type TreeToGraphOptions = {
+  /**
+   * Graph ids of `compose` nodes the caller wants expanded. Pass an empty
+   * set (or omit) to render every compose collapsed — the default. A
+   * compose whose graph id is in this set walks normally; absent ones
+   * stop at the compose boundary.
+   */
+  readonly expanded_composes?: ReadonlySet<string>;
+};
+
+export function tree_to_graph(
+  tree: FlowTree,
+  options?: TreeToGraphOptions,
+): TreeToGraphResult {
   const ctx: WalkContext = {
     nodes: [],
     edges: [],
     visited: new WeakSet(),
+    expanded_composes: options?.expanded_composes ?? new Set<string>(),
   };
   walk(ctx, tree.root, null, null);
   return { nodes: ctx.nodes, edges: ctx.edges };
