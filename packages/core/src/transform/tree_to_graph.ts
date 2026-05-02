@@ -44,7 +44,19 @@ export type WeftNodeData = {
 };
 
 export type WeftEdgeData = {
-  kind: 'structural' | 'overlay';
+  kind: 'structural' | 'overlay' | 'self-loop' | 'loop-back';
+  /**
+   * For wrapper-derived edges (`self-loop`, `loop-back`), the wrapper's
+   * graph id so the edge click handler can route the inspector to the
+   * wrapper's flow-tree node. Structural/overlay edges leave this absent.
+   */
+  wrapper_id?: string;
+  /**
+   * Condensed label for wrapper edges, e.g. "↻ 3× / 250ms" for retry.
+   * Renderers use this verbatim; transform formats it once at emit time so
+   * edge components stay free of config-parsing logic.
+   */
+  wrapper_label?: string;
 };
 
 export type WeftNode = Node<WeftNodeData>;
@@ -328,6 +340,56 @@ function walk_labeled_children(
   }
 }
 
+function format_retry_label(config: FlowNode['config']): string {
+  const attempts = read_number(config?.['max_attempts']);
+  const backoff = read_number(config?.['backoff_ms']);
+  if (attempts !== undefined && backoff !== undefined) {
+    return `↻ ${String(attempts)}× / ${String(backoff)}ms`;
+  }
+  if (attempts !== undefined) return `↻ ${String(attempts)}×`;
+  if (backoff !== undefined) return `↻ ${String(backoff)}ms`;
+  return '↻ retry';
+}
+
+function format_loop_label(config: FlowNode['config']): string {
+  const max_rounds = read_number(config?.['max_rounds']);
+  if (max_rounds !== undefined) return `↺ ≤ ${String(max_rounds)}`;
+  return '↺ loop';
+}
+
+function read_number(value: FlowValue | undefined): number | undefined {
+  return typeof value === 'number' ? value : undefined;
+}
+
+function self_loop_edge(node_id: string, label: string, wrapper_id: string): WeftEdge {
+  return {
+    id: `e:self-loop:${wrapper_id}->${node_id}`,
+    type: 'self-loop',
+    source: node_id,
+    target: node_id,
+    label,
+    data: { kind: 'self-loop', wrapper_id, wrapper_label: label },
+  };
+}
+
+function loop_back_edge(node_id: string, label: string, wrapper_id: string): WeftEdge {
+  return {
+    id: `e:loop-back:${wrapper_id}->${node_id}`,
+    type: 'loop-back',
+    source: node_id,
+    target: node_id,
+    label,
+    data: { kind: 'loop-back', wrapper_id, wrapper_label: label },
+  };
+}
+
+/**
+ * Walk a wrapper's child subtree, then attach a wrapper-specific decoration
+ * edge to the wrapped child. The wrapper itself remains in the graph as a
+ * container (so it stays clickable for the inspector and runtime overlay
+ * cascade); the decoration edge is what surfaces the wrapper's signature
+ * topology — retry's self-loop, loop's back-edge — visually.
+ */
 function walk_wrapper_child(
   ctx: WalkContext,
   parent_node: FlowNode,
@@ -336,6 +398,23 @@ function walk_wrapper_child(
   const children = parent_node.children ?? [];
   for (const child of children) {
     walk(ctx, child, parent_graph_id, parent_graph_id);
+  }
+  if (children.length === 0) return;
+  // The wrapped child is the first (and for retry/loop typically the only)
+  // child; the decoration edge lands on it. Loop's optional guard child is
+  // a second sibling — it does not need its own back-edge.
+  const first_child = children[0];
+  if (first_child === undefined) return;
+  const child_graph_id = child_path(parent_graph_id, first_child.id);
+  if (parent_node.kind === 'retry') {
+    const label = format_retry_label(parent_node.config);
+    ctx.edges.push(self_loop_edge(child_graph_id, label, parent_graph_id));
+    return;
+  }
+  if (parent_node.kind === 'loop') {
+    const label = format_loop_label(parent_node.config);
+    ctx.edges.push(loop_back_edge(child_graph_id, label, parent_graph_id));
+    return;
   }
 }
 

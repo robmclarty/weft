@@ -254,6 +254,26 @@
 .weft-node-checkpoint { border-left-color: var(--weft-checkpoint-accent); }
 
 /*
+ * Wrappers are containers that hold a single (or near-single) child rather
+ * than a full subgraph. Tighter min-size + zero-row padding lets them hug
+ * the wrapped child as a labeled bracket instead of a 280px-wide bay. The
+ * sequence/scope/branch/fallback/parallel containers (true subgraph
+ * containers) keep the larger minimum from `:root`. ELK's per-container
+ * `nodeSize.minimum` is set to match in `elk_runner.ts`.
+ */
+.weft-node-pipe,
+.weft-node-retry,
+.weft-node-timeout,
+.weft-node-loop,
+.weft-node-map,
+.weft-node-compose,
+.weft-node-checkpoint {
+  min-width: 212px;
+  min-height: 114px;
+  padding: calc(var(--weft-container-header-h) + 4px) 8px 8px;
+}
+
+/*
  * Container header band: a corner tab pinned to the top-left, ~auto width,
  * solid kind-color so it reads as a label flag on the bracket.
  */
@@ -485,6 +505,47 @@
 
 .weft-edge-overlay .react-flow__edge-text {
   fill: var(--weft-color-overlay-edge);
+}
+
+/*
+ * Wrapper-derived edges — retry (self-loop) and loop (loop-back) — render
+ * in their kind hue so the retry arc reads as yellow timing, and the loop
+ * sweep reads as magenta recursion. Stroke stays non-scaling and slightly
+ * thinner than structural edges so the loops don't dominate the
+ * predecessor / successor flow.
+ */
+.react-flow__edge.react-flow__edge-self-loop .react-flow__edge-path {
+  stroke: var(--weft-hue-yellow);
+  stroke-width: 3.5px;
+}
+
+.react-flow__edge.react-flow__edge-loop-back .react-flow__edge-path {
+  stroke: var(--weft-hue-magenta);
+  stroke-width: 3.5px;
+}
+
+.weft-edge-self-loop-label,
+.weft-edge-loop-back-label {
+  font-family: var(--weft-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--weft-color-paper);
+  border: 1.5px solid var(--weft-color-fg);
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  color: var(--weft-color-fg);
+  box-shadow: 0 1px 0 0 var(--weft-color-fg);
+}
+
+.weft-edge-self-loop-label {
+  border-color: var(--weft-hue-yellow);
+}
+
+.weft-edge-loop-back-label {
+  border-color: var(--weft-hue-magenta);
 }
 
 /* runtime overlay: active pulse, error scar, emit flash, cost badge.

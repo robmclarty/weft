@@ -125,6 +125,19 @@ const CONTAINER_PADDING = 14;
 const CONTAINER_MIN_WIDTH = 280;
 const CONTAINER_MIN_HEIGHT = 120;
 
+/*
+ * Wrapper kinds (single-child containers like retry, pipe, timeout, loop,
+ * map, checkpoint, compose) get tighter min-size + tighter padding so they
+ * read as labeled brackets around their child rather than half-empty bays.
+ * Kept in sync with the matching CSS rules in `canvas.css`.
+ */
+const WRAPPER_KINDS_FOR_LAYOUT = new Set([
+  'pipe', 'retry', 'timeout', 'loop', 'map', 'compose', 'checkpoint',
+]);
+const WRAPPER_MIN_WIDTH = 212;
+const WRAPPER_MIN_HEIGHT = 114;
+const WRAPPER_PADDING = 8;
+
 function build_subtree(
   parent: string | null,
   nodes: ReadonlyArray<WeftNode>,
@@ -140,6 +153,10 @@ function build_subtree(
       : [];
     const sub = build_subtree(n.id, nodes, edges);
     const has_children = sub.length > 0;
+    const is_wrapper = WRAPPER_KINDS_FOR_LAYOUT.has(n.data?.kind ?? '');
+    const min_w = is_wrapper ? WRAPPER_MIN_WIDTH : CONTAINER_MIN_WIDTH;
+    const min_h = is_wrapper ? WRAPPER_MIN_HEIGHT : CONTAINER_MIN_HEIGHT;
+    const side_pad = is_wrapper ? WRAPPER_PADDING : CONTAINER_PADDING;
     const child: ElkNode = has_children
       ? {
           id: n.id,
@@ -150,8 +167,8 @@ function build_subtree(
             ...elk_options_for(n),
             'org.eclipse.elk.nodeSize.constraints':
               '[NODE_LABELS, PORTS, MINIMUM_SIZE]',
-            'org.eclipse.elk.nodeSize.minimum': `(${String(CONTAINER_MIN_WIDTH)}, ${String(CONTAINER_MIN_HEIGHT)})`,
-            'org.eclipse.elk.padding': `[top=${String(CONTAINER_HEADER_BAND)},left=${String(CONTAINER_PADDING)},bottom=${String(CONTAINER_PADDING)},right=${String(CONTAINER_PADDING)}]`,
+            'org.eclipse.elk.nodeSize.minimum': `(${String(min_w)}, ${String(min_h)})`,
+            'org.eclipse.elk.padding': `[top=${String(CONTAINER_HEADER_BAND)},left=${String(side_pad)},bottom=${String(side_pad)},right=${String(side_pad)}]`,
           },
         }
       : {

@@ -49,6 +49,7 @@ import {
   type WeftNode,
 } from '../transform/tree_to_graph.js';
 import { node_types } from '../nodes/registry.js';
+import { edge_types } from '../edges/registry.js';
 import type { CanvasApi, CanvasViewport } from './canvas_api.js';
 import { export_canvas_png } from './png_export.js';
 
@@ -301,6 +302,7 @@ function CanvasInner({
         nodes={nodes}
         edges={edges}
         nodeTypes={node_types}
+        edgeTypes={edge_types}
         defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
         nodesDraggable={false}
         nodesConnectable={false}

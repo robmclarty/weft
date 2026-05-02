@@ -253,12 +253,13 @@ describe('tree_to_graph: input is not mutated', () => {
   });
 });
 
-describe('tree_to_graph: edges carry a structural/overlay tag', () => {
-  it('tags every edge in full_primitive_set.json', () => {
+describe('tree_to_graph: edges carry a typed kind', () => {
+  it('tags every edge in full_primitive_set.json with a known kind', () => {
     const tree = parse_fixture('full_primitive_set.json');
     const { edges } = tree_to_graph(tree);
+    const known = new Set(['structural', 'overlay', 'self-loop', 'loop-back']);
     for (const edge of edges) {
-      expect(edge.data?.kind === 'structural' || edge.data?.kind === 'overlay').toBe(true);
+      expect(known.has(edge.data?.kind ?? '')).toBe(true);
     }
   });
 });
