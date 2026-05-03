@@ -39,6 +39,18 @@ const SCENARIOS = [
     name: 'full_primitive_set',
     path: '/view?src=http://127.0.0.1:5173/fixtures/full_primitive_set.json',
   },
+  {
+    name: 'cycle_bug',
+    path: '/view?src=http://127.0.0.1:5173/fixtures/cycle_bug.json',
+  },
+  {
+    name: 'nested_parallel',
+    path: '/view?src=http://127.0.0.1:5173/fixtures/nested_parallel.json',
+  },
+  {
+    name: 'parallel_ordering',
+    path: '/view?src=http://127.0.0.1:5173/fixtures/parallel_ordering.json',
+  },
 ];
 
 async function ensure_server_up(url, max_attempts = 40) {
