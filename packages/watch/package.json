@@ -1,6 +1,6 @@
 {
   "name": "@repo/watch",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Watch CLI for weft. Tails a fascicle FlowNode JSON file and pushes changes over a localhost WebSocket.",
   "license": "Apache-2.0",
   "author": "Rob McLarty",

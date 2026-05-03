@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.1.5 — 2026-05-02
+
+### Added
+
+- `pnpm metrics:vision` — Claude vision-LLM scorer that rates each fixture screenshot from `pnpm metrics` on a four-axis rubric (edge clutter, label readability, container clarity, balance) and writes structured scores plus pixel-cited issue locations to `.check/layout-vision-scores.json`. Needs `ANTHROPIC_API_KEY`.
+- `pnpm metrics:graphviz` — diagnostic-only Graphviz `dot` benchmark that lays the fixtures out with `splines=ortho rankdir=LR` and reports the same crossings / bends / length / overlap metrics as `pnpm metrics`, with deltas vs the most recent ELK run. Answers whether residual visual issues are an engine ceiling or a property of the input shape.
+- Layout-options `router: 'elk' | 'libavoid'` flag (defaults to `'elk'`) plus studio `?router=libavoid` URL query. The libavoid path routes edges with `libavoid-js` after ELK has placed nodes; falls back silently to ELK routes when the optional WASM dep is unavailable. Behind-flag spike — `libavoid-js` is LGPL-2.1-or-later, so a license review is required before flipping the default.
+
+### Internal
+
+- `scripts/lib/layout-geometry.mjs` extracts the crossings / bends / length / overlap helpers shared by `pnpm metrics` and `pnpm metrics:graphviz` so the two scorers stay byte-comparable across engines.
+- `pnpm metrics --router libavoid` benchmarks the libavoid spike against ELK head-to-head on the same fixtures.
+
 ## v0.1.4 — 2026-05-02
 
 ### Changed
