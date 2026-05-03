@@ -105,7 +105,7 @@ function endpoint_for(
 ): { centre: { x: number; y: number }; w: number; h: number } | null {
   const pos = node.position;
   if (pos === undefined) return null;
-  const w = node.width ?? 184;
+  const w = node.width ?? 220;
   const h = node.height ?? 60;
   return {
     centre: {

@@ -75,6 +75,68 @@ describe('build_elk_graph', () => {
       expect(e.targets?.length).toBe(1);
     }
   });
+
+  it('annotates branch / fallback junctions with FIXED_SIDE ports (happy=EAST, alt=SOUTH)', () => {
+    // Build a minimal graph by hand so the assertion doesn't depend on
+    // fixture structure. Two junctions at root: one branch (then/otherwise),
+    // one fallback (primary/backup).
+    const nodes: WeftNode[] = [
+      { id: 'br', type: 'branch', position: { x: 0, y: 0 }, width: 56, height: 56, data: { kind: 'branch', id: 'br' } },
+      { id: 'fb', type: 'fallback', position: { x: 0, y: 0 }, width: 56, height: 56, data: { kind: 'fallback', id: 'fb' } },
+      { id: 'a', type: 'step', position: { x: 0, y: 0 }, data: { kind: 'step', id: 'a' } },
+      { id: 'b', type: 'step', position: { x: 0, y: 0 }, data: { kind: 'step', id: 'b' } },
+    ];
+    const edges: WeftEdge[] = [
+      { id: 'e1', source: 'br', target: 'a', sourceHandle: 'out:then', data: { kind: 'structural', role: 'then' } },
+      { id: 'e2', source: 'br', target: 'b', sourceHandle: 'out:otherwise', data: { kind: 'structural', role: 'otherwise' } },
+      { id: 'e3', source: 'fb', target: 'a', sourceHandle: 'out:primary', data: { kind: 'structural', role: 'primary' } },
+      { id: 'e4', source: 'fb', target: 'b', sourceHandle: 'out:backup', data: { kind: 'structural', role: 'backup' } },
+    ];
+    const graph = build_elk_graph(nodes, edges, resolve_options());
+
+    const branch = graph.children?.find((c) => c.id === 'br');
+    expect(branch?.layoutOptions?.['org.eclipse.elk.portConstraints']).toBe('FIXED_SIDE');
+    const branch_ports = branch?.ports ?? [];
+    expect(branch_ports.find((p) => p.id === 'br::in')?.layoutOptions?.['org.eclipse.elk.port.side']).toBe('WEST');
+    expect(branch_ports.find((p) => p.id === 'br::out:then')?.layoutOptions?.['org.eclipse.elk.port.side']).toBe('EAST');
+    expect(branch_ports.find((p) => p.id === 'br::out:otherwise')?.layoutOptions?.['org.eclipse.elk.port.side']).toBe('SOUTH');
+
+    const fallback = graph.children?.find((c) => c.id === 'fb');
+    expect(fallback?.layoutOptions?.['org.eclipse.elk.portConstraints']).toBe('FIXED_SIDE');
+    const fallback_ports = fallback?.ports ?? [];
+    expect(fallback_ports.find((p) => p.id === 'fb::out:primary')?.layoutOptions?.['org.eclipse.elk.port.side']).toBe('EAST');
+    expect(fallback_ports.find((p) => p.id === 'fb::out:backup')?.layoutOptions?.['org.eclipse.elk.port.side']).toBe('SOUTH');
+  });
+
+  it('binds branch / fallback edges to specific ports via `sources`', () => {
+    // The FIXED_SIDE side assignment only takes effect when ELK can match
+    // each edge to its declared port. A branch's `then` edge must list
+    // `<branch>::out:then` as its source, not the bare junction id.
+    const nodes: WeftNode[] = [
+      { id: 'br', type: 'branch', position: { x: 0, y: 0 }, width: 56, height: 56, data: { kind: 'branch', id: 'br' } },
+      { id: 'a', type: 'step', position: { x: 0, y: 0 }, data: { kind: 'step', id: 'a' } },
+      { id: 'b', type: 'step', position: { x: 0, y: 0 }, data: { kind: 'step', id: 'b' } },
+    ];
+    const edges: WeftEdge[] = [
+      { id: 'e1', source: 'br', target: 'a', sourceHandle: 'out:then', data: { kind: 'structural', role: 'then' } },
+      { id: 'e2', source: 'br', target: 'b', sourceHandle: 'out:otherwise', data: { kind: 'structural', role: 'otherwise' } },
+    ];
+    const graph = build_elk_graph(nodes, edges, resolve_options());
+    const elk_edges = graph.edges ?? [];
+    const e1 = elk_edges.find((e) => e.id === 'e1');
+    const e2 = elk_edges.find((e) => e.id === 'e2');
+    expect(e1?.sources?.[0]).toBe('br::out:then');
+    expect(e2?.sources?.[0]).toBe('br::out:otherwise');
+  });
+
+  it('does not bind sequence/structural edges to ports (only branch/fallback junctions get sourcePort)', () => {
+    // Regression: a plain step → step edge must not be rewritten to a port id.
+    const { nodes, edges } = graph_for('simple_sequence.json');
+    const graph = build_elk_graph(nodes, edges, resolve_options());
+    for (const e of graph.edges ?? []) {
+      expect(e.sources?.[0]).not.toMatch(/::out:/);
+    }
+  });
 });
 
 describe('apply_positions', () => {

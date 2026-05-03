@@ -35,7 +35,9 @@ function FallbackNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
       </span>
       <RuntimeOverlay runtime={data.runtime} />
       <Handle type="source" position={Position.Right} id="out:primary" data-weft-port-key="primary" />
-      <Handle type="source" position={Position.Right} id="out:backup" data-weft-port-key="backup" />
+      {/* `backup` exits the bottom — see `BranchNode.tsx` for the same
+       * FIXED_SIDE port arrangement. */}
+      <Handle type="source" position={Position.Bottom} id="out:backup" data-weft-port-key="backup" />
     </div>
   );
 }

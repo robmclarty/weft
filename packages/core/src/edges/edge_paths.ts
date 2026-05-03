@@ -9,7 +9,7 @@
  * helpers + label / marker-end conditionals.
  */
 
-const FALLBACK_NODE_W = 184;
+const FALLBACK_NODE_W = 220;
 const FALLBACK_NODE_H = 60;
 const SELF_LOOP_MIN_ARC_W = 80;
 const SELF_LOOP_MIN_ARC_H = 40;

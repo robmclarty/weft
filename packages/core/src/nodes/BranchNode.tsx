@@ -38,7 +38,11 @@ function BranchNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
       </span>
       <RuntimeOverlay runtime={data.runtime} />
       <Handle type="source" position={Position.Right} id="out:then" data-weft-port-key="then" />
-      <Handle type="source" position={Position.Right} id="out:otherwise" data-weft-port-key="otherwise" />
+      {/* `otherwise` exits the bottom of the diamond so ELK's FIXED_SIDE port
+       * (declared in `elk_runner.ts`) routes the dashed alt-path edge
+       * downward instead of through the right side; the visible handle dot
+       * sits where the line actually leaves the junction. */}
+      <Handle type="source" position={Position.Bottom} id="out:otherwise" data-weft-port-key="otherwise" />
     </div>
   );
 }

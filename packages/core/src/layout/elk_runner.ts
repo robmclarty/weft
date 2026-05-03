@@ -59,12 +59,30 @@ const ELK_DIRECTION: Record<LayoutDirection, string> = {
 };
 
 // Mirrors --weft-leaf-width / --weft-leaf-height in canvas.css.
-const DEFAULT_NODE_WIDTH = 184;
+const DEFAULT_NODE_WIDTH = 220;
 const DEFAULT_NODE_HEIGHT = 60;
 
 const PARALLEL_KIND = 'parallel';
 const PARALLEL_INPUT_PORT = 'in';
 const PARALLEL_OUTPUT_PORT_PREFIX = 'out:';
+
+// Branch / fallback junctions: one input on the WEST side and two output ports
+// — happy-path (`then` / `primary`) on the EAST and alt-path (`otherwise` /
+// `backup`) on the SOUTH. Splitting the alt path onto a different side keeps
+// ELK from routing the dashed edge as a U-turn through the diamond's right
+// side and back across unrelated nodes (the visible artifact on
+// all_primitives).
+const BRANCH_KIND = 'branch';
+const FALLBACK_KIND = 'fallback';
+const JUNCTION_INPUT_PORT = 'in';
+const BRANCH_HAPPY_LABEL = 'then';
+const BRANCH_ALT_LABEL = 'otherwise';
+const FALLBACK_HAPPY_LABEL = 'primary';
+const FALLBACK_ALT_LABEL = 'backup';
+
+function junction_port_layout(side: string): Record<string, string> {
+  return { 'org.eclipse.elk.port.side': side };
+}
 
 function default_worker_factory(): ((url?: string) => Worker) | undefined {
   if (typeof Worker === 'undefined') return undefined;
@@ -98,21 +116,45 @@ function children_of(parent: string | null, nodes: ReadonlyArray<WeftNode>): Wef
 
 function elk_options_for(node: WeftNode): Record<string, string> {
   const options: Record<string, string> = {};
-  if ((node.data?.kind ?? '') === PARALLEL_KIND) {
+  const kind = node.data?.kind ?? '';
+  if (kind === PARALLEL_KIND) {
     options['org.eclipse.elk.portConstraints'] = 'FIXED_ORDER';
+  } else if (kind === BRANCH_KIND || kind === FALLBACK_KIND) {
+    options['org.eclipse.elk.portConstraints'] = 'FIXED_SIDE';
   }
   return options;
 }
 
 function ports_for(node: WeftNode, fan_out_targets: ReadonlyArray<string>): ElkNode['ports'] | undefined {
-  if ((node.data?.kind ?? '') !== PARALLEL_KIND) return undefined;
-  const ports: NonNullable<ElkNode['ports']> = [
-    { id: `${node.id}::${PARALLEL_INPUT_PORT}` },
-  ];
-  for (const target of fan_out_targets) {
-    ports.push({ id: `${node.id}::${PARALLEL_OUTPUT_PORT_PREFIX}${target}` });
+  const kind = node.data?.kind ?? '';
+  if (kind === PARALLEL_KIND) {
+    const ports: NonNullable<ElkNode['ports']> = [
+      { id: `${node.id}::${PARALLEL_INPUT_PORT}` },
+    ];
+    for (const target of fan_out_targets) {
+      ports.push({ id: `${node.id}::${PARALLEL_OUTPUT_PORT_PREFIX}${target}` });
+    }
+    return ports;
   }
-  return ports;
+  if (kind === BRANCH_KIND || kind === FALLBACK_KIND) {
+    const happy = kind === BRANCH_KIND ? BRANCH_HAPPY_LABEL : FALLBACK_HAPPY_LABEL;
+    const alt = kind === BRANCH_KIND ? BRANCH_ALT_LABEL : FALLBACK_ALT_LABEL;
+    return [
+      {
+        id: `${node.id}::${JUNCTION_INPUT_PORT}`,
+        layoutOptions: junction_port_layout('WEST'),
+      },
+      {
+        id: `${node.id}::out:${happy}`,
+        layoutOptions: junction_port_layout('EAST'),
+      },
+      {
+        id: `${node.id}::out:${alt}`,
+        layoutOptions: junction_port_layout('SOUTH'),
+      },
+    ];
+  }
+  return undefined;
 }
 
 // Header tab + body padding reserved at the top of every container chrome
@@ -186,12 +228,29 @@ function build_subtree(
   return result;
 }
 
-function build_elk_edges(edges: ReadonlyArray<WeftEdge>): NonNullable<ElkNode['edges']> {
+function build_elk_edges(
+  edges: ReadonlyArray<WeftEdge>,
+  nodes: ReadonlyArray<WeftNode>,
+): NonNullable<ElkNode['edges']> {
+  const by_id = new Map<string, WeftNode>();
+  for (const n of nodes) by_id.set(n.id, n);
   const out: NonNullable<ElkNode['edges']> = [];
   for (const e of edges) {
+    // Branch / fallback junctions declare ports with FIXED_SIDE so the
+    // happy-path edge exits east and the alt-path edge exits south. Bind
+    // the edge to the specific port via `sources` so ELK actually honors
+    // the side assignment — without a port-qualified source, ELK is free
+    // to pick any side and we lose the routing benefit.
+    const src = by_id.get(e.source);
+    const src_kind = src?.data?.kind ?? '';
+    const has_fixed_side = src_kind === BRANCH_KIND || src_kind === FALLBACK_KIND;
+    const source_port =
+      has_fixed_side && typeof e.sourceHandle === 'string'
+        ? `${e.source}::${e.sourceHandle}`
+        : null;
     out.push({
       id: e.id,
-      sources: [e.source],
+      sources: [source_port ?? e.source],
       targets: [e.target],
     });
   }
@@ -221,7 +280,7 @@ export function build_elk_graph(
       'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
     },
     children: build_subtree(null, nodes, edges),
-    edges: build_elk_edges(edges),
+    edges: build_elk_edges(edges, nodes),
   };
 }
 

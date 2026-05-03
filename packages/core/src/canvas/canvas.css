@@ -117,7 +117,7 @@
   --weft-suspend-accent: var(--weft-hue-ink);
 
   /* sizing */
-  --weft-leaf-width: 184px;
+  --weft-leaf-width: 220px;
   --weft-leaf-height: 60px;
   --weft-container-min-width: 280px;
   --weft-container-min-height: 120px;

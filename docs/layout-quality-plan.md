@@ -397,3 +397,83 @@ boundaries).
   Fix would require node-bbox-aware label placement (offset the
   pill perpendicular to the segment until it clears every node
   rect), which is a larger change. Acceptable for now.
+
+- 2026-05-02 — Second pass driven by `pnpm metrics:vision` rubric (the
+  "after-marker-fix" run scored simple=3.0, all_primitives=2.17,
+  full=2.5). Four fixes landed; vision rerun gave simple=3.5,
+  all_primitives=2.5, full=2.5.
+
+  1. **Leaf width 184→220px** (`canvas.css`, `elk_runner.ts`,
+     `edge_paths.ts`, `libavoid_router.ts`, edge-paths test). Vision
+     scorer flagged `STEP:FAREWE…`, `<FN:T…PPER>`, `STEP:SUMMARIZE_S…`,
+     `STEP:FORMAT_CLAU…` — all mid-word truncations. 220px gives
+     ~22 mono-caps chars at the leaf font; covers the longest titles
+     in the canonical fixtures and most realistic step ids. The four
+     constants must stay in lockstep so ELK reserves space matching
+     the CSS width and the self-loop arc renders to scale.
+     Quantitative metrics regress slightly (`all_primitives` len
+     +241px, `simple_sequence` overlaps 0→2 — the wider leaves push
+     against their SEQUENCE container's bottom border) but the visual
+     and the vision-rubric `label_readability` axis improve
+     materially (simple_sequence 3→5).
+
+  2. **MiniMap auto-hide + relocation** (`WeftCanvas.tsx`). Under
+     `MINIMAP_MIN_NODES = 12` the minimap is hidden entirely (the
+     graph already fits in the viewport, so the map adds no
+     navigation value); above the threshold it now renders at
+     `bottom-right` instead of `top-right`, alongside the existing
+     bottom-left controls so the panel reads as part of the chrome
+     rather than a stray rectangle in otherwise-empty space. Added
+     `nodeColor`/`nodeStrokeColor`/`nodeStrokeWidth` so the minimap
+     content is actually visible at the small thumbnail scale.
+     Vision scorer's "phantom container in upper-right" complaint
+     across all three fixtures resolved.
+
+  3. **Auto-fit padding 0.12→0.08 + maxZoom 1.0** (`WeftCanvas.tsx`
+     fit-timer fan). Smaller padding lets wide-and-short graphs fill
+     more of the viewport horizontally; `maxZoom: 1` stops fitView
+     from over-scaling tiny single-node fixtures. Modest improvement
+     — the `balance` axis stays at 2 because the canonical fixtures
+     have a 3.2:1 aspect ratio that fundamentally can't fill a 1.27:1
+     viewport. Punting on a "rotate to TB on wide graphs" path
+     unless future fixtures make balance worse.
+
+  4. **`FIXED_SIDE` ports for branch/fallback** (`elk_runner.ts`,
+     `BranchNode.tsx`, `FallbackNode.tsx`, `elk_runner.test.ts`).
+     The Phase 2b sweep skipped this because parallel was the only
+     ported kind and FIXED_SIDE meant threading port ids through
+     every node renderer. Junctions are easier than full coverage:
+     branch already declares `out:then`/`out:otherwise` handles and
+     fallback declares `out:primary`/`out:backup`, so adding the
+     three explicit ports (input on WEST, happy-path on EAST,
+     alt-path on SOUTH) plus port-qualified `sources` on the
+     emitted ELK edges was self-contained. The visible
+     `Position.Bottom` handle on the alt-path output keeps the
+     fallback path (no ELK waypoints) visually consistent with the
+     orthogonal route. Result: the orange dashed `OTHERWISE` edge
+     in `all_primitives` no longer takes a U-turn down-and-around
+     past unrelated nodes — it exits the diamond cleanly downward
+     to `STEP:SUMMARIZE_SHORT`. `bends` 20→18, `nodeEdgeOverlaps`
+     unchanged at 5.
+
+  Deferred from this pass:
+
+  - **Node-bbox-aware edge-label placement** (issue 5 in the
+     plan). The longest-segment trick still loses on short
+     single-segment edges where the only run crosses a node body.
+     Would require feeding measured node bboxes into
+     `compute_orthogonal_path` (the helper currently has no
+     React-Flow context) and an iterative perpendicular-offset
+     search. Cost-to-benefit doesn't pencil for the residual.
+
+  - **Vertical balance**. The `balance` axis stays at 2 across
+     fixtures because the canonical graphs are wide-and-short and
+     fitView correctly centers them — there is just nothing in the
+     vertical extent to fill. If future fixtures emerge that look
+     poorly balanced for shape-driven (not aspect-driven) reasons,
+     revisit.
+
+  Visual ground truth: `.check/layout-metrics-screenshots/*.png`
+  after `pnpm metrics --label visual-cleanup-v3`. Vision scores in
+  `.check/layout-vision-scores.json` (rubric: edge_clutter,
+  label_readability, container_clarity, balance).

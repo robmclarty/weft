@@ -22,9 +22,9 @@ describe('compute_self_loop_path', () => {
 
   it('falls back to default leaf bounds when measured size is missing', () => {
     const { peak } = compute_self_loop_path({ x: 0, y: 0 });
-    // 184 * 0.85 = 156.4, half = 78.2 — peak.x ≈ -78.2.
-    expect(peak.x).toBeLessThan(-70);
-    expect(peak.x).toBeGreaterThan(-90);
+    // 220 * 0.85 = 187, half = 93.5 — peak.x ≈ -93.5.
+    expect(peak.x).toBeLessThan(-85);
+    expect(peak.x).toBeGreaterThan(-105);
     // 60 * 0.9 = 54, peak.y ≈ -54.
     expect(peak.y).toBeLessThan(-50);
     expect(peak.y).toBeGreaterThan(-60);
