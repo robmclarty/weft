@@ -12,6 +12,13 @@ import { useSearchParams } from 'react-router-dom';
 
 import type { FlowTree, LayoutGraphOptions, LayoutRouter } from '@repo/weft';
 
+// libavoid's bundled loader resolves `libavoid.wasm` relative to its own
+// module URL, which Vite returns the SPA index.html for and the magic-byte
+// check fails. Serve the WASM from the studio's `public/` so the URL is
+// stable and doesn't depend on package resolution. (Phase 4 spike, behind
+// `?router=libavoid`.)
+const LIBAVOID_WASM_URL = '/libavoid.wasm';
+
 import { Banner } from '../components/Banner.js';
 import { CanvasShell } from '../components/CanvasShell.js';
 import {
@@ -44,7 +51,10 @@ export function ViewRoute({ fetch_impl }: ViewRouteProps = {}): JSX.Element {
   const router_param = params.get('router');
   const layout_options: LayoutGraphOptions | undefined =
     router_param === 'libavoid' || router_param === 'elk'
-      ? { router: router_param satisfies LayoutRouter }
+      ? {
+          router: router_param satisfies LayoutRouter,
+          ...(router_param === 'libavoid' ? { libavoid_wasm_url: LIBAVOID_WASM_URL } : {}),
+        }
       : undefined;
   const [tree, set_tree] = useState<FlowTree | null>(null);
   const [error, set_error] = useState<LoaderError | null>(null);

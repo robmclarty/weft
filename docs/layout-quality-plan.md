@@ -477,3 +477,87 @@ boundaries).
   after `pnpm metrics --label visual-cleanup-v3`. Vision scores in
   `.check/layout-vision-scores.json` (rubric: edge_clutter,
   label_readability, container_clarity, balance).
+
+- 2026-05-02 — `pnpm metrics` source/target extraction was broken since
+  Phase 1 and only became visible after the leaf-width bump. React Flow
+  12 doesn't carry `data-source`/`data-target` attributes on the edge
+  group, so `count_node_edge_overlaps` couldn't filter the edge's own
+  source/target — it counted every edge endpoint that sat inside its
+  own source/target bbox as an overlap. The wider 220px leaves pushed
+  ELK's port position (at the leaf's right face) deeper into the leaf
+  bbox than the old 184px port did, which made the latent bug fire.
+
+  Fix: parse source/target from `data-id` (always
+  `e:<source>-><target>` for our generated edges). Re-baselined
+  metrics:
+
+  | fixture            | crossings | bends | totalEdgeLength | overlaps  |
+  |--------------------|----------:|------:|----------------:|----------:|
+  | simple_sequence    |     0 (=) | 0 (=) |          40 (=) |  0 (-2)   |
+  | all_primitives     |     0 (=) | 18 (=)|      1967.9 (=) |  1 (-4)   |
+  | full_primitive_set |     0 (=) | 4 (=) |       155.5 (=) |  0 (-2)   |
+
+  The "wider leaves push against their SEQUENCE container's bottom
+  border" framing in the previous decision-log entry was wrong; the
+  routes themselves were unchanged, only the overlap metric. Other
+  fixture metrics that previously claimed an overlap delta against an
+  earlier baseline should be read with this caveat in mind.
+
+  Same pass also ported the metrics script's compose-expansion step
+  into `scripts/screenshot-scenarios.mjs` so `pnpm screenshots` no
+  longer captures the misleading collapsed view.
+
+- 2026-05-02 — Phase 4 BENCHMARK COMPLETE; libavoid stays a behind-flag
+  spike, ELK remains the default. Wiring took two extra steps before a
+  real comparison ran:
+
+  1. `route_with_libavoid` calls `AvoidLib.load()` with no argument,
+     which makes the package resolve `libavoid.wasm` relative to its
+     own module URL. In Vite dev that path 404s into the SPA
+     `index.html`, the WASM magic-byte check fails, and the load
+     silently falls back to ELK — i.e., previous "libavoid" runs were
+     all measuring ELK. Threaded an explicit `libavoid_wasm_url`
+     through `LayoutGraphOptions` → `route_with_libavoid` →
+     `AvoidLib.load(url)`, with the studio resolving the URL by
+     copying `libavoid.wasm` into `packages/studio/public/` and
+     pointing at `/libavoid.wasm` (sidesteps Vite package-resolution,
+     which couldn't find the optional dep from the studio root).
+  2. Confirmed Vite serves the WASM with `Content-Type: application/
+     wasm` so streaming `WebAssembly.compile()` succeeds.
+
+  Benchmark deltas vs `phase4-benchmark-baseline` (ELK):
+
+  | fixture            | crossings | bends   | totalEdgeLength | overlaps   |
+  |--------------------|----------:|--------:|----------------:|-----------:|
+  | simple_sequence    |     0 (=) | 0 (=)   |       92 (+52)  | 1 (+1)     |
+  | all_primitives     |   5 (+5)  | 0 (-18) | 7124.6 (+5157)  | 19 (+18)   |
+  | full_primitive_set |     0 (=) | 0 (-4)  |    858.2 (+703) | 1 (+1)     |
+
+  libavoid loses on every axis. The `bends=0` across all three
+  fixtures is the smoking gun — `displayRoute()` is returning
+  endpoint-only polylines rather than orthogonal routes, so libavoid
+  is effectively drawing straight diagonals through the obstacle
+  field. The crossings/length explosion on `all_primitives` follows
+  directly from that. Suspected fix-paths if anyone returns to this:
+  set per-connector source/destination direction hints
+  (`ConnEnd::setDirections`), bump default routing penalties via
+  `Router::setRoutingParameter`, or wait for
+  `setRoutingOption(nudgeOrthogonalSegmentsConnectedToFixedPorts,
+  true)`. None of those are cheap unknowns; we have no in-house
+  libavoid expertise and the engine's strengths (channel allocation,
+  parallel-edge nudging) only matter once we have flow shapes that
+  ELK actually struggles with.
+
+  Decision: do not flip the default. Keep the spike for
+  reproducibility (`?router=libavoid` still works, and the studio's
+  `public/libavoid.wasm` makes the WASM addressable in dev), but
+  retire libavoid from the layout-quality roadmap until a fixture
+  emerges that ELK genuinely can't route. The LGPL-2.1-or-later
+  license note in `libavoid_router.ts` and `layout_options.ts`
+  remains accurate and stays in place — no license action needed
+  while the dep is opt-in and not in the default bundle.
+
+  Visual ground truth for the libavoid run:
+  `.check/layout-metrics-screenshots/*.png` after
+  `pnpm metrics --router libavoid --label libavoid-spike`. ELK
+  baseline at the same `phase4-benchmark-baseline` label.

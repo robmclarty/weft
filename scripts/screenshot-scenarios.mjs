@@ -94,8 +94,28 @@ async function main() {
         }
       });
       await page.goto(`http://127.0.0.1:5173${scenario.path}`);
+      if (scenario.name !== 'empty') {
+        await page.waitForSelector('.react-flow__node', { timeout: 10_000 });
+      }
       // Give the layout + auto-fit chain time to land.
       await sleep(900);
+      // Compose nodes mount collapsed (in-memory state in WeftCanvas.tsx);
+      // the screenshots are meant to mirror the `pnpm metrics` view, which
+      // is the *expanded* subgraph the user complains about. Click every
+      // collapsed compose, re-settle, and repeat until none remain.
+      let expand_passes = 0;
+      while (expand_passes < 20) {
+        const collapsed = await page.$$('.weft-node-compose-collapsed');
+        if (collapsed.length === 0) break;
+        for (const handle of collapsed) {
+          await handle.click({ force: true }).catch(() => undefined);
+        }
+        await sleep(600);
+        expand_passes += 1;
+      }
+      // Re-fit so the final framing matches what `pnpm metrics` captures.
+      await page.locator('.react-flow__controls-fitview').click().catch(() => undefined);
+      await sleep(400);
       const out_path = join(out_dir, `${scenario.name}.png`);
       await page.screenshot({ path: out_path, fullPage: false });
       manifest.push({ name: scenario.name, file: out_path });

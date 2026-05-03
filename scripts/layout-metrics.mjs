@@ -190,8 +190,13 @@ function extract_geometry() {
   const edges = [];
   for (const el of edge_els) {
     const id = el.getAttribute('data-id') ?? el.getAttribute('id') ?? '';
-    const source = el.getAttribute('data-source') ?? '';
-    const target = el.getAttribute('data-target') ?? '';
+    // React Flow 12 doesn't carry data-source / data-target on the edge
+    // group, so parse them from `data-id` (always `e:<source>-><target>`
+    // for our generated edges). Without this, the overlap metric counts
+    // every edge endpoint that sits inside its own source/target bbox.
+    const arrow = id.indexOf('->');
+    const source = arrow > 0 ? id.slice(id.indexOf(':') + 1, arrow) : '';
+    const target = arrow > 0 ? id.slice(arrow + 2) : '';
     const path = el.querySelector('.react-flow__edge-path');
     if (path === null) continue;
     const d = path.getAttribute('d') ?? '';

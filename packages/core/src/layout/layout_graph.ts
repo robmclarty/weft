@@ -54,6 +54,14 @@ export function reset_layout_warnings_for_tests(): void {
 export type LayoutGraphOptions = Partial<LayoutOptions> & {
   readonly worker_factory?: ((url?: string) => Worker) | null;
   readonly timeout_ms?: number;
+  /**
+   * Explicit URL for the libavoid-js WASM blob. Required in Vite dev: the
+   * package's default `import.meta.url`-relative resolver produces a path
+   * Vite doesn't serve, and the load falls back to the SPA index.html
+   * (which fails the WASM magic-byte check). The studio resolves this via
+   * `import wasm_url from 'libavoid-js/dist/libavoid.wasm?url'`.
+   */
+  readonly libavoid_wasm_url?: string;
 };
 
 function with_timeout<T>(
@@ -108,7 +116,11 @@ export async function layout_graph(
     const positioned = apply_positions(nodes, laid);
     const elk_routed = apply_edge_routes(edges, laid);
     if (resolved.router === 'libavoid') {
-      const libavoid_routes = await route_with_libavoid(positioned, elk_routed);
+      const libavoid_routes = await route_with_libavoid(
+        positioned,
+        elk_routed,
+        options?.libavoid_wasm_url ?? null,
+      );
       if (libavoid_routes !== null) {
         return {
           nodes: positioned,

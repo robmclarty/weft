@@ -55,7 +55,7 @@ type LibavoidApi = {
 };
 
 type LibavoidLib = {
-  load: () => Promise<void>;
+  load: (wasm_url?: string) => Promise<void>;
   getInstance: () => LibavoidApi;
 };
 
@@ -63,7 +63,10 @@ let cached_lib: LibavoidApi | null = null;
 let load_attempted = false;
 let load_failure_warned = false;
 
-async function load_libavoid(): Promise<LibavoidApi | null> {
+type LibavoidLibLoad = (wasm_url: string | undefined) => Promise<void>;
+type LibavoidLibWithLoad = LibavoidLib & { load: LibavoidLibLoad };
+
+async function load_libavoid(wasm_url: string | null): Promise<LibavoidApi | null> {
   if (cached_lib !== null) return cached_lib;
   if (load_attempted) return null;
   load_attempted = true;
@@ -85,8 +88,14 @@ async function load_libavoid(): Promise<LibavoidApi | null> {
       return null;
     }
     // eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- shape verified above
-    const lib = candidate as LibavoidLib;
-    await lib.load();
+    const lib = candidate as LibavoidLibWithLoad;
+    // libavoid's bundled `load(url?)` accepts an explicit WASM URL. Without
+    // it, the package resolves `libavoid.wasm` relative to its own module
+    // URL — which is fine in plain `<script>` contexts but in Vite dev
+    // returns the SPA index.html (HTML magic-byte check fails). Studios
+    // pass the URL via `?url` import; tests omit it and the package's own
+    // resolver fires.
+    await lib.load(wasm_url ?? undefined);
     cached_lib = lib.getInstance();
     return cached_lib;
   } catch (err) {
@@ -165,8 +174,9 @@ export type LibavoidRoutes = ReadonlyMap<string, ReadonlyArray<EdgeWaypoint>>;
 export async function route_with_libavoid(
   positioned_nodes: ReadonlyArray<WeftNode>,
   edges: ReadonlyArray<WeftEdge>,
+  wasm_url: string | null = null,
 ): Promise<LibavoidRoutes | null> {
-  const Avoid = await load_libavoid();
+  const Avoid = await load_libavoid(wasm_url);
   if (Avoid === null) return null;
 
   const offsets = compute_origin_offsets(positioned_nodes);
