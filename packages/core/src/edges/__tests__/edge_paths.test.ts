@@ -66,31 +66,47 @@ describe('compute_loop_back_path', () => {
     expect(path.endsWith('16 100')).toBe(true);
   });
 
-  it('respects the minimum arc height for short nodes', () => {
+  it('respects the minimum-radius floor for short nodes', () => {
     const { peak } = compute_loop_back_path(
       { x: 100, y: 0 },
       { x: 0, y: 0 },
       { height: 10 },
     );
-    // Min arc height 56 — peak.y ≈ -56.
-    expect(peak.y).toBeCloseTo(-56, 0);
+    // Tiny node height (10) is overridden by the 160px minimum-radius
+    // floor so the arc still has room to wrap with a smooth curve.
+    expect(peak.y).toBeCloseTo(-160, 0);
   });
 
-  it('scales bezier outreach with the span between source and target', () => {
-    // Wide span: span * 0.4 should win over the 32px floor.
+  it('extends control points outward past each endpoint so the arc wraps around with a minimum radius', () => {
+    // Wide span: span * 0.4 (= 400) is below the 160 radius floor for
+    // arc height but above it for outreach, so the curve still keeps
+    // its 160px vertical floor while honoring the wider horizontal
+    // outreach.
     const wide = compute_loop_back_path(
       { x: 1000, y: 0 },
       { x: 0, y: 0 },
       { height: 60 },
     );
-    expect(wide.path).toContain('1400 -60');
-    // Narrow span: 32px floor should win.
+    expect(wide.path).toContain('1400 -160');
+    expect(wide.path).toContain('-400 -160');
+    // Mirror layout (body on right, guard on left) flips the outward
+    // direction so the arc still wraps in the same way.
+    const mirror = compute_loop_back_path(
+      { x: 0, y: 0 },
+      { x: 1000, y: 0 },
+      { height: 60 },
+    );
+    expect(mirror.path).toContain('-400 -160');
+    expect(mirror.path).toContain('1400 -160');
+    // Narrow span: 160px radius floor wins so the curve doesn't collapse
+    // into a hairpin when source and target are close together.
     const narrow = compute_loop_back_path(
       { x: 50, y: 0 },
       { x: 0, y: 0 },
       { height: 60 },
     );
-    expect(narrow.path).toContain('82 -60');
+    expect(narrow.path).toContain('210 -160');
+    expect(narrow.path).toContain('-160 -160');
   });
 
   it('falls back to default node height when measured is missing', () => {
@@ -98,8 +114,8 @@ describe('compute_loop_back_path', () => {
       { x: 100, y: 0 },
       { x: 0, y: 0 },
     );
-    // Default height 60 → arc height max(60, 56) = 60.
-    expect(peak.y).toBeCloseTo(-60, 0);
+    // Default height 60 is below the 160px radius floor — peak.y ≈ -160.
+    expect(peak.y).toBeCloseTo(-160, 0);
   });
 });
 

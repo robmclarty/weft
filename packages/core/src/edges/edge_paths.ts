@@ -14,7 +14,14 @@ const FALLBACK_NODE_H = 60;
 const SELF_LOOP_MIN_ARC_W = 80;
 const SELF_LOOP_MIN_ARC_H = 40;
 const LOOP_BACK_FALLBACK_NODE_H = 60;
-const LOOP_BACK_MIN_ARC_H = 56;
+// Minimum radius for the loop-back wrap. The arc is a cubic bezier whose
+// "tightness" near each endpoint is governed by how far the control point
+// sits from that endpoint — both vertically (arc height) and horizontally
+// (outreach). Setting equal floors here gives a smooth quarter-turn at
+// each end instead of a hairpin: the curve clearly leaves the source
+// horizontally outward, sweeps up and over with room to breathe, and
+// approaches the target horizontally from the outside.
+const LOOP_BACK_MIN_RADIUS = 160;
 
 export type Point = { readonly x: number; readonly y: number };
 
@@ -56,10 +63,17 @@ export type LoopBackGeometry = {
 };
 
 /**
- * Loop-back arc — sweeps from the source's right-out to the target's
- * left-in (different handles on the same node, so React Flow gives us
- * distinct source/target coordinates). Arc clears the node's height by
- * at least the node's own height so it stays above any wrapper chrome.
+ * Loop-back arc — wraps from source out, up and over, then down into
+ * target. Control points are pulled **outward** past each endpoint by
+ * the same amount (`outreach`) and lifted **above** by `arc_h`, so the
+ * curve has a guaranteed quarter-circle radius at each end rather than
+ * a hairpin diving straight back. The result reads as a clear loop
+ * around the boxes regardless of which side source and target sit on:
+ * source-on-the-right (typical guard → body) extends right then up;
+ * source-on-the-left mirrors it.
+ *
+ * Container padding (see `elk_runner.ts`'s loop sizing) is matched to
+ * the same minimum radius so the arc always has room inside the chrome.
  */
 export function compute_loop_back_path(
   source: Point,
@@ -67,14 +81,21 @@ export function compute_loop_back_path(
   source_size?: { readonly height?: number },
 ): LoopBackGeometry {
   const node_h = source_size?.height ?? LOOP_BACK_FALLBACK_NODE_H;
-  const arc_h = Math.max(node_h * 1.0, LOOP_BACK_MIN_ARC_H);
+  const radius = Math.max(node_h * 1.0, LOOP_BACK_MIN_RADIUS);
+  const arc_h = radius;
   const peak_y = Math.min(source.y, target.y) - arc_h;
   const span = Math.abs(source.x - target.x);
-  const outreach = Math.max(span * 0.4, 32);
+  const outreach = Math.max(span * 0.4, radius);
+  // dir = +1 when source is right of target (the typical loop-back: guard
+  // sits to the right of body), so C1 extends further RIGHT past source
+  // and C2 extends further LEFT past target. The curve therefore leaves
+  // source heading outward (right), wraps around, and approaches target
+  // from the outside (left). dir flips for the mirror layout.
+  const dir = source.x >= target.x ? 1 : -1;
   const mid_x = (source.x + target.x) / 2;
   const path = `M ${String(source.x)} ${String(source.y)} `
-    + `C ${String(source.x + outreach)} ${String(peak_y)}, `
-    + `${String(target.x - outreach)} ${String(peak_y)}, `
+    + `C ${String(source.x + outreach * dir)} ${String(peak_y)}, `
+    + `${String(target.x - outreach * dir)} ${String(peak_y)}, `
     + `${String(target.x)} ${String(target.y)}`;
   return { path, peak: { x: mid_x, y: peak_y } };
 }

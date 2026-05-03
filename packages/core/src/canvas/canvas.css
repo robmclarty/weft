@@ -213,6 +213,48 @@
 }
 
 /*
+ * END terminator — a small paper-on-ink pill at the very tail of the
+ * top-level chain. Synthesized by `tree_to_graph`, never authored. The
+ * double-ring glyph + caps "END" make the meaning unambiguous; the
+ * compact 96×40 footprint keeps it from competing visually with the
+ * actual workflow steps.
+ */
+.weft-node-end {
+  width: 96px;
+  height: 40px;
+  background: var(--weft-color-paper);
+  border: 2px solid var(--weft-color-fg);
+  border-radius: 999px;
+  color: var(--weft-color-fg);
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  font-family: var(--weft-font-mono);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.weft-node-end .weft-node-end-glyph {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+}
+
+.weft-node-end .weft-node-end-glyph svg {
+  width: 100%;
+  height: 100%;
+}
+
+.weft-node-end .react-flow__handle {
+  background: var(--weft-color-fg);
+}
+
+/*
  * containers — one outer frame, then section markers.
  *
  * The OUTERMOST container (the only `.weft-node-container` not nested inside
@@ -293,6 +335,21 @@
   min-width: 212px;
   min-height: 114px;
   padding: calc(var(--weft-container-header-h) + 4px) 8px 8px;
+}
+
+/*
+ * Loop container — labeled box wrapping body+guard+back-arc. The
+ * back-arc wraps from one child outward, over the top, and down to the
+ * other (see `compute_loop_back_path`); the loop's padding budgets
+ * the radius of that wrap on every side so the curve stays inside the
+ * chrome. The numbers track `LOOP_BACK_RADIUS` / `LOOP_*_PADDING` in
+ * `elk_runner.ts` — drift here makes the arc clip the header or
+ * neighbour nodes.
+ */
+.weft-node-container.weft-node-loop {
+  min-width: 480px;
+  min-height: 238px;
+  padding: 154px 176px 24px;
 }
 
 /*

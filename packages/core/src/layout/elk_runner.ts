@@ -170,16 +170,75 @@ const CONTAINER_MIN_WIDTH = 280;
 const CONTAINER_MIN_HEIGHT = 120;
 
 /*
- * Wrapper-style containers — only expanded compose remains in the
- * post-deluxe world. pipe/timeout/checkpoint/map became peer markers,
- * retry/loop got dropped entirely, branch/fallback/parallel became
- * junctions. Compose (when expanded) is still the labeled-bracket
- * around its inner subgraph.
+ * Wrapper-style containers. `compose` is the labeled bracket around an
+ * inner subgraph; `loop` is the labeled box around body+guard+back-arc
+ * with a single labeled exit. pipe/timeout/checkpoint/map became peer
+ * markers, retry got dropped entirely, branch/fallback/parallel became
+ * junctions.
+ *
+ * `loop` carries an extra geometric requirement compose doesn't: the
+ * back-arc lives **outside** ELK's view but **inside** the container
+ * chrome visually. The arc peaks ≈60px above the children (see
+ * `compute_loop_back_path`), so the loop's own padding has to budget
+ * that headroom or the arc looks cramped under the header band.
  */
-const WRAPPER_KINDS_FOR_LAYOUT = new Set(['compose']);
+const COMPOSE_KIND = 'compose';
+const LOOP_KIND = 'loop';
 const WRAPPER_MIN_WIDTH = 212;
 const WRAPPER_MIN_HEIGHT = 114;
 const WRAPPER_PADDING = 8;
+// Loop-specific: budget the back-arc's wrap radius into the container's
+// padding on every side so the arc stays inside the chrome instead of
+// trespassing into neighboring nodes. Numbers match `LOOP_BACK_MIN_RADIUS`
+// in `edges/edge_paths.ts` — both must agree for the curve to fit cleanly.
+const LOOP_BACK_RADIUS = 160;
+// The arc peak sits LOOP_BACK_RADIUS above the source handle, which sits
+// at the leaf's vertical midline. So we only need ROUGHLY (radius -
+// half_leaf) of clearance above the leaf's top edge for the curve to
+// fit. Subtracting that from naive (HEADER_BAND + RADIUS) tucks the arc
+// up close to the chrome's top — the buffer between header and arc peak
+// shrinks from ~30px to ~6px.
+const LOOP_TOP_PADDING = CONTAINER_HEADER_BAND + LOOP_BACK_RADIUS - DEFAULT_NODE_HEIGHT / 2 - 24;
+const LOOP_SIDE_PADDING = LOOP_BACK_RADIUS + 16;
+const LOOP_BOTTOM_PADDING = 24;
+const LOOP_MIN_WIDTH = 480;
+const LOOP_MIN_HEIGHT = LOOP_TOP_PADDING + DEFAULT_NODE_HEIGHT + LOOP_BOTTOM_PADDING;
+
+type ContainerSizing = {
+  readonly min_w: number;
+  readonly min_h: number;
+  readonly padding_top: number;
+  readonly padding_side: number;
+  readonly padding_bottom: number;
+};
+
+function container_sizing(kind: string): ContainerSizing {
+  if (kind === LOOP_KIND) {
+    return {
+      min_w: LOOP_MIN_WIDTH,
+      min_h: LOOP_MIN_HEIGHT,
+      padding_top: LOOP_TOP_PADDING,
+      padding_side: LOOP_SIDE_PADDING,
+      padding_bottom: LOOP_BOTTOM_PADDING,
+    };
+  }
+  if (kind === COMPOSE_KIND) {
+    return {
+      min_w: WRAPPER_MIN_WIDTH,
+      min_h: WRAPPER_MIN_HEIGHT,
+      padding_top: CONTAINER_HEADER_BAND,
+      padding_side: WRAPPER_PADDING,
+      padding_bottom: WRAPPER_PADDING,
+    };
+  }
+  return {
+    min_w: CONTAINER_MIN_WIDTH,
+    min_h: CONTAINER_MIN_HEIGHT,
+    padding_top: CONTAINER_HEADER_BAND,
+    padding_side: CONTAINER_PADDING,
+    padding_bottom: CONTAINER_PADDING,
+  };
+}
 
 function build_subtree(
   parent: string | null,
@@ -197,10 +256,7 @@ function build_subtree(
       : [];
     const sub = build_subtree(n.id, nodes, edges, spacing);
     const has_children = sub.length > 0;
-    const is_wrapper = WRAPPER_KINDS_FOR_LAYOUT.has(n.data?.kind ?? '');
-    const min_w = is_wrapper ? WRAPPER_MIN_WIDTH : CONTAINER_MIN_WIDTH;
-    const min_h = is_wrapper ? WRAPPER_MIN_HEIGHT : CONTAINER_MIN_HEIGHT;
-    const side_pad = is_wrapper ? WRAPPER_PADDING : CONTAINER_PADDING;
+    const sizing = container_sizing(n.data?.kind ?? '');
     const child: ElkNode = has_children
       ? {
           id: n.id,
@@ -218,8 +274,8 @@ function build_subtree(
             ...elk_options_for(n),
             'org.eclipse.elk.nodeSize.constraints':
               '[NODE_LABELS, PORTS, MINIMUM_SIZE]',
-            'org.eclipse.elk.nodeSize.minimum': `(${String(min_w)}, ${String(min_h)})`,
-            'org.eclipse.elk.padding': `[top=${String(CONTAINER_HEADER_BAND)},left=${String(side_pad)},bottom=${String(side_pad)},right=${String(side_pad)}]`,
+            'org.eclipse.elk.nodeSize.minimum': `(${String(sizing.min_w)}, ${String(sizing.min_h)})`,
+            'org.eclipse.elk.padding': `[top=${String(sizing.padding_top)},left=${String(sizing.padding_side)},bottom=${String(sizing.padding_bottom)},right=${String(sizing.padding_side)}]`,
             'org.eclipse.elk.spacing.nodeNode': String(spacing.node),
             'org.eclipse.elk.layered.spacing.nodeNodeBetweenLayers': String(spacing.rank),
             'org.eclipse.elk.layered.spacing.edgeNodeBetweenLayers': '48',
@@ -242,6 +298,14 @@ function build_subtree(
   return result;
 }
 
+// Synthetic arcs that React Flow draws as custom geometry (LoopBackEdge,
+// SelfLoopEdge). Sending them to ELK makes the layered algorithm see a
+// cycle and pick an arbitrary order for the loop body and guard, which
+// reverses them ~half the time and hides the forward edge. ELK doesn't
+// route these anyway — the components compute the arc themselves — so
+// excluding them gives layered cycle-breaking a clean DAG to work with.
+const LAYOUT_IGNORED_EDGE_KINDS = new Set(['loop-back', 'self-loop']);
+
 function build_elk_edges(
   edges: ReadonlyArray<WeftEdge>,
   nodes: ReadonlyArray<WeftNode>,
@@ -250,6 +314,7 @@ function build_elk_edges(
   for (const n of nodes) by_id.set(n.id, n);
   const out: NonNullable<ElkNode['edges']> = [];
   for (const e of edges) {
+    if (LAYOUT_IGNORED_EDGE_KINDS.has(e.data?.kind ?? '')) continue;
     // Branch / fallback junctions declare ports with FIXED_SIDE so the
     // happy-path edge exits east and the alt-path edge exits south. Bind
     // the edge to the specific port via `sources` so ELK actually honors
@@ -364,53 +429,133 @@ export function apply_positions(
 export type EdgeWaypoint = { readonly x: number; readonly y: number };
 export type EdgeRoutes = Map<string, ReadonlyArray<EdgeWaypoint>>;
 
+type AbsPositions = Map<string, { x: number; y: number }>;
+
+function collect_abs_positions(
+  node: ElkNode,
+  parent_abs: { x: number; y: number },
+  into: AbsPositions,
+): void {
+  const node_abs = node.id === '__weft_root'
+    ? { x: 0, y: 0 }
+    : { x: parent_abs.x + (node.x ?? 0), y: parent_abs.y + (node.y ?? 0) };
+  into.set(node.id, node_abs);
+  if (node.children !== undefined) {
+    for (const child of node.children) {
+      collect_abs_positions(child, node_abs, into);
+    }
+  }
+}
+
 function harvest_edge_routes_at(
   node: ElkNode,
   parent_abs: { x: number; y: number },
+  source_to_lca_offset: (edge_id: string) => { x: number; y: number } | undefined,
   into: EdgeRoutes,
 ): void {
-  // ELK gives child x/y relative to the parent container. Accumulate ancestor
-  // offsets so the waypoints we emit are in root (flow) space — which is what
-  // React Flow's custom-edge `path` expects, since edges render in the flow's
-  // <g> at the same coordinate origin as the laid-out node positions.
+  // ELK with `INCLUDE_CHILDREN` reports section coordinates in the LCA's
+  // local coordinate system. The edge node it sits on (e.g. __weft_root)
+  // is **not** the LCA — we have to look up the LCA per-edge and add that
+  // container's absolute position. Without this shift, a sibling-to-sibling
+  // edge inside a loop/use container renders far to the upper-left of the
+  // canvas (its container-local origin in the ROOT frame).
   const node_abs = node.id === '__weft_root'
     ? { x: 0, y: 0 }
     : { x: parent_abs.x + (node.x ?? 0), y: parent_abs.y + (node.y ?? 0) };
 
-  // ELK with `hierarchyHandling: INCLUDE_CHILDREN` may lift an edge declared at
-  // root into a deeper container (the LCA of its endpoints). Walking every
-  // node's `edges` is the only correct way to find them; their coordinates are
-  // relative to the container they end up in.
   if (node.edges !== undefined) {
     for (const edge of node.edges) {
       const section = edge.sections?.[0];
       if (section === undefined) continue;
+      const lca_offset = source_to_lca_offset(edge.id) ?? node_abs;
       const points: EdgeWaypoint[] = [
-        { x: node_abs.x + section.startPoint.x, y: node_abs.y + section.startPoint.y },
+        { x: lca_offset.x + section.startPoint.x, y: lca_offset.y + section.startPoint.y },
       ];
       if (section.bendPoints !== undefined) {
         for (const bp of section.bendPoints) {
-          points.push({ x: node_abs.x + bp.x, y: node_abs.y + bp.y });
+          points.push({ x: lca_offset.x + bp.x, y: lca_offset.y + bp.y });
         }
       }
-      points.push({ x: node_abs.x + section.endPoint.x, y: node_abs.y + section.endPoint.y });
+      points.push({
+        x: lca_offset.x + section.endPoint.x,
+        y: lca_offset.y + section.endPoint.y,
+      });
       into.set(edge.id, points);
     }
   }
 
   if (node.children !== undefined) {
     for (const child of node.children) {
-      harvest_edge_routes_at(child, node_abs, into);
+      harvest_edge_routes_at(child, node_abs, source_to_lca_offset, into);
     }
   }
+}
+
+function collect_parent_map(
+  node: ElkNode,
+  parent_id: string | null,
+  into: Map<string, string | null>,
+): void {
+  if (node.id !== '__weft_root') into.set(node.id, parent_id);
+  if (node.children !== undefined) {
+    const child_parent = node.id === '__weft_root' ? null : node.id;
+    for (const child of node.children) {
+      collect_parent_map(child, child_parent, into);
+    }
+  }
+}
+
+function build_lca_lookup(
+  edges: ReadonlyArray<WeftEdge>,
+  laid: ElkNode,
+  abs_positions: AbsPositions,
+): (edge_id: string) => { x: number; y: number } | undefined {
+  const parent_of = new Map<string, string | null>();
+  collect_parent_map(laid, null, parent_of);
+
+  function ancestors_of(id: string): string[] {
+    const out: string[] = [];
+    let cur: string | null = id;
+    while (cur !== null) {
+      out.push(cur);
+      cur = parent_of.get(cur) ?? null;
+    }
+    return out;
+  }
+
+  const offset_for_edge = new Map<string, { x: number; y: number }>();
+  for (const e of edges) {
+    const src_chain = ancestors_of(e.source);
+    const tgt_set = new Set(ancestors_of(e.target));
+    let lca: string | null = null;
+    for (const a of src_chain) {
+      if (tgt_set.has(a)) {
+        lca = a;
+        break;
+      }
+    }
+    // ELK reports section coordinates in the LCA's own coordinate system
+    // (origin at the LCA's top-left in flow space). Adding the LCA's
+    // absolute position lifts those coords back into root flow space.
+    // When source and target are top-level peers, the LCA is null and we
+    // fall back to (0,0) which is correct since section coords are then
+    // already in root flow space.
+    if (lca === null) continue;
+    const offset = abs_positions.get(lca) ?? { x: 0, y: 0 };
+    offset_for_edge.set(e.id, offset);
+  }
+  return (edge_id) => offset_for_edge.get(edge_id);
 }
 
 export function apply_edge_routes(
   edges: ReadonlyArray<WeftEdge>,
   laid: ElkNode,
 ): WeftEdge[] {
+  const abs_positions: AbsPositions = new Map();
+  collect_abs_positions(laid, { x: 0, y: 0 }, abs_positions);
+  const lca_offset = build_lca_lookup(edges, laid, abs_positions);
   const routes: EdgeRoutes = new Map();
-  harvest_edge_routes_at(laid, { x: 0, y: 0 }, routes);
+  harvest_edge_routes_at(laid, { x: 0, y: 0 }, lca_offset, routes);
   return edges.map((e) => {
     const waypoints = routes.get(e.id);
     if (waypoints === undefined) return { ...e };
