@@ -19,9 +19,16 @@
  *
  * Output: .check/layout-vision-scores.json (gitignored).
  *
- * Requires ANTHROPIC_API_KEY in the environment.
+ * Uses the locally-installed `claude` CLI so the user's existing auth
+ * (Claude Code OAuth, ANTHROPIC_API_KEY, or Bedrock/Vertex creds) is
+ * picked up without extra wiring. The script spawns `claude -p
+ * --output-format json --model claude-sonnet-4-6 --allowedTools Read`
+ * with the screenshot path embedded in the prompt; Claude reads the file
+ * via its Read tool and returns a JSON envelope whose `.result` field is
+ * the model's text response (a single JSON object matching the rubric).
  */
 
+import { spawn } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -33,8 +40,8 @@ const metrics_path = join(out_dir, 'layout-metrics.json');
 const out_path = join(out_dir, 'layout-vision-scores.json');
 
 const MODEL = 'claude-sonnet-4-6';
-const API_URL = 'https://api.anthropic.com/v1/messages';
-const MAX_TOKENS = 1500;
+const CLI_BINARY = process.env['CLAUDE_CLI_BIN'] ?? 'claude';
+const CLI_TIMEOUT_MS = 120_000;
 
 const RUBRIC = `
 Score the canvas layout in this screenshot on these four axes (1-5, where
@@ -86,13 +93,7 @@ async function read_metrics() {
   return JSON.parse(raw);
 }
 
-async function read_image_b64(path) {
-  const buf = await readFile(path);
-  return buf.toString('base64');
-}
-
-async function score_fixture(fixture, api_key) {
-  const b64 = await read_image_b64(fixture.screenshot);
+function build_prompt(fixture) {
   const metrics_summary = `Quantitative metrics for this layout:
 - nodes=${fixture.metrics.nodes}, edges=${fixture.metrics.edges}
 - crossings=${fixture.metrics.crossings}
@@ -103,45 +104,105 @@ async function score_fixture(fixture, api_key) {
 Use these as ground truth, not as the score itself — your job is to add
 visual judgement the geometry-only counts miss.`;
 
-  const body = {
-    model: MODEL,
-    max_tokens: MAX_TOKENS,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/png', data: b64 } },
-          { type: 'text', text: `${metrics_summary}\n\n${RUBRIC}` },
-        ],
-      },
-    ],
-  };
+  return `Read the screenshot at this absolute path:
+${fixture.screenshot}
 
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': api_key,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify(body),
-  });
+${metrics_summary}
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`anthropic ${String(res.status)}: ${text.slice(0, 500)}`);
-  }
+${RUBRIC}`;
+}
 
-  const data = await res.json();
-  const text = data.content?.[0]?.text ?? '';
-  const trimmed = text.trim().replace(/^```json\s*/i, '').replace(/```\s*$/i, '');
+function extract_inner_json(text) {
+  const trimmed = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
   try {
     return JSON.parse(trimmed);
-  } catch (err) {
-    throw new Error(
-      `vision response was not JSON for ${fixture.name}: ${String(err)}\n--- raw ---\n${text}`,
-    );
+  } catch {
+    // Model sometimes wraps the JSON in surrounding prose. Pull the first
+    // balanced { ... } block out of the response and parse that.
+    const start = trimmed.indexOf('{');
+    if (start === -1) throw new Error('no `{` in CLI response');
+    let depth = 0;
+    for (let i = start; i < trimmed.length; i += 1) {
+      const ch = trimmed[i];
+      if (ch === '{') depth += 1;
+      else if (ch === '}') {
+        depth -= 1;
+        if (depth === 0) return JSON.parse(trimmed.slice(start, i + 1));
+      }
+    }
+    throw new Error('unbalanced braces in CLI response');
   }
+}
+
+async function spawn_claude(prompt, fixture) {
+  // Allow Read on the screenshots directory so Claude can open the PNG.
+  const screenshot_dir = dirname(fixture.screenshot);
+  const argv = [
+    '-p',
+    '--output-format', 'json',
+    '--model', MODEL,
+    '--allowedTools', 'Read',
+    '--add-dir', screenshot_dir,
+    '--permission-mode', 'bypassPermissions',
+  ];
+  return new Promise((resolve, reject) => {
+    const proc = spawn(CLI_BINARY, argv, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: process.env,
+    });
+
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+    const settle = (fn) => {
+      if (settled) return;
+      settled = true;
+      fn();
+    };
+
+    const timer = setTimeout(() => {
+      proc.kill('SIGTERM');
+      settle(() => reject(new Error(`claude CLI timed out after ${String(CLI_TIMEOUT_MS)}ms`)));
+    }, CLI_TIMEOUT_MS);
+
+    proc.stdout.on('data', (chunk) => { stdout += chunk.toString('utf8'); });
+    proc.stderr.on('data', (chunk) => { stderr += chunk.toString('utf8'); });
+    proc.on('error', (err) => {
+      clearTimeout(timer);
+      settle(() => reject(err));
+    });
+    proc.on('close', (code) => {
+      clearTimeout(timer);
+      if (code !== 0) {
+        settle(() => reject(new Error(
+          `claude CLI exited ${String(code)}: ${stderr.slice(0, 500)}`,
+        )));
+        return;
+      }
+      try {
+        const envelope = JSON.parse(stdout);
+        const text = typeof envelope?.result === 'string' ? envelope.result : '';
+        if (text === '') {
+          settle(() => reject(new Error(
+            `claude CLI returned empty result; raw envelope: ${stdout.slice(0, 500)}`,
+          )));
+          return;
+        }
+        settle(() => resolve(extract_inner_json(text)));
+      } catch (err) {
+        settle(() => reject(new Error(
+          `failed to parse CLI output: ${String(err)}\n--- raw ---\n${stdout.slice(0, 800)}`,
+        )));
+      }
+    });
+
+    proc.stdin.end(prompt);
+  });
+}
+
+async function score_fixture(fixture) {
+  const prompt = build_prompt(fixture);
+  return spawn_claude(prompt, fixture);
 }
 
 function format_score(score) {
@@ -155,12 +216,6 @@ async function main() {
   const args = process.argv.slice(2);
   const fix_idx = args.indexOf('--fixture');
   const only_fixture = fix_idx >= 0 ? args[fix_idx + 1] : null;
-
-  const api_key = process.env.ANTHROPIC_API_KEY ?? '';
-  if (api_key === '') {
-    process.stderr.write('ANTHROPIC_API_KEY not set\n');
-    process.exit(2);
-  }
 
   let metrics_report;
   try {
@@ -186,7 +241,7 @@ async function main() {
   for (const fixture of targets) {
     process.stdout.write(`scoring ${fixture.name}…\n`);
     try {
-      const score = await score_fixture(fixture, api_key);
+      const score = await score_fixture(fixture);
       results.push({ name: fixture.name, score });
       process.stdout.write(`  ${format_score(score)}\n`);
     } catch (err) {
@@ -198,6 +253,7 @@ async function main() {
   const report = {
     timestamp: new Date().toISOString(),
     model: MODEL,
+    via: 'claude-cli',
     metrics_timestamp: metrics_report.timestamp,
     ...(metrics_report.label !== undefined && metrics_report.label !== null
       ? { metrics_label: metrics_report.label }
