@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.1.6 — 2026-05-02
+
+### Changed
+
+- Wrapper-primitive chrome reworked: `pipe`, `timeout`, `checkpoint`, and `map` now render as inline corner badges on the wrapped step instead of separate 44×44 marker peer nodes connected by decorated edges. The structural chain runs step → arrow → step instead of threading through tiny marker dots, making lineage easier to follow. On `all_primitives`: nodes 24 → 20, edges 15 → 11, total edge length 6148 → 3968 (-35%), bends 22 → 18, vision-LLM rubric 2.2 → 2.83.
+- Edge labels render as text with a paper text-stroke halo instead of bordered pills, anchored to the longest segment's midpoint so chips land on open canvas instead of pinned to elbows.
+- ELK spacing now threads per-container, so `node_spacing` / `rank_spacing` reach nested subgraphs — previously sequence steps inside a parent collapsed to ~20px gaps regardless of root spacing. Defaults bumped to 120 / 200 with `minZoom: 0.1` so dense graphs auto-fit naturally.
+- `loop` with a guard child now chains body → guard sequentially with the loop-back arc going guard → body, so the guard step is no longer an orphaned block.
+- Leaf node width 184 → 220px to stop mid-word truncation on canonical fixtures.
+- Branch / fallback junctions use FIXED_SIDE ports: input WEST, happy-path EAST, alt-path SOUTH. The dashed `otherwise` edge no longer U-turns through the diamond past unrelated nodes.
+- MiniMap hides under 12 nodes and moves to bottom-right with a visible node fill; vision scorer kept flagging it as a phantom rectangle on small graphs.
+- `fitView` padding 0.08 + maxZoom 1.0 so wide-and-short graphs fill the viewport without single-node fixtures ballooning, and auto-fit retriggers when a compose is opened.
+
+### Fixed
+
+- `pnpm metrics` overlap counter was broken since Phase 1: React Flow 12 dropped `data-source` / `data-target` from edge groups, so the source/target filter never fired and every edge endpoint sitting inside its own bbox got counted. Endpoints now parse from `data-id`. Re-baselined: `simple_sequence` overlaps 2 → 0, `all_primitives` 5 → 1, `full_primitive_set` 2 → 0.
+- `route_with_libavoid` was silently falling back to ELK on every prior libavoid run — `AvoidLib.load()` resolved `libavoid.wasm` relative to its own module URL, which Vite's dev server intercepted with the SPA `index.html`. Now threads an explicit `libavoid_wasm_url` through `LayoutGraphOptions` → `route_with_libavoid` → `AvoidLib.load(url)` and serves the blob from `packages/studio/public/libavoid.wasm`.
+- `pnpm screenshots` now clicks every collapsed compose before snapping (mirroring `pnpm metrics`); previous output was the misleading single-root view.
+
+### Internal
+
+- Phase 4 (libavoid spike) closed out: with the WASM-path bug fixed, libavoid loses on every axis (`all_primitives`: crossings +5, length +5157px, overlaps +18; bends=0 across the board indicates straight-line routing through obstacles). Decision: keep `?router=libavoid` as a behind-flag spike, do not flip the default. LGPL-2.1-or-later license note stays in `libavoid_router.ts` and `layout_options.ts` while the dep is opt-in.
+- `pnpm metrics:vision` now spawns the local `claude` CLI (`claude -p --output-format json --allowedTools Read --add-dir <screenshot-dir>`) instead of calling the Anthropic SDK directly. Picks up existing Claude Code auth (OAuth, API key, Bedrock, Vertex); `ANTHROPIC_API_KEY` no longer required for local runs. `CLAUDE_CLI_BIN` overrides the binary path.
+- `.gitignore` excludes `packages/studio/public/libavoid.wasm` (492 KB binary copied from `node_modules` at dev time) and `.claude/scheduled_tasks.lock` (transient Claude Code harness state that was tripping the release-script clean-tree guard).
+- `docs/layout-quality-plan.md` updated for the libavoid WASM copy step and the visual cleanup pass.
+
 ## v0.1.5 — 2026-05-02
 
 ### Added
