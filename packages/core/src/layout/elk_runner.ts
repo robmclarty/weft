@@ -187,22 +187,26 @@ const LOOP_KIND = 'loop';
 const WRAPPER_MIN_WIDTH = 212;
 const WRAPPER_MIN_HEIGHT = 114;
 const WRAPPER_PADDING = 8;
-// Loop-specific: budget the back-arc's wrap radius into the container's
-// padding on every side so the arc stays inside the chrome instead of
-// trespassing into neighboring nodes. Numbers match `LOOP_BACK_MIN_RADIUS`
-// in `edges/edge_paths.ts` — both must agree for the curve to fit cleanly.
 const LOOP_BACK_RADIUS = 160;
-// The arc peak sits LOOP_BACK_RADIUS above the source handle, which sits
-// at the leaf's vertical midline. So we only need ROUGHLY (radius -
-// half_leaf) of clearance above the leaf's top edge for the curve to
-// fit. The loop-back label rides ON the arc's peak as a pill chip, not
-// above it, so the padding doesn't need to budget extra headroom for
-// the label — we tuck the arc as close to the chrome's top as the
-// header band allows.
+// A cubic bezier never reaches its control points: only ~75% of their
+// deflection in each dimension. With C1/C2 lifted by RADIUS and pulled
+// outward by RADIUS, the actual visible curve only reaches roughly
+// (RADIUS - half_leaf) above the leaf top, and ~30–50px past either
+// endpoint horizontally. Padding budgets the visible extent, not the
+// control-point bounds, so the chrome hugs the curve without wasted
+// runway. Top stays generous (header band + arc clearance, with the
+// label riding on the curve's apex inside the budget); sides match the
+// general CONTAINER_PADDING so the loop reads at the same width as a
+// compose / scope around equivalent children.
 const LOOP_TOP_PADDING = CONTAINER_HEADER_BAND + LOOP_BACK_RADIUS - DEFAULT_NODE_HEIGHT / 2 - 36;
-const LOOP_SIDE_PADDING = LOOP_BACK_RADIUS + 16;
+// Bezier-extension floor: the curve at narrow spans extends ~40-50px
+// past each endpoint horizontally (still well under the control-point
+// outreach). Match the general container padding plus that floor so
+// the arc stays inside the chrome at typical spans without making the
+// box dramatically wider than other containers.
+const LOOP_SIDE_PADDING = CONTAINER_PADDING + 24;
 const LOOP_BOTTOM_PADDING = 24;
-const LOOP_MIN_WIDTH = 480;
+const LOOP_MIN_WIDTH = CONTAINER_MIN_WIDTH;
 const LOOP_MIN_HEIGHT = LOOP_TOP_PADDING + DEFAULT_NODE_HEIGHT + LOOP_BOTTOM_PADDING;
 
 type ContainerSizing = {

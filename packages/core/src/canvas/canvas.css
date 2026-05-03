@@ -347,9 +347,9 @@
  * neighbour nodes.
  */
 .weft-node-container.weft-node-loop {
-  min-width: 480px;
+  min-width: 280px;
   min-height: 226px;
-  padding: 142px 176px 24px;
+  padding: 142px 52px 24px;
 }
 
 /*
