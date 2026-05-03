@@ -348,8 +348,8 @@
  */
 .weft-node-container.weft-node-loop {
   min-width: 480px;
-  min-height: 238px;
-  padding: 154px 176px 24px;
+  min-height: 226px;
+  padding: 142px 176px 24px;
 }
 
 /*
@@ -893,11 +893,29 @@
 }
 
 .weft-edge-self-loop-label {
-  border-color: color-mix(in srgb, var(--weft-hue-yellow) 60%, transparent);
+  background: var(--weft-color-paper);
+  border: 1.5px solid var(--weft-hue-yellow);
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: var(--weft-hue-yellow);
+  -webkit-text-stroke: 0;
+  z-index: 3;
 }
 
+/*
+ * Loop-back label rides the arc's peak as a paper pill. The pill masks
+ * the magenta stroke behind the text so the chip reads clearly; the arc
+ * continues past either side of the pill. Mirrors the role-tagged
+ * orthogonal-label treatment.
+ */
 .weft-edge-loop-back-label {
-  border-color: color-mix(in srgb, var(--weft-hue-magenta) 55%, transparent);
+  background: var(--weft-color-paper);
+  border: 1.5px solid var(--weft-hue-magenta);
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: var(--weft-hue-magenta);
+  -webkit-text-stroke: 0;
+  z-index: 3;
 }
 
 /* runtime overlay: active pulse, error scar, emit flash, cost badge.

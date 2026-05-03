@@ -195,10 +195,11 @@ const LOOP_BACK_RADIUS = 160;
 // The arc peak sits LOOP_BACK_RADIUS above the source handle, which sits
 // at the leaf's vertical midline. So we only need ROUGHLY (radius -
 // half_leaf) of clearance above the leaf's top edge for the curve to
-// fit. Subtracting that from naive (HEADER_BAND + RADIUS) tucks the arc
-// up close to the chrome's top — the buffer between header and arc peak
-// shrinks from ~30px to ~6px.
-const LOOP_TOP_PADDING = CONTAINER_HEADER_BAND + LOOP_BACK_RADIUS - DEFAULT_NODE_HEIGHT / 2 - 24;
+// fit. The loop-back label rides ON the arc's peak as a pill chip, not
+// above it, so the padding doesn't need to budget extra headroom for
+// the label — we tuck the arc as close to the chrome's top as the
+// header band allows.
+const LOOP_TOP_PADDING = CONTAINER_HEADER_BAND + LOOP_BACK_RADIUS - DEFAULT_NODE_HEIGHT / 2 - 36;
 const LOOP_SIDE_PADDING = LOOP_BACK_RADIUS + 16;
 const LOOP_BOTTOM_PADDING = 24;
 const LOOP_MIN_WIDTH = 480;

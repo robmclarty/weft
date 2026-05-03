@@ -35,7 +35,13 @@ export function LoopBackEdge(props: EdgeProps): JSX.Element {
             className="weft-edge-loop-back-label"
             style={{
               position: 'absolute',
-              transform: `translate(-50%, -50%) translate(${String(peak.x)}px, ${String(peak.y - 6)}px)`,
+              // Center the label ON the arc's peak so it reads as a chip
+              // riding the curve. The pill background (see canvas.css)
+              // masks the arc stroke directly under the text; the curve
+              // continues cleanly past either side of the chip. Sitting
+              // the label here (instead of 6px above) lets the loop
+              // container reclaim that headroom in `LOOP_TOP_PADDING`.
+              transform: `translate(-50%, -50%) translate(${String(peak.x)}px, ${String(peak.y)}px)`,
               pointerEvents: 'all',
             }}
           >
