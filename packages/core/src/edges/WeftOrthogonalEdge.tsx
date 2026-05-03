@@ -45,13 +45,26 @@ export function WeftOrthogonalEdge(props: EdgeProps<WeftEdge>): JSX.Element {
     ? { id, path, style }
     : { id, path, style, markerEnd };
 
+  // Mirror the edge's role/kind onto the label so role-tinted styling can
+  // hit it directly. EdgeLabelRenderer portals the label out of the edge's
+  // <g>, so an ancestor selector on `.react-flow__edge.weft-edge-role-*`
+  // never matches — the role class has to live on the label itself.
+  const role = data?.role;
+  const kind = data?.kind;
+  const label_class = ['weft-edge-orth-label']
+    .concat(role !== undefined ? [`weft-edge-orth-label-role-${role}`] : [])
+    .concat(kind !== undefined && kind !== 'structural' && kind !== 'overlay'
+      ? [`weft-edge-orth-label-kind-${kind}`]
+      : [])
+    .join(' ');
+
   return (
     <>
       <BaseEdge {...base_props} />
       {typeof label === 'string' && label !== '' ? (
         <EdgeLabelRenderer>
           <div
-            className="weft-edge-orth-label"
+            className={label_class}
             style={{
               position: 'absolute',
               transform: `translate(-50%, -50%) translate(${String(midpoint.x)}px, ${String(midpoint.y)}px)`,

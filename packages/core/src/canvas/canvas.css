@@ -855,35 +855,41 @@
 }
 
 /*
- * Per-role tinting on the orthogonal edge label so the chip's border matches
- * its line. Reads as "this label belongs to that line" without us having to
- * draw a leader. Borders soften via color-mix so they ride on the line at
- * the same visual weight as the base label hairline — the hue still
- * communicates which line the chip belongs to without the chip stealing
- * focus from the line itself.
+ * Per-role / per-kind tinting on the orthogonal edge label. EdgeLabelRenderer
+ * portals the label OUT of the edge's <g>, so an ancestor selector on
+ * `.react-flow__edge.weft-edge-*` never reaches it — the kind/role classes
+ * have to live on the label div itself (see WeftOrthogonalEdge.tsx).
+ *
+ * Role-tagged labels (primary/backup, then/otherwise) sit ON TOP of the
+ * same orange line they describe, so we render them as a paper-pill chip
+ * with a tinted border. The pill masks the line behind it and reads as
+ * "this label belongs to that line"; the line continues cleanly past
+ * either side of the pill.
  */
-.react-flow__edge.weft-edge-pipe-fn .weft-edge-orth-label,
-.react-flow__edge.weft-edge-checkpoint-key .weft-edge-orth-label {
-  border-color: color-mix(in srgb, var(--weft-hue-blue) 55%, transparent);
+.weft-edge-orth-label-kind-pipe-fn,
+.weft-edge-orth-label-kind-checkpoint-key {
   color: var(--weft-hue-blue);
 }
 
-.react-flow__edge.weft-edge-timeout-deadline .weft-edge-orth-label {
-  border-color: color-mix(in srgb, var(--weft-hue-yellow) 60%, transparent);
+.weft-edge-orth-label-kind-timeout-deadline {
   color: color-mix(in srgb, var(--weft-hue-yellow) 60%, var(--weft-color-fg));
 }
 
-.react-flow__edge.weft-edge-map-cardinality .weft-edge-orth-label {
-  border-color: color-mix(in srgb, var(--weft-hue-teal) 55%, transparent);
+.weft-edge-orth-label-kind-map-cardinality {
   color: var(--weft-hue-teal);
 }
 
-.react-flow__edge.weft-edge-role-then .weft-edge-orth-label,
-.react-flow__edge.weft-edge-role-otherwise .weft-edge-orth-label,
-.react-flow__edge.weft-edge-role-primary .weft-edge-orth-label,
-.react-flow__edge.weft-edge-role-backup .weft-edge-orth-label {
-  border-color: color-mix(in srgb, var(--weft-hue-orange) 55%, transparent);
+.weft-edge-orth-label-role-then,
+.weft-edge-orth-label-role-otherwise,
+.weft-edge-orth-label-role-primary,
+.weft-edge-orth-label-role-backup {
+  background: var(--weft-color-paper);
+  border: 1.5px solid var(--weft-hue-orange);
+  border-radius: 999px;
+  padding: 2px 8px;
   color: var(--weft-hue-orange);
+  -webkit-text-stroke: 0;
+  z-index: 3;
 }
 
 .weft-edge-self-loop-label {
