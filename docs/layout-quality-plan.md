@@ -549,13 +549,24 @@ boundaries).
   ELK actually struggles with.
 
   Decision: do not flip the default. Keep the spike for
-  reproducibility (`?router=libavoid` still works, and the studio's
-  `public/libavoid.wasm` makes the WASM addressable in dev), but
-  retire libavoid from the layout-quality roadmap until a fixture
+  reproducibility (`?router=libavoid` still works once
+  `packages/studio/public/libavoid.wasm` is in place — see below),
+  but retire libavoid from the layout-quality roadmap until a fixture
   emerges that ELK genuinely can't route. The LGPL-2.1-or-later
   license note in `libavoid_router.ts` and `layout_options.ts`
   remains accurate and stays in place — no license action needed
   while the dep is opt-in and not in the default bundle.
+
+  Reproducing the libavoid path (the WASM blob is gitignored / never
+  staged because it is a 492 KB binary; pnpm install pulls the
+  package but the studio needs an addressable copy):
+
+  ```sh
+  cp node_modules/.pnpm/libavoid-js@*/node_modules/libavoid-js/dist/libavoid.wasm \
+     packages/studio/public/libavoid.wasm
+  pnpm --filter @repo/studio dev   # in one terminal
+  pnpm metrics --router libavoid --label libavoid-spike
+  ```
 
   Visual ground truth for the libavoid run:
   `.check/layout-metrics-screenshots/*.png` after
