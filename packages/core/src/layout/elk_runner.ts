@@ -204,7 +204,7 @@ const LOOP_TOP_PADDING = CONTAINER_HEADER_BAND + LOOP_BACK_RADIUS - DEFAULT_NODE
 // outreach). Match the general container padding plus that floor so
 // the arc stays inside the chrome at typical spans without making the
 // box dramatically wider than other containers.
-const LOOP_SIDE_PADDING = CONTAINER_PADDING + 24;
+const LOOP_SIDE_PADDING = CONTAINER_PADDING + 36;
 const LOOP_BOTTOM_PADDING = 24;
 const LOOP_MIN_WIDTH = CONTAINER_MIN_WIDTH;
 const LOOP_MIN_HEIGHT = LOOP_TOP_PADDING + DEFAULT_NODE_HEIGHT + LOOP_BOTTOM_PADDING;
