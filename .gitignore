@@ -13,3 +13,8 @@ coverage/
 .DS_Store
 .claude/settings.local.json
 .pnpm-store/
+
+# Copied from node_modules at dev time for the libavoid spike — see
+# docs/layout-quality-plan.md (Phase 4). Not tracked because it's a
+# 492 KB binary and the dep is opt-in behind ?router=libavoid.
+packages/studio/public/libavoid.wasm
