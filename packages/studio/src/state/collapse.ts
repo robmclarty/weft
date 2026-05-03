@@ -23,7 +23,22 @@ export function apply_collapse(
 ): FlowTree {
   if (collapsed_ids.length === 0) return tree;
   const collapse_set = new Set(collapsed_ids);
-  return { version: 1, root: project(tree.root, collapse_set) };
+  // Skip the root: collapsing it would hide the entire graph, and ids can
+  // legitimately collide with the root (e.g. a `<cycle>` sentinel whose
+  // target id matches the root sequence in `cycle_bug.json`). Heals stuck
+  // localStorage state from past versions automatically.
+  return { version: 1, root: project_root(tree.root, collapse_set) };
+}
+
+function project_root(node: FlowNode, collapsed: Set<string>): FlowNode {
+  if (node.children === undefined) return node;
+  const projected = node.children.map((child) => project(child, collapsed));
+  return {
+    kind: node.kind,
+    id: node.id,
+    ...(node.config !== undefined ? { config: node.config } : {}),
+    children: projected,
+  };
 }
 
 function project(node: FlowNode, collapsed: Set<string>): FlowNode {

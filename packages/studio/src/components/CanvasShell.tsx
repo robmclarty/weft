@@ -101,6 +101,7 @@ export function CanvasShell({
 
   const handle_node_double_click = useCallback(
     (event: MouseEvent) => {
+      if (tree === null) return;
       const target = event.target;
       if (!(target instanceof Element)) return;
       const node_el = target.closest('[data-weft-kind]');
@@ -110,12 +111,21 @@ export function CanvasShell({
       const graph_id = id_el.getAttribute('data-id');
       if (graph_id === null) return;
       const local_id = strip_path(graph_id);
+      // Resolve to the FlowNode and skip the toggle when collapse would be
+      // a no-op or worse. A `<cycle>` sentinel borrows its target id, so
+      // resolving by stripped id surfaces the target (often the root) — we
+      // must not collapse the root, otherwise the canvas goes blank.
+      const found = find_flow_node(tree.root, local_id);
+      if (found === undefined) return;
+      if (found === tree.root) return;
+      const has_children = (found.children?.length ?? 0) > 0;
+      if (!has_children) return;
       const next = state.collapsed_node_ids.includes(local_id)
         ? state.collapsed_node_ids.filter((c) => c !== local_id)
         : [...state.collapsed_node_ids, local_id];
       set_state({ ...state, collapsed_node_ids: next });
     },
-    [state, set_state],
+    [tree, state, set_state],
   );
 
   const handle_ready = useCallback((api: CanvasApi) => {
@@ -247,6 +257,16 @@ export function CanvasShell({
 function strip_path(graph_id: string): string {
   const idx = graph_id.lastIndexOf('/');
   return idx === -1 ? graph_id : graph_id.slice(idx + 1);
+}
+
+function find_flow_node(root: FlowNode, id: string): FlowNode | undefined {
+  if (root.id === id) return root;
+  if (root.children === undefined) return undefined;
+  for (const child of root.children) {
+    const hit = find_flow_node(child, id);
+    if (hit !== undefined) return hit;
+  }
+  return undefined;
 }
 
 /**

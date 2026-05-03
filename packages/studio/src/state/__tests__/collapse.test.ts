@@ -50,9 +50,21 @@ describe('apply_collapse', () => {
     expect(JSON.stringify(tree)).toBe(before);
   });
 
-  it('collapses the root and reports the right child count', () => {
+  it('never collapses the root, so the canvas cannot go blank', () => {
+    // A `<cycle>` sentinel borrows its target id, which can collide with
+    // the root sequence's id (see fixtures/cycle_bug.json: the cycle node's
+    // resolved FlowNode id is "seq:loop", same as the root). Collapsing the
+    // root would strip every child and leave the canvas effectively empty.
     const next = apply_collapse(tree, ['seq:root']);
-    expect(next.root.children).toBeUndefined();
-    expect(next.root.config?.['weft_collapsed_count']).toBe(2);
+    expect(next.root.children?.length).toBe(2);
+    expect(next.root.config?.['weft_collapsed']).toBeUndefined();
+  });
+
+  it('still collapses non-root nodes when the root id is also in the set', () => {
+    const next = apply_collapse(tree, ['seq:root', 'p:0']);
+    expect(next.root.children?.length).toBe(2);
+    const parallel = next.root.children?.[1];
+    expect(parallel?.children).toBeUndefined();
+    expect(parallel?.config?.['weft_collapsed']).toBe(true);
   });
 });
