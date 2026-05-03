@@ -72,6 +72,15 @@ export type WeftNodeData = {
    */
   is_expanded?: boolean;
   /**
+   * Set on `stash` / `use` nodes that wrap a child — they appear as
+   * parented containers in the React Flow tree, so ELK sizes them as
+   * containers. The renderer reads this to switch from the leaf-pill
+   * shape (220×60) to a labeled container chrome that fills ELK's
+   * computed bounds; without it, edges land on the invisible big box
+   * far away from the visible pill.
+   */
+  is_container?: boolean;
+  /**
    * Inline wrapper badges. Earlier iterations emitted a separate marker
    * node per wrapper (a 44×44 dot adjacent to the lifted step). The user
    * complaint that "lines float in space, not connecting black blocks"
@@ -784,11 +793,21 @@ function walk_retry_or_loop_as_edge(
   return inner_segment;
 }
 
+// Mirrors --weft-leaf-height-with-wrappers in canvas.css. A leaf with
+// wrapper badges renders 88px tall instead of 60px; ELK must agree or
+// edges land 14-28px off the visual handle (see canvas.css).
+const LEAF_HEIGHT_WITH_WRAPPERS = 88;
+
 /**
  * Attach a `WrapperBadge` to an already-emitted node. Mutates the node's
  * data in place. Used by wrapper-kind walkers that need to annotate the
  * lifted child with their wrapper info instead of emitting a separate
  * marker peer.
+ *
+ * Also pins `target.height` to the wrapped-leaf height so ELK lays out
+ * the node at the same height the renderer paints. Without this, ELK
+ * treats the leaf as 60px tall while CSS renders it at 88px, and every
+ * edge into/out of a wrapped step lands 14px off the visual handle.
  */
 function attach_wrapper_badge(
   ctx: WalkContext,
@@ -799,6 +818,7 @@ function attach_wrapper_badge(
   if (target === undefined) return;
   const existing = target.data.wrappers ?? [];
   target.data = { ...target.data, wrappers: [...existing, badge] };
+  target.height = LEAF_HEIGHT_WITH_WRAPPERS;
 }
 
 /**
@@ -988,6 +1008,16 @@ function walk(
   // labeled-edge junction.
   const children = node.children;
   if (children === undefined || children.length === 0) return;
+  // stash/use are leaf-pill shapes by default, but when they wrap a
+  // child they end up parented in the React Flow tree, which makes ELK
+  // size them as containers. Mark them so the renderer paints container
+  // chrome that fills ELK's box instead of a small pill floating inside.
+  if (node.kind === 'stash' || node.kind === 'use') {
+    const target = ctx.nodes.find((n) => n.id === graph_id);
+    if (target !== undefined) {
+      target.data = { ...target.data, is_container: true };
+    }
+  }
   for (const child of children) {
     walk_for_chain(ctx, child, graph_id, graph_id);
   }

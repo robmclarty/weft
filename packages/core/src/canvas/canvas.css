@@ -275,6 +275,10 @@
 .weft-node-map { border-left-color: var(--weft-map-accent); }
 .weft-node-compose { border-left-color: var(--weft-compose-accent); }
 .weft-node-checkpoint { border-left-color: var(--weft-checkpoint-accent); }
+.weft-node-container.weft-node-stash { border-left-color: var(--weft-stash-accent); }
+.weft-node-container.weft-node-use { border-left-color: var(--weft-use-accent); }
+.weft-node-container.weft-node-stash .weft-node-header { background: var(--weft-stash-accent); color: var(--weft-color-paper); }
+.weft-node-container.weft-node-use .weft-node-header { background: var(--weft-use-accent); color: var(--weft-color-paper); }
 
 /*
  * Expanded-compose is the only wrapper that still renders as a container —
