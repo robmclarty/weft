@@ -260,3 +260,61 @@ export function apply_positions(
     return next;
   });
 }
+
+export type EdgeWaypoint = { readonly x: number; readonly y: number };
+export type EdgeRoutes = Map<string, ReadonlyArray<EdgeWaypoint>>;
+
+function harvest_edge_routes_at(
+  node: ElkNode,
+  parent_abs: { x: number; y: number },
+  into: EdgeRoutes,
+): void {
+  // ELK gives child x/y relative to the parent container. Accumulate ancestor
+  // offsets so the waypoints we emit are in root (flow) space — which is what
+  // React Flow's custom-edge `path` expects, since edges render in the flow's
+  // <g> at the same coordinate origin as the laid-out node positions.
+  const node_abs = node.id === '__weft_root'
+    ? { x: 0, y: 0 }
+    : { x: parent_abs.x + (node.x ?? 0), y: parent_abs.y + (node.y ?? 0) };
+
+  // ELK with `hierarchyHandling: INCLUDE_CHILDREN` may lift an edge declared at
+  // root into a deeper container (the LCA of its endpoints). Walking every
+  // node's `edges` is the only correct way to find them; their coordinates are
+  // relative to the container they end up in.
+  if (node.edges !== undefined) {
+    for (const edge of node.edges) {
+      const section = edge.sections?.[0];
+      if (section === undefined) continue;
+      const points: EdgeWaypoint[] = [
+        { x: node_abs.x + section.startPoint.x, y: node_abs.y + section.startPoint.y },
+      ];
+      if (section.bendPoints !== undefined) {
+        for (const bp of section.bendPoints) {
+          points.push({ x: node_abs.x + bp.x, y: node_abs.y + bp.y });
+        }
+      }
+      points.push({ x: node_abs.x + section.endPoint.x, y: node_abs.y + section.endPoint.y });
+      into.set(edge.id, points);
+    }
+  }
+
+  if (node.children !== undefined) {
+    for (const child of node.children) {
+      harvest_edge_routes_at(child, node_abs, into);
+    }
+  }
+}
+
+export function apply_edge_routes(
+  edges: ReadonlyArray<WeftEdge>,
+  laid: ElkNode,
+): WeftEdge[] {
+  const routes: EdgeRoutes = new Map();
+  harvest_edge_routes_at(laid, { x: 0, y: 0 }, routes);
+  return edges.map((e) => {
+    const waypoints = routes.get(e.id);
+    if (waypoints === undefined) return { ...e };
+    const data = { ...(e.data ?? { kind: 'structural' as const }), waypoints };
+    return { ...e, data };
+  });
+}

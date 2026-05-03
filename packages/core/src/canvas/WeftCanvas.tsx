@@ -61,12 +61,13 @@ import './canvas.css';
 const LAYOUT_DEBOUNCE_MS = 200;
 const DEFAULT_LARGE_THRESHOLD = 200;
 
-// Subway-style edge routing: smoothstep gives the right-angle "track" look
-// that pairs with ELK's ORTHOGONAL routing. The closed arrowhead is sized
-// to read at the new 4.5px stroke weight; ink color matches
-// --weft-color-edge-default in canvas.css.
+// Subway-style edge routing: `weft-orth` renders the orthogonal polyline
+// ELK actually computed (with rounded corners), instead of letting React
+// Flow's built-in `smoothstep` re-route from source/target handles and
+// throw the bend points away. The closed arrowhead is sized to read at the
+// 4.5px stroke weight; ink color matches `--weft-color-edge-default`.
 const DEFAULT_EDGE_OPTIONS: DefaultEdgeOptions = {
-  type: 'smoothstep',
+  type: 'weft-orth',
   markerEnd: {
     type: MarkerType.ArrowClosed,
     width: 18,

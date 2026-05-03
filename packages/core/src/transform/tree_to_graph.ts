@@ -81,6 +81,13 @@ export type WeftEdgeData = {
    * edges that have no semantic role.
    */
   role?: 'then' | 'otherwise' | 'primary' | 'backup';
+  /**
+   * ELK-computed orthogonal route in root (flow) space. Populated by
+   * `apply_edge_routes` after layout; absent before. The custom orthogonal
+   * edge component reads this to render the right-angle path ELK actually
+   * computed instead of letting React Flow re-route from scratch.
+   */
+  waypoints?: ReadonlyArray<{ readonly x: number; readonly y: number }>;
 };
 
 export type WeftNode = Node<WeftNodeData>;

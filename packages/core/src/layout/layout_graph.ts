@@ -13,6 +13,7 @@
 
 import type { WeftEdge, WeftNode } from '../transform/tree_to_graph.js';
 import {
+  apply_edge_routes,
   apply_positions,
   build_elk,
   build_elk_graph,
@@ -105,7 +106,7 @@ export async function layout_graph(
     const laid = await result;
     return {
       nodes: apply_positions(nodes, laid),
-      edges: edges.map((e) => ({ ...e })),
+      edges: apply_edge_routes(edges, laid),
     };
   } catch (err) {
     cancel();

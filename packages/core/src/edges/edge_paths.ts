@@ -78,3 +78,100 @@ export function compute_loop_back_path(
     + `${String(target.x)} ${String(target.y)}`;
   return { path, peak: { x: mid_x, y: peak_y } };
 }
+
+const ORTHOGONAL_CORNER_RADIUS = 8;
+const ORTHOGONAL_LABEL_FRACTION = 0.5;
+
+export type OrthogonalGeometry = {
+  readonly path: string;
+  /** Midpoint of the polyline (by arc length), suitable for positioning a label. */
+  readonly midpoint: Point;
+};
+
+function distance(a: Point, b: Point): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function move_toward(from: Point, toward: Point, len: number): Point {
+  const total = distance(from, toward);
+  if (total === 0) return { x: from.x, y: from.y };
+  const t = len / total;
+  return { x: from.x + (toward.x - from.x) * t, y: from.y + (toward.y - from.y) * t };
+}
+
+/**
+ * Build an SVG path along an orthogonal polyline (the kind ELK emits when
+ * `edgeRouting: ORTHOGONAL`), rounding interior corners with a quadratic
+ * bezier whose control point is the corner itself. The corner radius is
+ * clamped to half the shorter incident segment so adjacent corners don't
+ * overlap on tight elbows.
+ *
+ * The polyline is built from `source` → `bend_points` → `target` directly.
+ * Callers should pass ELK's first / last waypoint as `source` / `target`
+ * (not React Flow's measured handle position) — substituting the React
+ * Flow position there breaks the orthogonal property when ELK's port
+ * assumption disagrees with the handle by even a pixel, which produces
+ * visible diagonal stubs at the node boundary.
+ */
+export function compute_orthogonal_path(
+  source: Point,
+  target: Point,
+  bend_points: ReadonlyArray<Point>,
+): OrthogonalGeometry {
+  const points: Point[] = [source, ...bend_points, target];
+  if (points.length === 2) {
+    const path = `M ${String(source.x)} ${String(source.y)} `
+      + `L ${String(target.x)} ${String(target.y)}`;
+    const midpoint: Point = {
+      x: (source.x + target.x) / 2,
+      y: (source.y + target.y) / 2,
+    };
+    return { path, midpoint };
+  }
+
+  let d = `M ${String(points[0]!.x)} ${String(points[0]!.y)}`;
+  for (let i = 1; i < points.length - 1; i += 1) {
+    const prev = points[i - 1]!;
+    const curr = points[i]!;
+    const next = points[i + 1]!;
+    const r = Math.min(
+      ORTHOGONAL_CORNER_RADIUS,
+      distance(prev, curr) / 2,
+      distance(curr, next) / 2,
+    );
+    if (r < 0.5) {
+      d += ` L ${String(curr.x)} ${String(curr.y)}`;
+      continue;
+    }
+    const enter = move_toward(curr, prev, r);
+    const exit = move_toward(curr, next, r);
+    d += ` L ${String(enter.x)} ${String(enter.y)}`;
+    d += ` Q ${String(curr.x)} ${String(curr.y)} ${String(exit.x)} ${String(exit.y)}`;
+  }
+  const last = points[points.length - 1]!;
+  d += ` L ${String(last.x)} ${String(last.y)}`;
+
+  // Pick a label anchor at the segment containing arc-length midpoint. This
+  // keeps "primary"/"otherwise"/"<fn:name>" chips readable on long routes.
+  let total_len = 0;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    total_len += distance(points[i]!, points[i + 1]!);
+  }
+  let target_len = total_len * ORTHOGONAL_LABEL_FRACTION;
+  let midpoint: Point = points[0]!;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const a = points[i]!;
+    const b = points[i + 1]!;
+    const seg_len = distance(a, b);
+    if (target_len <= seg_len) {
+      const t = seg_len === 0 ? 0 : target_len / seg_len;
+      midpoint = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+      break;
+    }
+    target_len -= seg_len;
+    midpoint = b;
+  }
+  return { path: d, midpoint };
+}

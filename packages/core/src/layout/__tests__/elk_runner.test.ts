@@ -4,6 +4,7 @@ import { flow_tree_schema } from '../../schemas.js';
 import { load_fixture_raw } from '../../test_helpers.js';
 import { tree_to_graph, type WeftEdge, type WeftNode } from '../../transform/tree_to_graph.js';
 import {
+  apply_edge_routes,
   apply_positions,
   build_elk,
   build_elk_graph,
@@ -128,6 +129,129 @@ describe('apply_positions', () => {
     const result = apply_positions(nodes, { id: '__weft_root', children: [] });
     expect(result.length).toBe(1);
     expect(result[0]?.position).toEqual({ x: 5, y: 5 });
+  });
+});
+
+describe('apply_edge_routes', () => {
+  it('writes ELK section waypoints (root-space) onto matching edges as data.waypoints', () => {
+    const edges: WeftEdge[] = [
+      { id: 'e1', source: 'a', target: 'b', data: { kind: 'structural' } },
+    ];
+    const laid_root = {
+      id: '__weft_root',
+      children: [
+        { id: 'a', x: 0, y: 0, width: 100, height: 50 },
+        { id: 'b', x: 200, y: 0, width: 100, height: 50 },
+      ],
+      edges: [
+        {
+          id: 'e1',
+          sources: ['a'],
+          targets: ['b'],
+          sections: [
+            {
+              id: 's1',
+              startPoint: { x: 100, y: 25 },
+              bendPoints: [{ x: 150, y: 25 }, { x: 150, y: 25 }],
+              endPoint: { x: 200, y: 25 },
+            },
+          ],
+        },
+      ],
+    };
+    const out = apply_edge_routes(edges, laid_root);
+    expect(out[0]?.data?.waypoints).toEqual([
+      { x: 100, y: 25 },
+      { x: 150, y: 25 },
+      { x: 150, y: 25 },
+      { x: 200, y: 25 },
+    ]);
+  });
+
+  it('translates edge waypoints by ancestor offsets so they land in root (flow) space', () => {
+    // ELK stores edge sections relative to the edge's container. Walk a
+    // 2-deep nesting and verify that ancestor offsets accumulate.
+    const edges: WeftEdge[] = [
+      { id: 'e1', source: 'a', target: 'b', data: { kind: 'structural' } },
+    ];
+    const laid_root = {
+      id: '__weft_root',
+      children: [
+        {
+          id: 'outer',
+          x: 100,
+          y: 200,
+          children: [
+            {
+              id: 'inner',
+              x: 10,
+              y: 20,
+              edges: [
+                {
+                  id: 'e1',
+                  sources: ['a'],
+                  targets: ['b'],
+                  sections: [
+                    {
+                      id: 's1',
+                      startPoint: { x: 5, y: 6 },
+                      endPoint: { x: 15, y: 16 },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const out = apply_edge_routes(edges, laid_root);
+    // 100 + 10 + 5 = 115, 200 + 20 + 6 = 226
+    // 100 + 10 + 15 = 125, 200 + 20 + 16 = 236
+    expect(out[0]?.data?.waypoints).toEqual([
+      { x: 115, y: 226 },
+      { x: 125, y: 236 },
+    ]);
+  });
+
+  it('omits waypoints when ELK returns no sections for the edge', () => {
+    const edges: WeftEdge[] = [
+      { id: 'e1', source: 'a', target: 'b', data: { kind: 'structural' } },
+    ];
+    const laid_root = {
+      id: '__weft_root',
+      edges: [{ id: 'e1', sources: ['a'], targets: ['b'] }],
+    };
+    const out = apply_edge_routes(edges, laid_root);
+    expect(out[0]?.data?.waypoints).toBeUndefined();
+  });
+
+  it('preserves existing edge data (kind/role/wrapper_label) when adding waypoints', () => {
+    const edges: WeftEdge[] = [
+      {
+        id: 'e1',
+        source: 'a',
+        target: 'b',
+        data: { kind: 'pipe-fn', wrapper_id: 'w1', wrapper_label: '<fn:foo>' },
+      },
+    ];
+    const laid_root = {
+      id: '__weft_root',
+      edges: [
+        {
+          id: 'e1',
+          sources: ['a'],
+          targets: ['b'],
+          sections: [
+            { id: 's', startPoint: { x: 0, y: 0 }, endPoint: { x: 10, y: 0 } },
+          ],
+        },
+      ],
+    };
+    const out = apply_edge_routes(edges, laid_root);
+    expect(out[0]?.data?.kind).toBe('pipe-fn');
+    expect(out[0]?.data?.wrapper_label).toBe('<fn:foo>');
+    expect(out[0]?.data?.waypoints).toEqual([{ x: 0, y: 0 }, { x: 10, y: 0 }]);
   });
 });
 
