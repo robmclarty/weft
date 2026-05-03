@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.1.4 — 2026-05-02
+
+### Changed
+
+- Canvas edges now render the orthogonal route ELK actually computed (with rounded corners), not a smoothstep approximation re-routed from source/target handles. On the `all_primitives` fixture this drops crossings 2→0, bends 82→20, edge length 27%, and node-edge overlaps 54%. Self-loop and loop-back arcs keep their dedicated components; everything else falls through to the new `weft-orth` edge type.
+
+### Internal
+
+- New `pnpm metrics` (`scripts/layout-metrics.mjs`) drives Playwright through the canonical fixtures and writes per-fixture crossing / bend / length / overlap counts to `.check/layout-metrics.json` for quantitative regression checks.
+- `docs/layout-quality-plan.md` documents the layout-quality investigation, baseline metrics, and the Phase 2b ELK option-sweep results (every option produced exact-zero deltas on top of the waypoint pipe — the defaults are already well-tuned for our graph shape).
+
 ## v0.1.3 — 2026-05-02
 
 ### Changed
