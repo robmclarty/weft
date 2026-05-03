@@ -73,8 +73,10 @@ describe('compute_loop_back_path', () => {
       { height: 10 },
     );
     // Tiny node height (10) is overridden by the 160px minimum-radius
-    // floor so the arc still has room to wrap with a smooth curve.
-    expect(peak.y).toBeCloseTo(-160, 0);
+    // floor. peak is the VISUAL apex of the bezier (0.75 of the control
+    // point's deflection), not the control point itself, so the
+    // expected value is -120 = 0.75 * -160.
+    expect(peak.y).toBeCloseTo(-120, 0);
   });
 
   it('extends control points outward past each endpoint so the arc wraps around with a minimum radius', () => {
@@ -114,8 +116,9 @@ describe('compute_loop_back_path', () => {
       { x: 100, y: 0 },
       { x: 0, y: 0 },
     );
-    // Default height 60 is below the 160px radius floor — peak.y ≈ -160.
-    expect(peak.y).toBeCloseTo(-160, 0);
+    // Default height 60 is below the 160px radius floor. The visual
+    // apex sits at 0.75 of the control deflection: -120.
+    expect(peak.y).toBeCloseTo(-120, 0);
   });
 });
 

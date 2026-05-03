@@ -97,7 +97,13 @@ export function compute_loop_back_path(
     + `C ${String(source.x + outreach * dir)} ${String(peak_y)}, `
     + `${String(target.x - outreach * dir)} ${String(peak_y)}, `
     + `${String(target.x)} ${String(target.y)}`;
-  return { path, peak: { x: mid_x, y: peak_y } };
+  // The visual apex of a cubic bezier with C1 and C2 at peak_y sits at
+  // 0.75 of peak_y's deflection, NOT at peak_y itself — the curve never
+  // reaches its control points. Compute the actual midpoint y so callers
+  // (label rendering) place chips ON the visible curve instead of
+  // floating in the empty space above it.
+  const apex_y = (source.y + target.y) / 8 + (3 / 4) * peak_y;
+  return { path, peak: { x: mid_x, y: apex_y } };
 }
 
 const ORTHOGONAL_CORNER_RADIUS = 8;
