@@ -32,6 +32,28 @@ import type { Edge, Node } from '@xyflow/react';
 import type { FlowNode, FlowTree, FlowValue, StepMetadata } from '../schemas.js';
 import type { NodeRuntimeState } from '../runtime_state.js';
 
+export type WrapperBadge = {
+  /**
+   * The wrapper kind whose info this badge represents — `pipe`, `timeout`,
+   * `checkpoint`, `map`, etc. The renderer looks up the kind's color and
+   * glyph to keep the badge visually consistent with the kind's family
+   * across the canvas.
+   */
+  kind: string;
+  /**
+   * Wrapper config formatted for display, e.g. `<fn:to_typescript>` for
+   * pipe, `↻ 3× / 250ms` for retry, `8000ms` for timeout. Computed once
+   * at emit time so renderers stay free of config-parsing logic.
+   */
+  label: string;
+  /**
+   * Position relative to the wrapped step. `'before'` means the wrapper
+   * acts on the input (checkpoint loads, map fans out); `'after'` means
+   * the wrapper acts on the output (pipe transforms, timeout deadlines).
+   */
+  position: 'before' | 'after';
+};
+
 export type WeftNodeData = {
   kind: string;
   id: string;
@@ -48,6 +70,17 @@ export type WeftNodeData = {
    * when `true`, the inner children render as nested chrome (the v0 look).
    */
   is_expanded?: boolean;
+  /**
+   * Inline wrapper badges. Earlier iterations emitted a separate marker
+   * node per wrapper (a 44×44 dot adjacent to the lifted step). The user
+   * complaint that "lines float in space, not connecting black blocks"
+   * was that the structural chain ran through those tiny markers, never
+   * directly between the work steps. Now we attach wrapper info here and
+   * let the leaf renderer paint a corner badge — the chain reads as
+   * black-step → arrow → black-step, with each step labeling its own
+   * wrappers in place.
+   */
+  wrappers?: ReadonlyArray<WrapperBadge>;
 };
 
 export type WeftEdgeData = {
@@ -407,15 +440,40 @@ function self_loop_edge(node_id: string, label: string, wrapper_id: string): Wef
 }
 
 function loop_back_edge(node_id: string, label: string, wrapper_id: string): WeftEdge {
-  // Loop-back: edge sweeps from right-out handle back around to left-in
-  // handle of the same node. Distinct handle ids make React Flow compute
-  // distinct sourceX and targetX so the arc has real horizontal extent
-  // instead of collapsing to a single point.
+  // Loop-back self-edge: edge sweeps from right-out handle back around to
+  // left-in handle of the same node. Distinct handle ids make React Flow
+  // compute distinct sourceX and targetX so the arc has real horizontal
+  // extent instead of collapsing to a single point. Used for guard-less
+  // loops where the body itself is the only chain member.
   return {
     id: `e:loop-back:${wrapper_id}->${node_id}`,
     type: 'loop-back',
     source: node_id,
     target: node_id,
+    sourceHandle: 'out',
+    targetHandle: 'in',
+    label,
+    data: { kind: 'loop-back', wrapper_id, wrapper_label: label },
+  };
+}
+
+function loop_back_edge_between(
+  source_node: string,
+  target_node: string,
+  label: string,
+  wrapper_id: string,
+): WeftEdge {
+  // Loop-back inter-node: arc from `source_node`'s right-out to
+  // `target_node`'s left-in. Used when a loop has a guard child — the
+  // sequential chain runs body → guard, then this edge sweeps back from
+  // the guard to the body to express "if guard fails, repeat body". The
+  // LoopBackEdge component already handles distinct source/target points;
+  // it just needs different node ids in source/target.
+  return {
+    id: `e:loop-back:${wrapper_id}:${source_node}->${target_node}`,
+    type: 'loop-back',
+    source: source_node,
+    target: target_node,
     sourceHandle: 'out',
     targetHandle: 'in',
     label,
@@ -684,99 +742,107 @@ function walk_retry_or_loop_as_edge(
   if (node.kind === 'retry') {
     const label = format_retry_label(node.config);
     ctx.edges.push(self_loop_edge(inner_segment.first, label, graph_id));
-  } else {
-    const label = format_loop_label(node.config);
-    ctx.edges.push(loop_back_edge(inner_segment.first, label, graph_id));
+    // Retry has no guard child by spec; later children, if any, walk as
+    // orphan peers without altering the chain.
+    for (let i = 1; i < children.length; i += 1) {
+      const sibling = children[i];
+      if (sibling === undefined) continue;
+      walk_for_chain(ctx, sibling, parent_graph_id, graph_id);
+    }
+    return inner_segment;
   }
 
-  // Optional guard children (loop's second child, if present) walk
-  // alongside as peers but get no back-edge of their own.
-  for (let i = 1; i < children.length; i += 1) {
-    const sibling = children[i];
-    if (sibling === undefined) continue;
-    walk_for_chain(ctx, sibling, parent_graph_id, graph_id);
+  // loop kind: optionally has a guard child (loop body, then guard test).
+  // Walk it inline so the user sees the full body→guard→continue chain
+  // with a loop-back arc from guard back to body. Without this the guard
+  // floated as an unconnected block — exactly the "no visible flow" the
+  // user kept flagging on all_primitives.
+  const label = format_loop_label(node.config);
+  const guard = children[1];
+  if (guard !== undefined) {
+    const guard_segment = walk_for_chain(ctx, guard, parent_graph_id, graph_id);
+    ctx.edges.push(structural_edge(inner_segment.last, guard_segment.first));
+    ctx.edges.push(
+      loop_back_edge_between(guard_segment.last, inner_segment.first, label, graph_id),
+    );
+    // Any additional siblings beyond the guard fall back to orphan-peer
+    // behavior — the spec treats only children[0..1] as semantic.
+    for (let i = 2; i < children.length; i += 1) {
+      const sibling = children[i];
+      if (sibling === undefined) continue;
+      walk_for_chain(ctx, sibling, parent_graph_id, graph_id);
+    }
+    return { first: inner_segment.first, last: guard_segment.last };
   }
-
+  ctx.edges.push(loop_back_edge(inner_segment.first, label, graph_id));
   return inner_segment;
 }
 
 /**
- * Generic helper for wrapper kinds that splice a marker around their
- * wrapped child. The chain segment that the marker forms depends on
- * `position`:
- *
- *   - `'after'`: chain becomes `[child, marker]` — the marker sits
- *     downstream and acts as the chain's `last`. Used by pipe and
- *     timeout (the marker is the "after the work" station).
- *   - `'before'`: chain becomes `[marker, child]` — the marker sits
- *     upstream as the chain's `first`. Used by checkpoint and map
- *     (the marker is the "before the work" station).
- *
- * The decoration edge runs from the upstream end to the downstream end
- * of the marker pair.
+ * Attach a `WrapperBadge` to an already-emitted node. Mutates the node's
+ * data in place. Used by wrapper-kind walkers that need to annotate the
+ * lifted child with their wrapper info instead of emitting a separate
+ * marker peer.
  */
-function walk_wrapper_as_marker(
+function attach_wrapper_badge(
+  ctx: WalkContext,
+  target_id: string,
+  badge: WrapperBadge,
+): void {
+  const target = ctx.nodes.find((n) => n.id === target_id);
+  if (target === undefined) return;
+  const existing = target.data.wrappers ?? [];
+  target.data = { ...target.data, wrappers: [...existing, badge] };
+}
+
+/**
+ * Generic helper for wrapper kinds that decorate their wrapped child:
+ * `pipe` (transforms output), `timeout` (caps duration), `checkpoint`
+ * (loads cached input), `map` (fans out per item).
+ *
+ * Earlier these emitted a separate small "marker" node adjacent to the
+ * lifted child, with a decoration edge between them. The visual cost
+ * was that the structural sequence chain ran through those markers — so
+ * a black work step never had a line connecting directly to its
+ * upstream/downstream black work step. The user flagged this exactly:
+ * "lines float in space, not connecting black blocks."
+ *
+ * Now: walk the inner, attach a badge with the wrapper kind+config to
+ * the chain endpoint (`first` for before-wrappers, `last` for
+ * after-wrappers), and return the inner's chain segment unchanged. No
+ * separate node, no decoration edge — just a corner badge on the work
+ * step itself.
+ */
+function walk_wrapper_as_badge(
   ctx: WalkContext,
   node: FlowNode,
   parent_graph_id: string | null,
   graph_id: string,
   position: 'before' | 'after',
-  edge_factory: (source: string, target: string, label: string, wrapper_id: string) => WeftEdge,
   label: string,
-  marker_kind_class: string,
 ): ChainSegment {
   ctx.visited.add(node);
 
   const inner = node.children?.[0];
-  let inner_segment: ChainSegment;
   if (inner === undefined) {
-    inner_segment = { first: graph_id, last: graph_id };
-  } else {
-    inner_segment = walk_for_chain(ctx, inner, parent_graph_id, graph_id);
-  }
-
-  const data = build_node_data(node);
-  const rf_node: WeftNode = {
-    id: graph_id,
-    type: marker_kind_class,
-    position: { x: 0, y: 0 },
-    width: MARKER_W,
-    height: MARKER_H,
-    data,
-  };
-  if (parent_graph_id !== null) rf_node.parentId = parent_graph_id;
-  ctx.nodes.push(rf_node);
-
-  if (inner === undefined) {
+    // Degenerate: no child to decorate. Return a synthetic single-id
+    // segment anchored at the wrapper's would-be graph id. No node is
+    // emitted; the wrapper effectively disappears from the visible graph.
     return { first: graph_id, last: graph_id };
   }
 
-  if (position === 'after') {
-    // child → marker — marker is downstream
-    ctx.edges.push(edge_factory(inner_segment.last, graph_id, label, graph_id));
-    return { first: inner_segment.first, last: graph_id };
-  }
-  // 'before': marker → child — marker is upstream
-  ctx.edges.push(edge_factory(graph_id, inner_segment.first, label, graph_id));
-  return { first: graph_id, last: inner_segment.last };
+  const inner_segment = walk_for_chain(ctx, inner, parent_graph_id, graph_id);
+  const target_id = position === 'after' ? inner_segment.last : inner_segment.first;
+  attach_wrapper_badge(ctx, target_id, { kind: node.kind, label, position });
+  return inner_segment;
 }
 
 /**
- * Walk a `pipe(child, fn)` wrapper as a peer marker (B-deluxe topology).
- *
- * Topology: the inner child is lifted to share `parent_graph_id` with the
- * pipe marker, so React Flow treats them as siblings instead of nesting
- * the child inside the pipe. The pipe itself is emitted as a small leaf
- * marker (44×44) downstream of the child; a `pipe-fn` decoration edge
- * carries the `<fn:name>` chip from child to marker.
- *
- * Chain: predecessor → child → marker → successor. The returned segment
- * has `first = inner.first` (so a sequence's prev edge enters the lifted
- * child) and `last = marker_graph_id` (so the next edge leaves the
- * marker).
- *
- * This is the prototype lift-to-peers conversion the rest of the wrapper
- * kinds will follow in subsequent commits.
+ * Walk a `pipe(child, fn)` wrapper. Pipe is an after-wrapper (transforms
+ * the child's output), so its badge attaches to the chain's `last`.
+ * Routes through the shared `walk_wrapper_as_badge` helper so the same
+ * lift-and-annotate semantics apply uniformly to pipe / timeout /
+ * checkpoint / map.
  */
 function walk_pipe_as_marker(
   ctx: WalkContext,
@@ -784,44 +850,14 @@ function walk_pipe_as_marker(
   parent_graph_id: string | null,
   graph_id: string,
 ): ChainSegment {
-  ctx.visited.add(node);
-
-  const children = node.children ?? [];
-  const inner = children[0];
-  let inner_segment: ChainSegment;
-  if (inner === undefined) {
-    // Pipe with no child is degenerate but possible; treat it as a lone
-    // marker with no incoming chain piece.
-    inner_segment = { first: graph_id, last: graph_id };
-  } else {
-    // Lift: parentId stays at the pipe's parent, but path-string keeps the
-    // pipe's id in the chain so child graph_ids remain unique across
-    // sibling wrappers with the same inner-id.
-    inner_segment = walk_for_chain(ctx, inner, parent_graph_id, graph_id);
-  }
-
-  // Emit the pipe itself as a small marker leaf. Width/height are set
-  // explicitly so ELK lays it out as a 44px node, not the default 184px
-  // leaf size.
-  const data = build_node_data(node);
-  const rf_node: WeftNode = {
-    id: graph_id,
-    type: 'pipe',
-    position: { x: 0, y: 0 },
-    width: PIPE_MARKER_W,
-    height: PIPE_MARKER_H,
-    data,
-  };
-  if (parent_graph_id !== null) rf_node.parentId = parent_graph_id;
-  ctx.nodes.push(rf_node);
-
-  // Decoration edge from the inner's last → marker, carrying the fn chip.
-  const fn_label = format_fn_chip(node.config?.['fn']);
-  if (inner !== undefined) {
-    ctx.edges.push(pipe_fn_edge(inner_segment.last, graph_id, fn_label, graph_id));
-  }
-
-  return { first: inner_segment.first, last: graph_id };
+  return walk_wrapper_as_badge(
+    ctx,
+    node,
+    parent_graph_id,
+    graph_id,
+    'after',
+    format_fn_chip(node.config?.['fn']),
+  );
 }
 
 /**
@@ -884,44 +920,33 @@ function walk_for_chain(
     return walk_parallel_as_junction(ctx, node, parent_graph_id, graph_id);
   }
 
-  // Pipe: lift child to peer, emit pipe as marker, return [child, marker].
+  // Pipe / timeout / checkpoint / map: drop the wrapper as a separate
+  // peer; instead annotate the lifted child with a corner badge so the
+  // chain runs black-step → black-step directly. Pipe and timeout act
+  // on output (badge sits on the chain's `last`); checkpoint and map
+  // act on input (badge sits on the chain's `first`).
   if (node.kind === 'pipe') {
-    return walk_pipe_as_marker(ctx, node, parent_graph_id, graph_id);
+    return walk_wrapper_as_badge(
+      ctx, node, parent_graph_id, graph_id,
+      'after', format_fn_chip(node.config?.['fn']),
+    );
   }
   if (node.kind === 'timeout') {
-    return walk_wrapper_as_marker(
-      ctx,
-      node,
-      parent_graph_id,
-      graph_id,
-      'after',
-      timeout_deadline_edge,
-      format_timeout_chip(node.config),
-      'timeout',
+    return walk_wrapper_as_badge(
+      ctx, node, parent_graph_id, graph_id,
+      'after', format_timeout_chip(node.config),
     );
   }
   if (node.kind === 'checkpoint') {
-    return walk_wrapper_as_marker(
-      ctx,
-      node,
-      parent_graph_id,
-      graph_id,
-      'before',
-      checkpoint_key_edge,
-      format_checkpoint_chip(node.config),
-      'checkpoint',
+    return walk_wrapper_as_badge(
+      ctx, node, parent_graph_id, graph_id,
+      'before', format_checkpoint_chip(node.config),
     );
   }
   if (node.kind === 'map') {
-    return walk_wrapper_as_marker(
-      ctx,
-      node,
-      parent_graph_id,
-      graph_id,
-      'before',
-      map_cardinality_edge,
-      format_map_chip(node.config),
-      'map',
+    return walk_wrapper_as_badge(
+      ctx, node, parent_graph_id, graph_id,
+      'before', format_map_chip(node.config),
     );
   }
 

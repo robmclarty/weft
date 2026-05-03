@@ -16,13 +16,16 @@ import type { WeftNode } from '../transform/tree_to_graph.js';
 import { StepGlyph } from './glyphs.js';
 import { format_fn_ref, runtime_class } from './node_helpers.js';
 import { RuntimeOverlay } from './RuntimeOverlay.js';
+import { WrapperBadges } from './WrapperBadges.js';
 
 function StepNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
   const fn_label = format_fn_ref(data.config?.['fn']);
   const display_name = data.meta?.display_name;
+  const wrappers = data.wrappers ?? [];
+  const has_wrappers = wrappers.length > 0;
   return (
     <div
-      className={`weft-node weft-node-leaf weft-node-step ${runtime_class(data.runtime)}`}
+      className={`weft-node weft-node-leaf weft-node-step ${runtime_class(data.runtime)} ${has_wrappers ? 'weft-node-with-wrappers' : ''}`}
       data-weft-kind="step"
     >
       <Handle type="target" position={Position.Left} id="in" />
@@ -31,6 +34,7 @@ function StepNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
         <div className="weft-node-title">{display_name ?? data.id}</div>
       </div>
       <div className="weft-node-subtitle">{fn_label}</div>
+      <WrapperBadges wrappers={wrappers} />
       <RuntimeOverlay runtime={data.runtime} />
       <Handle type="source" position={Position.Right} id="out" />
     </div>

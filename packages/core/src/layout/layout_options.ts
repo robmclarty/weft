@@ -28,10 +28,21 @@ export type LayoutOptions = {
   readonly router: LayoutRouter;
 };
 
+/*
+ * Spacing defaults tuned for "see the flow first, fit-everything second".
+ * Thick orthogonal edges with arrowheads need a *long* visible run between
+ * adjacent stops or the head dominates and the line vanishes — the user
+ * complaint that "blocks look disconnected" was, mechanically, about the
+ * 30–60px stubs between markers and their lifted children. Cranking to
+ * 128 / 240 gives every arrow a clear runway between blocks; the trade
+ * is that a wide LR pipeline no longer fits in one viewport at native
+ * zoom, which is acceptable since panning is cheap and traceability is
+ * the priority.
+ */
 export const DEFAULT_LAYOUT_OPTIONS: LayoutOptions = {
   direction: 'LR',
-  node_spacing: 56,
-  rank_spacing: 96,
+  node_spacing: 120,
+  rank_spacing: 200,
   router: 'elk',
 };
 

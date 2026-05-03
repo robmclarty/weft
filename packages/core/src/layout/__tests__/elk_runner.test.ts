@@ -24,8 +24,8 @@ describe('build_elk_graph', () => {
     expect(graph.id).toBe('__weft_root');
     expect(graph.layoutOptions?.['elk.algorithm']).toBe('layered');
     expect(graph.layoutOptions?.['elk.direction']).toBe('RIGHT');
-    expect(graph.layoutOptions?.['elk.spacing.nodeNode']).toBe('56');
-    expect(graph.layoutOptions?.['elk.layered.spacing.nodeNodeBetweenLayers']).toBe('96');
+    expect(graph.layoutOptions?.['elk.spacing.nodeNode']).toBe('120');
+    expect(graph.layoutOptions?.['elk.layered.spacing.nodeNodeBetweenLayers']).toBe('200');
     expect(graph.layoutOptions?.['elk.edgeRouting']).toBe('ORTHOGONAL');
     expect(graph.layoutOptions?.['elk.hierarchyHandling']).toBe('INCLUDE_CHILDREN');
   });

@@ -13,12 +13,14 @@ import type { WeftNode } from '../transform/tree_to_graph.js';
 import { UseGlyph } from './glyphs.js';
 import { read_string_array_field, runtime_class } from './node_helpers.js';
 import { RuntimeOverlay } from './RuntimeOverlay.js';
+import { WrapperBadges } from './WrapperBadges.js';
 
 function UseNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
   const keys = read_string_array_field(data.config, 'keys') ?? [];
+  const wrappers = data.wrappers ?? [];
   return (
     <div
-      className={`weft-node weft-node-leaf weft-node-use ${runtime_class(data.runtime)}`}
+      className={`weft-node weft-node-leaf weft-node-use ${runtime_class(data.runtime)} ${wrappers.length > 0 ? 'weft-node-with-wrappers' : ''}`}
       data-weft-kind="use"
     >
       <Handle type="target" position={Position.Left} id="in" />
@@ -28,6 +30,7 @@ function UseNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
         </span>
         <div className="weft-node-title">{data.id}</div>
       </div>
+      <WrapperBadges wrappers={wrappers} />
       <RuntimeOverlay runtime={data.runtime} />
       <Handle type="source" position={Position.Right} id="out" />
     </div>

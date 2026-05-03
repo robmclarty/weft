@@ -116,28 +116,28 @@ describe('tree_to_graph: containers and wrappers', () => {
     expect(self_loops.length).toBe(1);
   });
 
-  it('lifts pipe wrapper children to peers and emits a pipe-fn decoration edge', () => {
+  it('attaches a pipe wrapper as an after-position badge on the lifted child', () => {
     const tree = parse_fixture('full_primitive_set.json');
     const { nodes, edges } = tree_to_graph(tree);
-    const pipe_node = find_by_id(
-      nodes,
-      'seq:everything/scope:root/pipe:upper',
-    );
+    // The pipe wrapper itself is no longer emitted as a separate node —
+    // markers are now inline corner badges on the wrapped step.
+    const pipe_node = find_by_id(nodes, 'seq:everything/scope:root/pipe:upper');
+    expect(pipe_node).toBeUndefined();
     const pipe_child = find_by_id(
       nodes,
       'seq:everything/scope:root/pipe:upper/use:greeting',
     );
-    expect(pipe_node?.type).toBe('pipe');
-    // Lift: pipe child's parentId is the pipe's parent (the scope), not the pipe.
+    // Lift: the wrapped child's parentId is the wrapper's parent (the scope).
     expect(pipe_child?.parentId).toBe('seq:everything/scope:root');
-    // The pipe-fn decoration edge runs from the wrapped child to the pipe marker.
+    // Wrapper info lands on the child as a badge.
+    const badges = pipe_child?.data.wrappers ?? [];
+    const pipe_badge = badges.find((b) => b.kind === 'pipe');
+    expect(pipe_badge).toBeDefined();
+    expect(pipe_badge?.position).toBe('after');
+    expect(typeof pipe_badge?.label).toBe('string');
+    // No standalone decoration edge — the badge replaces it.
     const pipe_fn_edges = edges.filter((e) => e.data?.kind === 'pipe-fn');
-    expect(pipe_fn_edges.length).toBeGreaterThan(0);
-    const pipe_fn_edge = pipe_fn_edges.find(
-      (e) => e.target === 'seq:everything/scope:root/pipe:upper',
-    );
-    expect(pipe_fn_edge?.source).toBe('seq:everything/scope:root/pipe:upper/use:greeting');
-    expect(typeof pipe_fn_edge?.label).toBe('string');
+    expect(pipe_fn_edges.length).toBe(0);
   });
 });
 
@@ -371,19 +371,17 @@ describe('tree_to_graph: new primitive kinds', () => {
     expect(loop_backs[0]?.source).toBe('loop_1/inner');
   });
 
-  it('lifts timeout/checkpoint/map wrapper children to peers and emits decoration edges', () => {
+  it('attaches timeout/checkpoint/map wrappers as inline badges on the lifted child', () => {
     const cases: Array<{
       kind: 'timeout' | 'checkpoint' | 'map';
-      edge_kind: 'timeout-deadline' | 'checkpoint-key' | 'map-cardinality';
-      // Where the marker sits in the chain: 'after' = downstream of child,
-      // 'before' = upstream of child. Decoration edge runs upstream → downstream.
+      old_edge_kind: 'timeout-deadline' | 'checkpoint-key' | 'map-cardinality';
       position: 'after' | 'before';
     }> = [
-      { kind: 'timeout', edge_kind: 'timeout-deadline', position: 'after' },
-      { kind: 'checkpoint', edge_kind: 'checkpoint-key', position: 'before' },
-      { kind: 'map', edge_kind: 'map-cardinality', position: 'before' },
+      { kind: 'timeout', old_edge_kind: 'timeout-deadline', position: 'after' },
+      { kind: 'checkpoint', old_edge_kind: 'checkpoint-key', position: 'before' },
+      { kind: 'map', old_edge_kind: 'map-cardinality', position: 'before' },
     ];
-    for (const { kind, edge_kind, position } of cases) {
+    for (const { kind, old_edge_kind, position } of cases) {
       const tree: FlowTree = {
         version: 1,
         root: {
@@ -393,23 +391,17 @@ describe('tree_to_graph: new primitive kinds', () => {
         },
       };
       const { nodes, edges } = tree_to_graph(tree);
-      const wrapper = find_by_id(nodes, `${kind}_1`);
+      // Wrapper itself no longer exists as a standalone node.
+      expect(find_by_id(nodes, `${kind}_1`)).toBeUndefined();
       const child = find_by_id(nodes, `${kind}_1/inner`);
-      // The wrapper is still in the graph (as a marker leaf).
-      expect(wrapper?.type).toBe(kind);
-      // The child has been LIFTED — its parentId is the marker's parent
-      // (the root, undefined here), not the marker itself.
       expect(child?.parentId).toBeUndefined();
-      // Decoration edge connects marker and child in the right direction.
-      const decoration = edges.find((e) => e.data?.kind === edge_kind);
-      expect(decoration).toBeDefined();
-      if (position === 'after') {
-        expect(decoration?.source).toBe(`${kind}_1/inner`);
-        expect(decoration?.target).toBe(`${kind}_1`);
-      } else {
-        expect(decoration?.source).toBe(`${kind}_1`);
-        expect(decoration?.target).toBe(`${kind}_1/inner`);
-      }
+      // Wrapper info attached as an inline badge on the child.
+      const badges = child?.data.wrappers ?? [];
+      const badge = badges.find((b) => b.kind === kind);
+      expect(badge).toBeDefined();
+      expect(badge?.position).toBe(position);
+      // The old decoration edge between marker and child is gone.
+      expect(edges.filter((e) => e.data?.kind === old_edge_kind).length).toBe(0);
     }
   });
 

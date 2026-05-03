@@ -158,12 +158,14 @@ function ports_for(node: WeftNode, fan_out_targets: ReadonlyArray<string>): ElkN
 }
 
 // Header tab + body padding reserved at the top of every container chrome
-// (see canvas.css `--weft-container-header-h: 32px` plus the 8px body
-// padding above the first child). ELK's child rect origin must clear this
-// band so the title flag never overlaps a child. Side/bottom padding match
-// the CSS container body padding (14px).
-const CONTAINER_HEADER_BAND = 40;
-const CONTAINER_PADDING = 14;
+// (see canvas.css `--weft-container-header-h: 32px` plus the body padding
+// above the first child). ELK's child rect origin must clear this band so
+// the title flag never overlaps a child. Side/bottom padding give children
+// real breathing room from the bracket — 28px instead of the original 14
+// keeps edges off the container boundary, which the vision-LLM kept
+// flagging as "edges grazing the SCOPE container".
+const CONTAINER_HEADER_BAND = 48;
+const CONTAINER_PADDING = 28;
 const CONTAINER_MIN_WIDTH = 280;
 const CONTAINER_MIN_HEIGHT = 120;
 
@@ -183,6 +185,7 @@ function build_subtree(
   parent: string | null,
   nodes: ReadonlyArray<WeftNode>,
   edges: ReadonlyArray<WeftEdge>,
+  spacing: { node: number; rank: number },
 ): ElkNode[] {
   const direct = children_of(parent, nodes);
   const result: ElkNode[] = [];
@@ -192,7 +195,7 @@ function build_subtree(
         .filter((e) => e.source === n.id && e.data?.kind === 'structural')
         .map((e) => e.target)
       : [];
-    const sub = build_subtree(n.id, nodes, edges);
+    const sub = build_subtree(n.id, nodes, edges, spacing);
     const has_children = sub.length > 0;
     const is_wrapper = WRAPPER_KINDS_FOR_LAYOUT.has(n.data?.kind ?? '');
     const min_w = is_wrapper ? WRAPPER_MIN_WIDTH : CONTAINER_MIN_WIDTH;
@@ -201,15 +204,26 @@ function build_subtree(
     const child: ElkNode = has_children
       ? {
           id: n.id,
-          // Containers: let ELK compute the width/height from children. The
-          // minimum-size constraint pins the floor so an empty container still
-          // shows its header band.
+          /*
+           * Containers: let ELK compute the width/height from children.
+           * The minimum-size constraint pins the floor so an empty
+           * container still shows its header band. Spacing options are
+           * forwarded explicitly because elkjs's layered algorithm runs
+           * a fresh pass per nested subgraph and does NOT inherit the
+           * root's spacing knobs by default — without this, leaf steps
+           * inside `sequence_1` would sit only ~20px apart even when the
+           * root requested 320px between layers.
+           */
           layoutOptions: {
             ...elk_options_for(n),
             'org.eclipse.elk.nodeSize.constraints':
               '[NODE_LABELS, PORTS, MINIMUM_SIZE]',
             'org.eclipse.elk.nodeSize.minimum': `(${String(min_w)}, ${String(min_h)})`,
             'org.eclipse.elk.padding': `[top=${String(CONTAINER_HEADER_BAND)},left=${String(side_pad)},bottom=${String(side_pad)},right=${String(side_pad)}]`,
+            'org.eclipse.elk.spacing.nodeNode': String(spacing.node),
+            'org.eclipse.elk.layered.spacing.nodeNodeBetweenLayers': String(spacing.rank),
+            'org.eclipse.elk.layered.spacing.edgeNodeBetweenLayers': '48',
+            'org.eclipse.elk.layered.spacing.edgeEdgeBetweenLayers': '40',
           },
         }
       : {
@@ -269,17 +283,44 @@ export function build_elk_graph(
       'elk.direction': ELK_DIRECTION[options.direction],
       'elk.spacing.nodeNode': String(options.node_spacing),
       'elk.layered.spacing.nodeNodeBetweenLayers': String(options.rank_spacing),
-      // Orthogonal edge routing gives the subway-line read: edges run in
-      // straight horizontal and vertical segments with right-angle turns
-      // instead of bezier soup, so they stay legible at the new 4.5px
-      // stroke weight.
+      // Some ELK builds ignore the verbose property names above when set
+      // only at the root; setting `elk.layered.spacing.baseValue` makes the
+      // layered algorithm scale ALL of its internal spacings (between-
+      // layers, edge-node, edge-edge) from this base. Without it, leaf
+      // steps inside a sequence sit only 20px apart regardless of
+      // nodeNodeBetweenLayers — exactly the "blocks too close" symptom.
+      'elk.layered.spacing.baseValue': String(options.rank_spacing),
+      /*
+       * Orthogonal edge routing gives the subway-line read: edges run in
+       * straight horizontal and vertical segments with right-angle turns
+       * instead of bezier soup, so they stay legible at the new 4.5px
+       * stroke weight.
+       */
       'elk.edgeRouting': 'ORTHOGONAL',
-      // Recurse into subflows so container nodes are sized to enclose their
-      // children (and edges between siblings inside a parent are routed
-      // intra-container instead of through the root).
+      /*
+       * Edge gutters. Generous values force ELK to keep every parallel
+       * track on its own corridor and every label chip well away from
+       * neighboring nodes. nodePlacement.bk.fixedAlignment=BALANCED keeps
+       * aligned edges in straight runs rather than scattering them, which
+       * helps the "follow this line from start to end" read.
+       */
+      'elk.spacing.edgeNode': '48',
+      'elk.spacing.edgeEdge': '40',
+      'elk.layered.spacing.edgeNodeBetweenLayers': '48',
+      'elk.layered.spacing.edgeEdgeBetweenLayers': '40',
+      'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED',
+      'elk.layered.crossingMinimization.semiInteractive': 'false',
+      /*
+       * Recurse into subflows so container nodes are sized to enclose
+       * their children (and edges between siblings inside a parent are
+       * routed intra-container instead of through the root).
+       */
       'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
     },
-    children: build_subtree(null, nodes, edges),
+    children: build_subtree(null, nodes, edges, {
+      node: options.node_spacing,
+      rank: options.rank_spacing,
+    }),
     edges: build_elk_edges(edges, nodes),
   };
 }

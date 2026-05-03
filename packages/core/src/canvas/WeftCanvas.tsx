@@ -66,17 +66,20 @@ const DEFAULT_LARGE_THRESHOLD = 200;
 // fixtures; hide it there.
 const MINIMAP_MIN_NODES = 12;
 
-// Subway-style edge routing: `weft-orth` renders the orthogonal polyline
-// ELK actually computed (with rounded corners), instead of letting React
-// Flow's built-in `smoothstep` re-route from source/target handles and
-// throw the bend points away. The closed arrowhead is sized to read at the
-// 4.5px stroke weight; ink color matches `--weft-color-edge-default`.
+/*
+ * Subway-style edge routing: `weft-orth` renders the orthogonal polyline
+ * ELK actually computed (with rounded corners), instead of letting React
+ * Flow's built-in `smoothstep` re-route from source/target handles and
+ * throw the bend points away. Arrowhead 16×16 — readable at fit-zoom
+ * without dominating; ELK spacing keeps every edge long enough that line
+ * + head reads clearly.
+ */
 const DEFAULT_EDGE_OPTIONS: DefaultEdgeOptions = {
   type: 'weft-orth',
   markerEnd: {
     type: MarkerType.ArrowClosed,
-    width: 18,
-    height: 18,
+    width: 16,
+    height: 16,
     color: '#1a1611',
   },
 };
@@ -150,11 +153,18 @@ function CanvasInner({
     [],
   );
 
-  // Reset the auto-fit guard when the tree itself changes (a new tree gets a
-  // fresh fit; subsequent layout passes for the same tree do not).
+  /*
+   * Reset the auto-fit guard when the tree changes OR when the user expands
+   * a compose. A compose-expand materially changes the visible graph
+   * (multiple new nodes appear, the bounding box jumps); fitting once at
+   * mount and never again leaves the user staring at the original framing
+   * with the new content half-off-screen. Tree change still gets a fresh
+   * fit; runtime-state overlays leave the user's pan/zoom alone because
+   * neither `tree` nor `expanded_composes` changes for them.
+   */
   useEffect(() => {
     has_auto_fit_ref.current = false;
-  }, [tree]);
+  }, [tree, expanded_composes]);
 
   useEffect(() => {
     let cancelled = false;
@@ -231,10 +241,18 @@ function CanvasInner({
     // shrinks the empty bands above/below that the vision-LLM scorer flags;
     // maxZoom 1 stops fitView from over-scaling tiny single-node fixtures into
     // a balloon. minZoom 0.1 lets very large graphs still fit.
+    /*
+     * Auto-fit lets the layout find its natural zoom — the wide ELK
+     * spacing means even at fit-zoom 0.5 there's a visible gap between
+     * adjacent stops. minZoom 0.1 lets very large graphs still fit on
+     * screen for the bird's-eye view; maxZoom 1 stops single-node
+     * fixtures from ballooning; padding 0.06 keeps content close to the
+     * viewport edges so dense graphs don't lose more pixels to margin.
+     */
     const fit = (): void => {
       void instance.fitView({
         duration: 220,
-        padding: 0.08,
+        padding: 0.06,
         minZoom: 0.1,
         maxZoom: 1,
       });
