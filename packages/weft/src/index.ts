@@ -25,6 +25,7 @@ export type {
   LayoutDirection,
   LayoutGraphOptions,
   LayoutOptions,
+  LayoutRouter,
 } from '@repo/core';
 
 export { WeftCanvas, node_types } from '@repo/core';

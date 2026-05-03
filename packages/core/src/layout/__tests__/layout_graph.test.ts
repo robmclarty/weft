@@ -21,6 +21,7 @@ describe('resolve_options', () => {
       direction: 'LR',
       node_spacing: 56,
       rank_spacing: 96,
+      router: 'elk',
     });
   });
 
@@ -29,11 +30,19 @@ describe('resolve_options', () => {
       direction: 'TB',
       node_spacing: 56,
       rank_spacing: 96,
+      router: 'elk',
     });
     expect(resolve_options({ node_spacing: 12, rank_spacing: 7 })).toEqual({
       direction: 'LR',
       node_spacing: 12,
       rank_spacing: 7,
+      router: 'elk',
+    });
+    expect(resolve_options({ router: 'libavoid' })).toEqual({
+      direction: 'LR',
+      node_spacing: 56,
+      rank_spacing: 96,
+      router: 'libavoid',
     });
   });
 });

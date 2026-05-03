@@ -24,7 +24,7 @@ export type {
 export { layout_graph } from './layout/layout_graph.js';
 
 export type { LayoutGraphOptions } from './layout/layout_graph.js';
-export type { LayoutDirection, LayoutOptions } from './layout/layout_options.js';
+export type { LayoutDirection, LayoutOptions, LayoutRouter } from './layout/layout_options.js';
 
 export { fallback_layout } from './layout/fallback_layout.js';
 export { make_latest_wins_debounce } from './layout/debounce.js';

@@ -10,7 +10,7 @@
 import { useEffect, useState, type JSX } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import type { FlowTree } from '@repo/weft';
+import type { FlowTree, LayoutGraphOptions, LayoutRouter } from '@repo/weft';
 
 import { Banner } from '../components/Banner.js';
 import { CanvasShell } from '../components/CanvasShell.js';
@@ -41,6 +41,11 @@ export type ViewRouteProps = {
 export function ViewRoute({ fetch_impl }: ViewRouteProps = {}): JSX.Element {
   const [params] = useSearchParams();
   const src = params.get('src');
+  const router_param = params.get('router');
+  const layout_options: LayoutGraphOptions | undefined =
+    router_param === 'libavoid' || router_param === 'elk'
+      ? { router: router_param satisfies LayoutRouter }
+      : undefined;
   const [tree, set_tree] = useState<FlowTree | null>(null);
   const [error, set_error] = useState<LoaderError | null>(null);
   const [busy, set_busy] = useState<boolean>(false);
@@ -90,6 +95,7 @@ export function ViewRoute({ fetch_impl }: ViewRouteProps = {}): JSX.Element {
               ? `loading ${src}…`
               : 'load failed; check the loader panel.'
         }
+        {...(layout_options !== undefined ? { layout_options } : {})}
         banners={
           busy ? <Banner tone="info">fetching {src}…</Banner> : undefined
         }

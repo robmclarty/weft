@@ -21,6 +21,7 @@ import {
 } from './elk_runner.js';
 import { fallback_layout } from './fallback_layout.js';
 import { resolve_options, type LayoutOptions } from './layout_options.js';
+import { apply_libavoid_routes, route_with_libavoid } from './libavoid_router.js';
 
 const ELK_TIMEOUT_MS = 10_000;
 
@@ -104,10 +105,18 @@ export async function layout_graph(
 
   try {
     const laid = await result;
-    return {
-      nodes: apply_positions(nodes, laid),
-      edges: apply_edge_routes(edges, laid),
-    };
+    const positioned = apply_positions(nodes, laid);
+    const elk_routed = apply_edge_routes(edges, laid);
+    if (resolved.router === 'libavoid') {
+      const libavoid_routes = await route_with_libavoid(positioned, elk_routed);
+      if (libavoid_routes !== null) {
+        return {
+          nodes: positioned,
+          edges: apply_libavoid_routes(elk_routed, libavoid_routes),
+        };
+      }
+    }
+    return { nodes: positioned, edges: elk_routed };
   } catch (err) {
     cancel();
     const reason = err instanceof Error ? err.message : String(err);

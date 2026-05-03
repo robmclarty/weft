@@ -9,16 +9,30 @@
 
 export type LayoutDirection = 'LR' | 'TB';
 
+/**
+ * Edge-routing engine. ELK lays out node positions in both cases; this picks
+ * which engine produces the orthogonal polylines drawn between them.
+ *
+ * - `'elk'` (default) — use ELK's own ORTHOGONAL routing output (Phase 2).
+ * - `'libavoid'` — Phase 4 spike: re-route with `libavoid-js` after ELK.
+ *   Optional dependency, lazy-loaded; falls back to `'elk'` if unavailable.
+ *   NOTE: libavoid-js is LGPL-2.1-or-later. Acceptable for a behind-flag
+ *   spike but a license review is required before shipping it on by default.
+ */
+export type LayoutRouter = 'elk' | 'libavoid';
+
 export type LayoutOptions = {
   readonly direction: LayoutDirection;
   readonly node_spacing: number;
   readonly rank_spacing: number;
+  readonly router: LayoutRouter;
 };
 
 export const DEFAULT_LAYOUT_OPTIONS: LayoutOptions = {
   direction: 'LR',
   node_spacing: 56,
   rank_spacing: 96,
+  router: 'elk',
 };
 
 export function resolve_options(input?: Partial<LayoutOptions>): LayoutOptions {
@@ -27,5 +41,6 @@ export function resolve_options(input?: Partial<LayoutOptions>): LayoutOptions {
     direction: input.direction ?? DEFAULT_LAYOUT_OPTIONS.direction,
     node_spacing: input.node_spacing ?? DEFAULT_LAYOUT_OPTIONS.node_spacing,
     rank_spacing: input.rank_spacing ?? DEFAULT_LAYOUT_OPTIONS.rank_spacing,
+    router: input.router ?? DEFAULT_LAYOUT_OPTIONS.router,
   };
 }

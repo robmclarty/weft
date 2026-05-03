@@ -33,6 +33,7 @@ import {
   type CanvasApi,
   type FlowNode,
   type FlowTree,
+  type LayoutGraphOptions,
   type NodeRuntimeState,
   type ParsedTrajectoryEvent,
 } from '@repo/weft';
@@ -53,6 +54,7 @@ export type CanvasShellProps = {
   readonly side_top?: ReactNode | undefined;
   readonly banners?: ReactNode | undefined;
   readonly events?: ReadonlyArray<ParsedTrajectoryEvent>;
+  readonly layout_options?: LayoutGraphOptions;
 };
 
 export function CanvasShell({
@@ -62,6 +64,7 @@ export function CanvasShell({
   side_top,
   banners,
   events,
+  layout_options,
 }: CanvasShellProps): JSX.Element {
   const tid = useMemo(
     () => (tree === null ? null : compute_tree_id(tree.root)),
@@ -219,6 +222,7 @@ export function CanvasShell({
             on_node_click={handle_node_click}
             on_ready={handle_ready}
             {...(runtime_state !== undefined ? { runtime_state } : {})}
+            {...(layout_options !== undefined ? { layout_options } : {})}
             {...(hydrated && is_meaningful_viewport(state)
               ? {
                   initial_viewport: {

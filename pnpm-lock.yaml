@@ -14,6 +14,9 @@ importers:
       '@axe-core/playwright':
         specifier: 4.11.2
         version: 4.11.2(playwright-core@1.59.1)
+      '@hpcc-js/wasm-graphviz':
+        specifier: 1.21.5
+        version: 1.21.5
       '@playwright/test':
         specifier: 1.59.1
         version: 1.59.1
@@ -102,6 +105,10 @@ importers:
       '@types/react-dom':
         specifier: 18.3.7
         version: 18.3.7(@types/react@18.3.20)
+    optionalDependencies:
+      libavoid-js:
+        specifier: 0.5.0-beta.5
+        version: 0.5.0-beta.5
 
   packages/studio:
     dependencies:
@@ -861,6 +868,9 @@ packages:
     resolution: {integrity: sha512-hGzDbQuaNDGS6Vxq3Iyt9QsyAA/HjHcW+v/0dxwwg41NHMBRlMCguOlybuDk35G1eFysQPmT20s+oga7QmIKzQ==}
     cpu: [x64]
     os: [win32]
+
+  '@hpcc-js/wasm-graphviz@1.21.5':
+    resolution: {integrity: sha512-rgFx1A5gd1BdMrLkrKg44cdOjTvEQVWODf1PDTwgiKDfmJioD+tyoMBvmEJdH6OC7rh1JaeqFJ2+r92F1Ip/sA==}
 
   '@inquirer/ansi@2.0.5':
     resolution: {integrity: sha512-doc2sWgJpbFQ64UflSVd17ibMGDuxO1yKgOgLMwavzESnXjFWJqUeG8saYosqKpHp4kWiM5x1nXvEjbpx90gzw==}
@@ -2261,6 +2271,9 @@ packages:
   katex@0.16.45:
     resolution: {integrity: sha512-pQpZbdBu7wCTmQUh7ufPmLr0pFoObnGUoL/yhtwJDgmmQpbkg/0HSVti25Fu4rmd1oCR6NGWe9vqTWuWv3GcNA==}
     hasBin: true
+
+  libavoid-js@0.5.0-beta.5:
+    resolution: {integrity: sha512-jHkn6A10815TgFhZ1paUD/NDnQkg4C66qJc2Juj1NpmO/+QXnJ4UjIdKQarkXLmI/QgXhEO3RWDxMi3i+uHPwA==}
 
   lightningcss-android-arm64@1.32.0:
     resolution: {integrity: sha512-YK7/ClTt4kAK0vo6w3X+Pnm0D2cf2vPHbhOXdoNti1Ga0al1P4TBZhwjATvjNwLEBCnKvjJc2jQgHXH0NEwlAg==}
@@ -3791,6 +3804,8 @@ snapshots:
   '@fallow-cli/win32-x64-msvc@2.48.0':
     optional: true
 
+  '@hpcc-js/wasm-graphviz@1.21.5': {}
+
   '@inquirer/ansi@2.0.5': {}
 
   '@inquirer/checkbox@5.1.4(@types/node@24.12.2)':
@@ -5119,6 +5134,9 @@ snapshots:
   katex@0.16.45:
     dependencies:
       commander: 8.3.0
+
+  libavoid-js@0.5.0-beta.5:
+    optional: true
 
   lightningcss-android-arm64@1.32.0:
     optional: true
