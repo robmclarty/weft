@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.1.7 — 2026-05-03
+
+### Changed
+
+- Sequence and scope no longer emit visible chrome — they were structural-only, so their children lift to peers and read directly under whatever was hosting them. Compose is now the only kind that produces a visible outer box, eliminating the rectangles-within-rectangles stack the canvas had accumulated.
+
+### Fixed
+
+- ELK-routed edges now actually touch the nodes they connect. Two dimension mismatches were leaving arrows hovering near shapes: (1) steps with wrapper badges render 88px tall via CSS but ELK was routing to a 60px box, so endpoints landed 14–28px off the visual handle; (2) `stash`/`use` rendered as 220×60 pills while ELK sized them as ~280×136 containers (because they parent their wrapped child), so structural and overlay edges landed on the invisible bigger box instead of the visible pill. Wrapped leaves now pin their height to ELK's input; parented stash/use switch to container chrome that fills ELK's computed bounds.
+
+### Internal
+
+- Visual e2e snapshots refreshed to match the new chrome rules.
+
 ## v0.1.6 — 2026-05-02
 
 ### Changed

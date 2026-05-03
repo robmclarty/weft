@@ -1,6 +1,6 @@
 {
   "name": "@repo/weft",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Umbrella library for weft. Re-exports the curated public surface of @repo/core.",
   "license": "Apache-2.0",
   "author": "Rob McLarty",
