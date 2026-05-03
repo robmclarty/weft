@@ -13,27 +13,33 @@ function find_by_id(nodes: ReadonlyArray<WeftNode>, id: string): WeftNode | unde
 }
 
 describe('tree_to_graph: simple_sequence.json', () => {
-  it('emits the three children as root-level peers chained by structural edges', () => {
+  it('emits the three children as root-level peers chained by structural edges and an END terminator', () => {
     const tree = parse_fixture('simple_sequence.json');
     const { nodes, edges } = tree_to_graph(tree);
 
     // Sequence is structural-only — no node emitted for it. Children
-    // sit as root peers (no parentId) connected by chain edges.
+    // sit as root peers (no parentId) connected by chain edges, with a
+    // synthetic END terminator at the chain tail.
     expect(nodes.map((n) => n.id)).toEqual([
       'seq:root/step:greet',
       'seq:root/step:farewell',
       'seq:root/step:cleanup',
+      '__weft_end__',
     ]);
 
-    for (const child of nodes) {
-      expect(child.type).toBe('step');
+    const steps = nodes.filter((n) => n.type === 'step');
+    for (const child of steps) {
       expect(child.parentId).toBeUndefined();
     }
+    const end = nodes[nodes.length - 1];
+    expect(end?.type).toBe('end');
+    expect(end?.parentId).toBeUndefined();
 
     const sequence_edges = edges.filter((e) => e.data?.kind === 'structural');
     expect(sequence_edges.map((e) => `${e.source}->${e.target}`)).toEqual([
       'seq:root/step:greet->seq:root/step:farewell',
       'seq:root/step:farewell->seq:root/step:cleanup',
+      'seq:root/step:cleanup->__weft_end__',
     ]);
   });
 });
@@ -351,7 +357,7 @@ describe('tree_to_graph: new primitive kinds', () => {
     ]);
   });
 
-  it('drops the loop wrapper from the graph and emits a loop-back edge on the wrapped child', () => {
+  it('emits the loop as a labeled container hosting the body, with a back-arc inside and the body parented under the container', () => {
     const tree: FlowTree = {
       version: 1,
       root: {
@@ -362,16 +368,42 @@ describe('tree_to_graph: new primitive kinds', () => {
       },
     };
     const { nodes, edges } = tree_to_graph(tree);
-    // Loop wrapper is not emitted as a node (B-deluxe).
-    expect(find_by_id(nodes, 'loop_1')).toBeUndefined();
+    // Loop emits a container node; the body is parented under it.
+    const container = find_by_id(nodes, 'loop_1');
+    expect(container?.type).toBe('loop');
     const child = find_by_id(nodes, 'loop_1/inner');
-    expect(child).toBeDefined();
-    // The child is at the root level — its parentId is undefined (no parent).
-    expect(child?.parentId).toBeUndefined();
-    // A loop-back edge attaches to the child carrying the loop's config.
+    expect(child?.parentId).toBe('loop_1');
+    // The single-body case uses a self loop-back arc on the body.
     const loop_backs = edges.filter((e) => e.data?.kind === 'loop-back');
     expect(loop_backs.length).toBe(1);
     expect(loop_backs[0]?.source).toBe('loop_1/inner');
+  });
+
+  it('parents both body and guard under the loop container with body→guard structural and guard→body loop-back', () => {
+    const tree: FlowTree = {
+      version: 1,
+      root: {
+        kind: 'loop',
+        id: 'loop_1',
+        config: { max_rounds: 3 },
+        children: [
+          { kind: 'step', id: 'body' },
+          { kind: 'step', id: 'guard' },
+        ],
+      },
+    };
+    const { nodes, edges } = tree_to_graph(tree);
+    expect(find_by_id(nodes, 'loop_1')?.type).toBe('loop');
+    expect(find_by_id(nodes, 'loop_1/body')?.parentId).toBe('loop_1');
+    expect(find_by_id(nodes, 'loop_1/guard')?.parentId).toBe('loop_1');
+    const structural_inside = edges
+      .filter((e) => e.data?.kind === 'structural')
+      .map((e) => `${e.source}->${e.target}`);
+    expect(structural_inside).toContain('loop_1/body->loop_1/guard');
+    const loop_backs = edges.filter((e) => e.data?.kind === 'loop-back');
+    expect(loop_backs.length).toBe(1);
+    expect(loop_backs[0]?.source).toBe('loop_1/guard');
+    expect(loop_backs[0]?.target).toBe('loop_1/body');
   });
 
   it('attaches timeout/checkpoint/map wrappers as inline badges on the lifted child', () => {
@@ -440,7 +472,7 @@ describe('tree_to_graph: new primitive kinds', () => {
     expect(find_by_id(nodes, 'compose_1/inner')).toBeUndefined();
   });
 
-  it('renders suspend as a leaf with no children', () => {
+  it('renders suspend as a leaf with no children, plus the END terminator', () => {
     const tree: FlowTree = {
       version: 1,
       root: {
@@ -452,7 +484,8 @@ describe('tree_to_graph: new primitive kinds', () => {
     const { nodes } = tree_to_graph(tree);
     const node = find_by_id(nodes, 'approval_gate');
     expect(node?.type).toBe('suspend');
-    expect(nodes.length).toBe(1);
+    expect(nodes.length).toBe(2);
+    expect(nodes[1]?.type).toBe('end');
   });
 
   it('preserves meta on the WeftNode data', () => {

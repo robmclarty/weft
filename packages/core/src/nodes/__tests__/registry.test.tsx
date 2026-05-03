@@ -360,6 +360,60 @@ describe('display_name from meta surfaces in container titles', () => {
   });
 });
 
+describe('LoopNode (container with config-derived bound)', () => {
+  it('renders the iteration bound from config.max_rounds and the display title', () => {
+    const nodes: WeftNode[] = [
+      {
+        id: 'loop:1',
+        type: 'loop',
+        position: { x: 0, y: 0 },
+        data: {
+          kind: 'loop',
+          id: 'loop:1',
+          config: { max_rounds: 5, display_name: 'refine_loop' },
+        },
+      },
+    ];
+    mounted = mount_canvas(nodes, []);
+    const node = mounted.container.querySelector('[data-weft-kind="loop"]');
+    expect(node).not.toBeNull();
+    expect(node?.textContent).toContain('↺ ≤ 5');
+    expect(node?.textContent?.toLowerCase()).toContain('refine_loop');
+  });
+
+  it('falls back to the generic ↺ loop bound when max_rounds is absent', () => {
+    const nodes: WeftNode[] = [
+      {
+        id: 'loop:2',
+        type: 'loop',
+        position: { x: 0, y: 0 },
+        data: { kind: 'loop', id: 'loop:2' },
+      },
+    ];
+    mounted = mount_canvas(nodes, []);
+    const node = mounted.container.querySelector('[data-weft-kind="loop"]');
+    expect(node?.textContent).toContain('↺ loop');
+  });
+});
+
+describe('EndNode (synthetic terminator)', () => {
+  it('renders the END label and the input handle', () => {
+    const nodes: WeftNode[] = [
+      {
+        id: '__weft_end__',
+        type: 'end',
+        position: { x: 0, y: 0 },
+        data: { kind: 'end', id: '__weft_end__' },
+      },
+    ];
+    mounted = mount_canvas(nodes, []);
+    const node = mounted.container.querySelector('[data-weft-kind="end"]');
+    expect(node).not.toBeNull();
+    expect(node?.textContent).toContain('END');
+    expect(node?.querySelector('.react-flow__handle')).not.toBeNull();
+  });
+});
+
 describe('Runtime overlay rendering', () => {
   it('shows the cost badge when runtime.cost_usd > 0', () => {
     const nodes: WeftNode[] = [

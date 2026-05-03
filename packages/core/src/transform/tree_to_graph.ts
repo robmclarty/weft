@@ -163,6 +163,14 @@ const KNOWN_KINDS = new Set([
 const CYCLE_KIND = '<cycle>';
 const GENERIC_TYPE = 'generic';
 const CYCLE_TYPE = 'cycle';
+const END_KIND = 'end';
+const END_GRAPH_ID = '__weft_end__';
+
+// Diverging top-level shapes don't get an END terminator: appending one to
+// a parallel/branch/fallback junction would imply convergence the runtime
+// doesn't perform. A loop's chain segment anchors on its container, which
+// has a single exit, so it does get one.
+const NO_END_TERMINATOR_KINDS = new Set(['parallel', 'branch', 'fallback']);
 
 function node_type_for(kind: string): string {
   if (kind === CYCLE_KIND) return CYCLE_TYPE;
@@ -725,17 +733,11 @@ function walk_parallel_as_junction(
 }
 
 /**
- * Walk a `retry(child)` or `loop(child)` wrapper as a pure edge
- * decoration. The wrapper itself is NOT emitted as a node — only the
- * wrapped child appears in the graph. A self-loop (retry) or loop-back
- * (loop) edge attaches to the child carrying the wrapper's config
- * label. Optional sibling children (loop's guard) walk normally.
- *
- * Chain segment passes through the wrapped child unchanged: predecessor
- * lands on `child.first`, successor leaves from `child.last`. The
- * wrapper has no presence in the chain.
+ * Walk a `retry(child)` wrapper as a pure edge decoration. The wrapper
+ * itself is NOT emitted as a node — only the wrapped child appears, with
+ * a self-loop edge carrying the retry config label.
  */
-function walk_retry_or_loop_as_edge(
+function walk_retry_as_edge(
   ctx: WalkContext,
   node: FlowNode,
   parent_graph_id: string | null,
@@ -746,51 +748,76 @@ function walk_retry_or_loop_as_edge(
   const children = node.children ?? [];
   const inner = children[0];
   if (inner === undefined) {
-    // Empty retry/loop: degenerate. Return a synthetic single-id segment
-    // anchored at the wrapper's would-be graph id; no edge emitted.
     return { first: graph_id, last: graph_id };
   }
 
-  // The lift: child's parentId becomes the wrapper's parent.
   const inner_segment = walk_for_chain(ctx, inner, parent_graph_id, graph_id);
+  const label = format_retry_label(node.config);
+  ctx.edges.push(self_loop_edge(inner_segment.first, label, graph_id));
+  for (let i = 1; i < children.length; i += 1) {
+    const sibling = children[i];
+    if (sibling === undefined) continue;
+    walk_for_chain(ctx, sibling, parent_graph_id, graph_id);
+  }
+  return inner_segment;
+}
 
-  if (node.kind === 'retry') {
-    const label = format_retry_label(node.config);
-    ctx.edges.push(self_loop_edge(inner_segment.first, label, graph_id));
-    // Retry has no guard child by spec; later children, if any, walk as
-    // orphan peers without altering the chain.
-    for (let i = 1; i < children.length; i += 1) {
-      const sibling = children[i];
-      if (sibling === undefined) continue;
-      walk_for_chain(ctx, sibling, parent_graph_id, graph_id);
-    }
-    return inner_segment;
+/**
+ * Walk a `loop(body, guard?)` as a labeled container box. The container
+ * holds the body, the guard (when present), the structural `body→guard`
+ * edge, and the loop-back arc — all parented under the container so the
+ * "circle" reads as a self-contained sub-machine. External chain edges
+ * anchor on the container, so a successor in the parent sequence sees a
+ * single labeled exit ("done") leaving the box.
+ *
+ * This deliberately differs from `retry`, which stays edge-only: a retry
+ * loops back to one and the same step; a `loop` runs a body and an
+ * optional guard, repeats, then exits. Boxing the latter makes the
+ * "iterate-then-exit" shape legible at a glance.
+ */
+function walk_loop_as_container(
+  ctx: WalkContext,
+  node: FlowNode,
+  parent_graph_id: string | null,
+  graph_id: string,
+): ChainSegment {
+  ctx.visited.add(node);
+
+  // Emit the container node. Body+guard live inside it (parentId =
+  // graph_id) so ELK sizes the box around them and the back-arc renders
+  // visibly within the container chrome.
+  emit_basic_node(ctx, node, graph_id, parent_graph_id);
+
+  const children = node.children ?? [];
+  const inner = children[0];
+  if (inner === undefined) {
+    // Degenerate empty loop — render as an empty container; chain anchor
+    // stays on the container itself.
+    return { first: graph_id, last: graph_id };
   }
 
-  // loop kind: optionally has a guard child (loop body, then guard test).
-  // Walk it inline so the user sees the full body→guard→continue chain
-  // with a loop-back arc from guard back to body. Without this the guard
-  // floated as an unconnected block — exactly the "no visible flow" the
-  // user kept flagging on all_primitives.
   const label = format_loop_label(node.config);
+  const inner_segment = walk_for_chain(ctx, inner, graph_id, graph_id);
   const guard = children[1];
+
   if (guard !== undefined) {
-    const guard_segment = walk_for_chain(ctx, guard, parent_graph_id, graph_id);
+    const guard_segment = walk_for_chain(ctx, guard, graph_id, graph_id);
     ctx.edges.push(structural_edge(inner_segment.last, guard_segment.first));
     ctx.edges.push(
       loop_back_edge_between(guard_segment.last, inner_segment.first, label, graph_id),
     );
-    // Any additional siblings beyond the guard fall back to orphan-peer
-    // behavior — the spec treats only children[0..1] as semantic.
     for (let i = 2; i < children.length; i += 1) {
       const sibling = children[i];
       if (sibling === undefined) continue;
-      walk_for_chain(ctx, sibling, parent_graph_id, graph_id);
+      walk_for_chain(ctx, sibling, graph_id, graph_id);
     }
-    return { first: inner_segment.first, last: guard_segment.last };
+  } else {
+    ctx.edges.push(loop_back_edge(inner_segment.first, label, graph_id));
   }
-  ctx.edges.push(loop_back_edge(inner_segment.first, label, graph_id));
-  return inner_segment;
+
+  // Anchor the external chain on the container so the parent sequence's
+  // successor edge attaches to the box (not to the inner guard/body).
+  return { first: graph_id, last: graph_id };
 }
 
 // Mirrors --weft-leaf-height-with-wrappers in canvas.css. A leaf with
@@ -906,13 +933,17 @@ function walk_for_chain(
     return walk_compose(ctx, node, parent_graph_id, graph_id);
   }
 
-  // Retry / loop: drop the wrapper node entirely. The wrapped child
-  // takes the wrapper's place in the chain; a self-loop (retry) or
-  // loop-back (loop) edge carries the wrapper's config label and is the
-  // sole visual signature. Inspector access for the wrapper config will
-  // come from edge-click handling in a follow-up.
-  if (node.kind === 'retry' || node.kind === 'loop') {
-    return walk_retry_or_loop_as_edge(ctx, node, parent_graph_id, graph_id);
+  // Retry: drop the wrapper node entirely. The wrapped child takes the
+  // wrapper's place in the chain; a self-loop edge carries the retry
+  // config label and is the sole visual signature.
+  if (node.kind === 'retry') {
+    return walk_retry_as_edge(ctx, node, parent_graph_id, graph_id);
+  }
+  // Loop: emit a labeled container box hosting body + guard + back-arc.
+  // External chain edges anchor on the container so the exit reads as
+  // one arrow leaving the box.
+  if (node.kind === 'loop') {
+    return walk_loop_as_container(ctx, node, parent_graph_id, graph_id);
   }
   // Branch / fallback / parallel: emit as a 56px diamond junction with
   // children lifted to peers, then fan out role-tagged or port-keyed
@@ -1045,7 +1076,34 @@ export function tree_to_graph(
   };
   // Use walk_for_chain so a root-level wrapper (e.g. a tree whose root is
   // a pipe) gets the same lift-to-peers treatment as one nested under a
-  // sequence; the returned segment is unused at the root.
-  walk_for_chain(ctx, tree.root, null, null);
+  // sequence.
+  const root_segment = walk_for_chain(ctx, tree.root, null, null);
+  emit_end_terminator(ctx, root_segment.last);
   return { nodes: ctx.nodes, edges: ctx.edges };
+}
+
+/**
+ * Append a single `END` leaf to mark "this is where the workflow finishes".
+ * Skipped for diverging tails (parallel / branch / fallback) where a
+ * single terminator would falsely imply convergence.
+ */
+function emit_end_terminator(ctx: WalkContext, chain_last: string): void {
+  if (chain_last === END_GRAPH_ID) return;
+  const tail_node = ctx.nodes.find((n) => n.id === chain_last);
+  if (tail_node === undefined) return;
+  const tail_kind = tail_node.data?.kind ?? '';
+  if (NO_END_TERMINATOR_KINDS.has(tail_kind)) return;
+  // Explicit width/height match the .weft-node-end CSS box. ELK uses the
+  // declared dims for layout when no children are present; mismatched
+  // sizes leave the inbound edge stub off the visible pill.
+  const end_node: WeftNode = {
+    id: END_GRAPH_ID,
+    type: END_KIND,
+    position: { x: 0, y: 0 },
+    width: 96,
+    height: 40,
+    data: { kind: END_KIND, id: END_GRAPH_ID },
+  };
+  ctx.nodes.push(end_node);
+  ctx.edges.push(structural_edge(chain_last, END_GRAPH_ID));
 }

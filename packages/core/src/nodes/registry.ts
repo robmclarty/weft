@@ -16,8 +16,10 @@ import { BranchNode } from './BranchNode.js';
 import { CheckpointNode } from './CheckpointNode.js';
 import { ComposeNode } from './ComposeNode.js';
 import { CycleNode } from './CycleNode.js';
+import { EndNode } from './EndNode.js';
 import { FallbackNode } from './FallbackNode.js';
 import { GenericNode } from './GenericNode.js';
+import { LoopNode } from './LoopNode.js';
 import { MapNode } from './MapNode.js';
 import { ParallelNode } from './ParallelNode.js';
 import { PipeNode } from './PipeNode.js';
@@ -28,8 +30,8 @@ import { TimeoutNode } from './TimeoutNode.js';
 import { UseNode } from './UseNode.js';
 
 // Several kinds intentionally absent:
-//   - retry / loop — B-deluxe drops the wrapper entirely; the wrapped
-//     child is visible and a self-loop / loop-back edge carries config.
+//   - retry — drops the wrapper entirely; the wrapped child is visible
+//     and a self-loop edge carries the retry config.
 //   - sequence / scope — visual-simplification pass makes them
 //     structural-only. Sequence chains its children with edges; scope
 //     hosts overlay edges; neither emits a node.
@@ -42,11 +44,13 @@ export const node_types: NodeTypes = {
   pipe: PipeNode,
   fallback: FallbackNode,
   timeout: TimeoutNode,
+  loop: LoopNode,
   compose: ComposeNode,
   checkpoint: CheckpointNode,
   suspend: SuspendNode,
   stash: StashNode,
   use: UseNode,
   cycle: CycleNode,
+  end: EndNode,
   generic: GenericNode,
 };

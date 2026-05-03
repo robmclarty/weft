@@ -31,8 +31,10 @@ describe('weft umbrella', () => {
       root: { kind: 'step', id: 'a' },
     });
     const { nodes } = tree_to_graph(tree);
-    expect(nodes).toHaveLength(1);
+    // The walked step plus the synthesized END terminator.
+    expect(nodes).toHaveLength(2);
     expect(nodes[0]?.id).toBe('a');
+    expect(nodes[1]?.type).toBe('end');
     expect(typeof tree_id(tree.root)).toBe('string');
   });
 });

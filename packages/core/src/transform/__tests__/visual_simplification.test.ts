@@ -212,6 +212,10 @@ describe('criterion F: bounded nesting — sequence and scope never appear in th
     const allowed_parent_kinds = new Set([
       // The only "outer box" the user opted into.
       'compose',
+      // The loop primitive: body+guard are parented under a labeled
+      // container so the back-arc and exit read as one self-contained
+      // sub-machine.
+      'loop',
       // Marker wrappers that decorate a single inner step. These are
       // small tag-style containers and are out of scope for this pass.
       'stash',

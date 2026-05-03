@@ -194,3 +194,12 @@ export function SuspendGlyph(): JSX.Element {
     </svg>
   );
 }
+
+export function EndGlyph(): JSX.Element {
+  return (
+    <svg {...SVG} aria-hidden="true">
+      <circle cx="6" cy="6" r="4" />
+      <circle cx="6" cy="6" r="2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
