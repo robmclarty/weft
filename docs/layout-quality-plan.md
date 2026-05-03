@@ -288,7 +288,12 @@ boundaries).
   when comparing routers (Phase 4) or external benchmarks (Phase 5),
   so it is kept on-demand rather than retired.
 
-  Requires `ANTHROPIC_API_KEY` in the environment.
+  Originally hit the Anthropic HTTP API directly with `ANTHROPIC_API_KEY`;
+  switched on 2026-05-02 to spawn the locally-installed `claude` CLI
+  (`-p --output-format json --allowedTools Read --add-dir <screenshot-
+  dir>`) so the user's existing Claude Code auth (OAuth, API key, Bedrock,
+  Vertex) is picked up automatically. `CLAUDE_CLI_BIN` overrides the
+  binary path if needed.
 
 - 2026-05-02 — Phase 4 LANDED as a behind-flag spike. New module
   `packages/core/src/layout/libavoid_router.ts` lazy-imports
@@ -345,3 +350,50 @@ boundaries).
   cluster boundaries or per-node ports the studio relies on, so this
   is for ceiling-detection ("is the residual overlap an engine
   problem or an input-shape problem?"), not a shipping path.
+
+- 2026-05-02 — Visual cleanup pass driven by the new tooling. Three
+  bugs surfaced after expanding the canonical fixtures and inspecting
+  the rendered DOM via Playwright MCP:
+
+  1. **Marker bloat** (`canvas.css`). An obsolete container-style
+     rule still applied `min-width: 212px; min-height: 114px` to
+     `.weft-node-checkpoint`, `.weft-node-map`, `.weft-node-timeout`,
+     plus the no-longer-rendered `retry`/`loop`. After the BC-deluxe
+     refactor those kinds render through `.weft-node-marker` (44×44
+     dot with `border-radius: 50%`), so the leftover `min-width`
+     ballooned the inner div into 212×114 ovals — the user's "giant
+     blue/teal/yellow blobs" complaint. ELK was already laying them
+     out as 44×44 boxes (tree_to_graph sets `width`/`height`
+     correctly), so layout metrics didn't move; the fix was purely
+     visual. Trimmed the rule to just `.weft-node-container.
+     weft-node-compose`, which is the only wrapper still rendered as
+     a container.
+
+  2. **Unstyled orthogonal-edge labels**. `WeftOrthogonalEdge`
+     renders labels via `EdgeLabelRenderer` with class
+     `weft-edge-orth-label`, but the class had no CSS. Pre-fix the
+     labels were bare text floating over edges and nodes. Mirrored
+     the existing self-loop / loop-back pill rule and added per-role
+     border tinting (pipe-fn / checkpoint-key → blue, timeout-deadline
+     → yellow, map-cardinality → teal, branch/fallback role →
+     orange) so a label's chip border matches the line it belongs to.
+
+  3. **Label position landing on a node body**. `compute_orthogonal_
+     path` placed the label at the arc-length midpoint, which on
+     L-shapes is the corner. Switched to longest-segment midpoint:
+     for any polyline the label anchors at the middle of its longest
+     run, which keeps "primary" / "<fn:to_upper>" chips on open
+     canvas instead of pinned to an elbow. Single-segment edges
+     unchanged (longest = only segment).
+
+  Visual ground truth: re-run `pnpm metrics` and compare
+  `.check/layout-metrics-screenshots/all_primitives.png` against
+  the v0.1.5 baseline. Quantitative metrics are unchanged
+  (the bug never affected ELK's coordinates), but the layout reads
+  as a tight subway map instead of giant ovals stomping on labels.
+
+  Known residual: short structural edges still place labels inside
+  the receiving node's bbox when the only segment crosses the node.
+  Fix would require node-bbox-aware label placement (offset the
+  pill perpendicular to the segment until it clears every node
+  rect), which is a larger change. Acceptable for now.
