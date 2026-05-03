@@ -26,5 +26,9 @@ test('paste loader renders the fixture with the expected node kinds', async ({ p
   );
   expect(kinds.length).toBeGreaterThan(0);
   expect(kinds).toContain('step');
-  expect(kinds).toContain('scope');
+  // Scope is structural-only after the visual-simplification pass; it
+  // emits no node. Stash is a marker that survives in the rendered
+  // graph and is the next-best signal that the scope hosting it
+  // walked correctly.
+  expect(kinds).toContain('stash');
 });

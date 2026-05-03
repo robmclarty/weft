@@ -64,10 +64,11 @@ export type WeftNodeData = {
   warning?: 'cycle-guard';
   runtime?: NodeRuntimeState;
   /**
-   * For `compose` nodes only: whether the user has expanded this composite
-   * to reveal its inner subgraph. When `false`, the transform stops the
-   * walk at this node, so the compose renders as a single labeled block;
-   * when `true`, the inner children render as nested chrome (the v0 look).
+   * For `compose` nodes only: whether the user is viewing this composite
+   * with its inner subgraph revealed. Composites default to **expanded**
+   * — the whole machine is visible at first load — and a click toggles
+   * the compose's id into `collapsed_composes` to hide the inner
+   * children.
    */
   is_expanded?: boolean;
   /**
@@ -150,16 +151,6 @@ const KNOWN_KINDS = new Set([
   'use',
 ]);
 
-const CONTAINER_KINDS = new Set(['sequence', 'parallel', 'scope', 'branch', 'fallback']);
-const WRAPPER_KINDS = new Set([
-  'pipe',
-  'retry',
-  'timeout',
-  'checkpoint',
-  'compose',
-  'map',
-  'loop',
-]);
 const CYCLE_KIND = '<cycle>';
 const GENERIC_TYPE = 'generic';
 const CYCLE_TYPE = 'cycle';
@@ -198,13 +189,13 @@ type WalkContext = {
   edges: WeftEdge[];
   visited: WeakSet<FlowNode>;
   /**
-   * Graph ids of `compose` nodes the user has expanded. A compose whose id
-   * is absent renders as a collapsed leaf-style block; a compose whose id
-   * is present recurses into its children. Defaults to empty so trees
-   * load with all composites collapsed — the abstraction the user opted
-   * into is what they see first.
+   * Graph ids of `compose` nodes the user has explicitly collapsed. A
+   * compose whose id appears here renders as a single leaf-style block;
+   * any compose whose id is absent renders **expanded**. The default
+   * (empty set) is all-expanded — the user opted into seeing the full
+   * machine, so the first load shows it.
    */
-  expanded_composes: ReadonlySet<string>;
+  collapsed_composes: ReadonlySet<string>;
 };
 
 function build_node_data(node: FlowNode): WeftNodeData {
@@ -306,7 +297,7 @@ function emit_basic_node(
   const data = build_node_data(node);
   if (type_ === GENERIC_TYPE) data.generic = true;
   if (node.kind === 'compose') {
-    data.is_expanded = ctx.expanded_composes.has(graph_id);
+    data.is_expanded = !ctx.collapsed_composes.has(graph_id);
   }
   const rf_node: WeftNode = {
     id: graph_id,
@@ -343,18 +334,45 @@ function collect_scope_bindings(
   }
 }
 
-function walk_scope_children(
+/**
+ * Walk a `scope` invisibly: emit no node, lift children to be peers of
+ * the scope's parent, chain them sequentially (so the sequence the
+ * scope sits in stays visibly connected), and emit the dashed
+ * `stash → use` overlay edges.
+ *
+ * Returns the chain segment endpoints from the first/last walked
+ * children. If the scope is empty, returns a degenerate single-id
+ * segment anchored at the scope's would-be graph id.
+ */
+function walk_scope_as_invisible(
   ctx: WalkContext,
   scope_node: FlowNode,
+  parent_graph_id: string | null,
   scope_graph_id: string,
-): void {
+): ChainSegment {
+  ctx.visited.add(scope_node);
   const children = scope_node.children ?? [];
+  const segments: ChainSegment[] = [];
   for (const child of children) {
-    // Use walk_for_chain so wrapper children inside the scope still get
-    // lifted to peers; we don't chain the segments here because scope
-    // doesn't emit sequential edges between members.
-    walk_for_chain(ctx, child, scope_graph_id, scope_graph_id);
+    // Lift children to scope's parent so they read as peers; the
+    // scope's own graph id remains the path prefix so descendants
+    // keep unique ids.
+    segments.push(walk_for_chain(ctx, child, parent_graph_id, scope_graph_id));
   }
+  // Chain scope's children sequentially. Scopes are typically a stash
+  // followed by a use, which IS a temporal flow (the stash populates
+  // before the use reads). Chaining keeps the workflow visibly
+  // connected end-to-end instead of leaving scope members floating as
+  // disconnected peers.
+  for (let i = 0; i < segments.length - 1; i += 1) {
+    const a = segments[i];
+    const b = segments[i + 1];
+    if (a === undefined || b === undefined) continue;
+    ctx.edges.push(structural_edge(a.last, b.first));
+  }
+  // Overlay edges still anchor on stash/use graph ids. Their nodes are
+  // emitted normally (stash and use remain visible marker containers
+  // for now), so the ids the bindings reference are valid.
   const stashes: StashRecord[] = [];
   const uses: UseRecord[] = [];
   for (const child of children) {
@@ -368,6 +386,12 @@ function walk_scope_children(
       }
     }
   }
+  const first_seg = segments[0];
+  const last_seg = segments[segments.length - 1];
+  return {
+    first: first_seg?.first ?? scope_graph_id,
+    last: last_seg?.last ?? scope_graph_id,
+  };
 }
 
 /**
@@ -383,15 +407,30 @@ type ChainSegment = {
   last: string;
 };
 
-function walk_sequence_children(
+/**
+ * Walk a `sequence` invisibly: emit no node, lift children to be peers
+ * of the sequence's parent, and emit a chain edge between every pair
+ * of adjacent children.
+ *
+ * Sequence is structural-only — it expresses "do these in order" and
+ * never carried information beyond that. Removing its chrome makes the
+ * top-level steps flow directly into each other, which is what the
+ * user asked for.
+ */
+function walk_sequence_as_invisible(
   ctx: WalkContext,
-  parent_node: FlowNode,
-  parent_graph_id: string,
-): void {
-  const children = parent_node.children ?? [];
+  seq_node: FlowNode,
+  parent_graph_id: string | null,
+  seq_graph_id: string,
+): ChainSegment {
+  ctx.visited.add(seq_node);
+  const children = seq_node.children ?? [];
   const segments: ChainSegment[] = [];
   for (const child of children) {
-    segments.push(walk_for_chain(ctx, child, parent_graph_id, parent_graph_id));
+    // Lift children to the sequence's parent (parent_graph_id) so they
+    // are peers of whatever was hosting the sequence. Path prefix
+    // stays under the sequence (seq_graph_id) so ids remain unique.
+    segments.push(walk_for_chain(ctx, child, parent_graph_id, seq_graph_id));
   }
   for (let i = 0; i < segments.length - 1; i += 1) {
     const a = segments[i];
@@ -399,6 +438,12 @@ function walk_sequence_children(
     if (a === undefined || b === undefined) continue;
     ctx.edges.push(structural_edge(a.last, b.first));
   }
+  const first_seg = segments[0];
+  const last_seg = segments[segments.length - 1];
+  return {
+    first: first_seg?.first ?? seq_graph_id,
+    last: last_seg?.last ?? seq_graph_id,
+  };
 }
 
 function format_retry_label(config: FlowNode['config']): string {
@@ -482,29 +527,54 @@ function loop_back_edge_between(
 }
 
 /**
- * Walk an expanded `compose`'s child subtree. Pipe/retry/loop/timeout/
- * checkpoint/map are intercepted by `walk_for_chain` before they reach
- * `walk()`, so this function only runs for compose-expanded — where the
- * children are walked via `walk_for_chain` so any wrapper grandchildren
- * still lift to peers.
+ * Walk a `compose`. Compose is the **only** kind that produces a
+ * visible outer box, and it always emits a node — even when collapsed.
+ *
+ * Default behavior is **expanded**: a compose whose graph id is NOT in
+ * `ctx.collapsed_composes` walks its children, parents them under
+ * itself, and chains them sequentially. The user opted into seeing the
+ * full machine on first load.
+ *
+ * The chain segment for a compose is always `{ first: compose_id,
+ * last: compose_id }` — external chain edges always anchor on the
+ * compose box, never on its inner first/last child. Visually the
+ * arrow into the composite ends at the box edge; the inner-last
+ * step's outflow exits through the box's right edge to the next
+ * top-level step.
  */
-function walk_wrapper_child(
+function walk_compose(
   ctx: WalkContext,
-  parent_node: FlowNode,
-  parent_graph_id: string,
-): void {
-  const children = parent_node.children ?? [];
-  for (const child of children) {
-    walk_for_chain(ctx, child, parent_graph_id, parent_graph_id);
-  }
-}
+  node: FlowNode,
+  parent_graph_id: string | null,
+  graph_id: string,
+): ChainSegment {
+  ctx.visited.add(node);
+  emit_basic_node(ctx, node, graph_id, parent_graph_id);
 
-const MARKER_W = 44;
-const MARKER_H = 44;
-// (Backwards-compat aliases; the per-kind walker functions still use them
-// by name so a kind can later opt into a different size if needed.)
-const PIPE_MARKER_W = MARKER_W;
-const PIPE_MARKER_H = MARKER_H;
+  if (ctx.collapsed_composes.has(graph_id)) {
+    // Collapsed: the compose renders as a single labeled block; no
+    // children, no inner edges. Click toggles its id out of the
+    // collapsed set to reveal the subgraph.
+    return { first: graph_id, last: graph_id };
+  }
+
+  const children = node.children ?? [];
+  const segments: ChainSegment[] = [];
+  for (const child of children) {
+    segments.push(walk_for_chain(ctx, child, graph_id, graph_id));
+  }
+  // Chain compose's direct children when there is more than one (e.g.
+  // a compose declared with multiple steps instead of an inner
+  // sequence). The common case — compose wrapping a single sequence —
+  // produces only one segment, so this loop is a no-op there.
+  for (let i = 0; i < segments.length - 1; i += 1) {
+    const a = segments[i];
+    const b = segments[i + 1];
+    if (a === undefined || b === undefined) continue;
+    ctx.edges.push(structural_edge(a.last, b.first));
+  }
+  return { first: graph_id, last: graph_id };
+}
 
 function format_fn_chip(value: FlowValue | undefined): string {
   // Inline of nodes/node_helpers.format_fn_ref so the transform layer
@@ -521,22 +591,6 @@ function format_fn_chip(value: FlowValue | undefined): string {
   const name = value.name;
   if (typeof name !== 'string' || name === '') return '<fn>';
   return `<fn:${name}>`;
-}
-
-function pipe_fn_edge(
-  source: string,
-  target: string,
-  label: string,
-  wrapper_id: string,
-): WeftEdge {
-  return {
-    id: `e:pipe-fn:${source}->${target}`,
-    source,
-    target,
-    label,
-    className: 'weft-edge-pipe-fn',
-    data: { kind: 'pipe-fn', wrapper_id, wrapper_label: label },
-  };
 }
 
 function format_timeout_chip(config: FlowNode['config']): string {
@@ -564,54 +618,6 @@ function format_map_chip(config: FlowNode['config']): string {
   const concurrency = read_number(config?.['concurrency']);
   if (concurrency !== undefined) return `× n / ${String(concurrency)} at-once`;
   return '× n';
-}
-
-function timeout_deadline_edge(
-  source: string,
-  target: string,
-  label: string,
-  wrapper_id: string,
-): WeftEdge {
-  return {
-    id: `e:timeout-deadline:${source}->${target}`,
-    source,
-    target,
-    label,
-    className: 'weft-edge-timeout-deadline',
-    data: { kind: 'timeout-deadline', wrapper_id, wrapper_label: label },
-  };
-}
-
-function checkpoint_key_edge(
-  source: string,
-  target: string,
-  label: string,
-  wrapper_id: string,
-): WeftEdge {
-  return {
-    id: `e:checkpoint-key:${source}->${target}`,
-    source,
-    target,
-    label,
-    className: 'weft-edge-checkpoint-key',
-    data: { kind: 'checkpoint-key', wrapper_id, wrapper_label: label },
-  };
-}
-
-function map_cardinality_edge(
-  source: string,
-  target: string,
-  label: string,
-  wrapper_id: string,
-): WeftEdge {
-  return {
-    id: `e:map-cardinality:${source}->${target}`,
-    source,
-    target,
-    label,
-    className: 'weft-edge-map-cardinality',
-    data: { kind: 'map-cardinality', wrapper_id, wrapper_label: label },
-  };
 }
 
 const JUNCTION_W = 56;
@@ -838,29 +844,6 @@ function walk_wrapper_as_badge(
 }
 
 /**
- * Walk a `pipe(child, fn)` wrapper. Pipe is an after-wrapper (transforms
- * the child's output), so its badge attaches to the chain's `last`.
- * Routes through the shared `walk_wrapper_as_badge` helper so the same
- * lift-and-annotate semantics apply uniformly to pipe / timeout /
- * checkpoint / map.
- */
-function walk_pipe_as_marker(
-  ctx: WalkContext,
-  node: FlowNode,
-  parent_graph_id: string | null,
-  graph_id: string,
-): ChainSegment {
-  return walk_wrapper_as_badge(
-    ctx,
-    node,
-    parent_graph_id,
-    graph_id,
-    'after',
-    format_fn_chip(node.config?.['fn']),
-  );
-}
-
-/**
  * Chain-aware walk: returns a `ChainSegment` describing where the
  * predecessor's edge should land (`first`) and where the successor's
  * edge should originate (`last`). For most kinds these match
@@ -885,6 +868,22 @@ function walk_for_chain(
   if (node.kind === CYCLE_KIND || ctx.visited.has(node)) {
     walk(ctx, node, parent_graph_id, parent_path_str);
     return { first: graph_id, last: graph_id };
+  }
+
+  // Sequence / scope: structural-only. Emit no node; lift children to
+  // be peers of the sequence/scope's parent. Sequence chains its
+  // children; scope chains them too AND emits stash→use overlays.
+  if (node.kind === 'sequence') {
+    return walk_sequence_as_invisible(ctx, node, parent_graph_id, graph_id);
+  }
+  if (node.kind === 'scope') {
+    return walk_scope_as_invisible(ctx, node, parent_graph_id, graph_id);
+  }
+  // Compose: the only kind that produces a visible outer box. Emits a
+  // node always; expanded by default; chain segment anchored on the
+  // box so external edges terminate at compose's perimeter.
+  if (node.kind === 'compose') {
+    return walk_compose(ctx, node, parent_graph_id, graph_id);
   }
 
   // Retry / loop: drop the wrapper node entirely. The wrapped child
@@ -978,47 +977,30 @@ function walk(
 
   emit_basic_node(ctx, node, graph_id, parent_graph_id);
 
-  if (CONTAINER_KINDS.has(node.kind)) {
-    if (node.kind === 'sequence') {
-      walk_sequence_children(ctx, node, graph_id);
-      return;
-    }
-    // parallel / branch / fallback are intercepted by walk_for_chain
-    // before reaching walk(); their case handlers in this branch were
-    // dead code post-C-deluxe and have been removed.
-    if (node.kind === 'scope') {
-      walk_scope_children(ctx, node, graph_id);
-      return;
-    }
-  }
-
-  if (node.kind === 'compose' && !ctx.expanded_composes.has(graph_id)) {
-    // Collapsed compose: stop the walk here. The compose renders as a
-    // single labeled block (no children, no inner edges); clicking it
-    // toggles expansion via the canvas.
-    return;
-  }
-
-  if (WRAPPER_KINDS.has(node.kind)) {
-    walk_wrapper_child(ctx, node, graph_id);
-    return;
-  }
-
+  // sequence / scope / compose / parallel / branch / fallback / pipe /
+  // timeout / checkpoint / map / retry / loop are all intercepted by
+  // `walk_for_chain` and never reach this generic fallback. What lands
+  // here are leaves (step, suspend, cycle) and "marker container"
+  // wrappers (stash, use) plus generic unknown kinds. Recurse via
+  // `walk_for_chain` so any kind-specific dispatch (junctions, badge
+  // wrappers) still applies — without it, e.g. a `fallback` nested
+  // inside a `use` would render as a generic node instead of the
+  // labeled-edge junction.
   const children = node.children;
   if (children === undefined || children.length === 0) return;
   for (const child of children) {
-    walk(ctx, child, graph_id, graph_id);
+    walk_for_chain(ctx, child, graph_id, graph_id);
   }
 }
 
 export type TreeToGraphOptions = {
   /**
-   * Graph ids of `compose` nodes the caller wants expanded. Pass an empty
-   * set (or omit) to render every compose collapsed — the default. A
-   * compose whose graph id is in this set walks normally; absent ones
-   * stop at the compose boundary.
+   * Graph ids of `compose` nodes the caller wants collapsed. Pass an
+   * empty set (or omit) to render every compose **expanded** — the
+   * default. A compose whose graph id appears here renders as a single
+   * leaf block; absent composes walk normally.
    */
-  readonly expanded_composes?: ReadonlySet<string>;
+  readonly collapsed_composes?: ReadonlySet<string>;
 };
 
 export function tree_to_graph(
@@ -1029,7 +1011,7 @@ export function tree_to_graph(
     nodes: [],
     edges: [],
     visited: new WeakSet(),
-    expanded_composes: options?.expanded_composes ?? new Set<string>(),
+    collapsed_composes: options?.collapsed_composes ?? new Set<string>(),
   };
   // Use walk_for_chain so a root-level wrapper (e.g. a tree whose root is
   // a pipe) gets the same lift-to-peers treatment as one nested under a

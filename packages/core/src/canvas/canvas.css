@@ -48,10 +48,6 @@
   --weft-step-on: var(--weft-color-paper);
   --weft-step-accent: var(--weft-hue-ink);
 
-  --weft-sequence-fill: transparent;
-  --weft-sequence-on: var(--weft-color-fg);
-  --weft-sequence-accent: var(--weft-hue-ink);
-
   --weft-parallel-fill: var(--weft-hue-teal);
   --weft-parallel-on: var(--weft-color-paper);
   --weft-parallel-accent: var(--weft-hue-teal);
@@ -63,10 +59,6 @@
   --weft-retry-fill: var(--weft-hue-yellow);
   --weft-retry-on: var(--weft-hue-ink);
   --weft-retry-accent: var(--weft-hue-yellow);
-
-  --weft-scope-fill: transparent;
-  --weft-scope-on: var(--weft-color-fg);
-  --weft-scope-accent: var(--weft-hue-green);
 
   --weft-stash-fill: var(--weft-hue-green);
   --weft-stash-on: var(--weft-color-paper);
@@ -273,11 +265,9 @@
   border-radius: 0;
 }
 
-.weft-node-sequence { border-left-color: var(--weft-sequence-accent); }
 .weft-node-parallel { border-left-color: var(--weft-parallel-accent); }
 .weft-node-pipe { border-left-color: var(--weft-pipe-accent); }
 .weft-node-retry { border-left-color: var(--weft-retry-accent); }
-.weft-node-scope { border-left-color: var(--weft-scope-accent); }
 .weft-node-branch { border-left-color: var(--weft-branch-accent); }
 .weft-node-fallback { border-left-color: var(--weft-fallback-accent); }
 .weft-node-timeout { border-left-color: var(--weft-timeout-accent); }
@@ -436,11 +426,9 @@
   overflow: hidden;
 }
 
-.weft-node-sequence .weft-node-header { background: var(--weft-sequence-accent); color: var(--weft-color-paper); }
 .weft-node-parallel .weft-node-header { background: var(--weft-parallel-accent); color: var(--weft-color-paper); }
 .weft-node-pipe .weft-node-header { background: var(--weft-pipe-accent); color: var(--weft-color-paper); }
 .weft-node-retry .weft-node-header { background: var(--weft-retry-accent); color: var(--weft-color-fg); }
-.weft-node-scope .weft-node-header { background: var(--weft-scope-accent); color: var(--weft-color-paper); }
 .weft-node-branch .weft-node-header { background: var(--weft-branch-accent); color: var(--weft-color-paper); }
 .weft-node-fallback .weft-node-header { background: var(--weft-fallback-accent); color: var(--weft-color-paper); }
 .weft-node-timeout .weft-node-header { background: var(--weft-timeout-accent); color: var(--weft-color-fg); }
@@ -623,11 +611,9 @@
 }
 
 .weft-node-step .react-flow__handle { background: var(--weft-step-accent); }
-.weft-node-sequence .react-flow__handle { background: var(--weft-sequence-accent); }
 .weft-node-parallel .react-flow__handle { background: var(--weft-parallel-accent); }
 .weft-node-pipe .react-flow__handle { background: var(--weft-pipe-accent); }
 .weft-node-retry .react-flow__handle { background: var(--weft-retry-accent); }
-.weft-node-scope .react-flow__handle { background: var(--weft-scope-accent); }
 .weft-node-stash .react-flow__handle { background: var(--weft-stash-accent); }
 .weft-node-use .react-flow__handle { background: var(--weft-use-accent); }
 .weft-node-cycle .react-flow__handle { background: var(--weft-cycle-accent); }

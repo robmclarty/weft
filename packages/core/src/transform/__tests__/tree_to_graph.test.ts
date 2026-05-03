@@ -13,24 +13,21 @@ function find_by_id(nodes: ReadonlyArray<WeftNode>, id: string): WeftNode | unde
 }
 
 describe('tree_to_graph: simple_sequence.json', () => {
-  it('emits the parent and three children with structural edges between them', () => {
+  it('emits the three children as root-level peers chained by structural edges', () => {
     const tree = parse_fixture('simple_sequence.json');
     const { nodes, edges } = tree_to_graph(tree);
 
+    // Sequence is structural-only — no node emitted for it. Children
+    // sit as root peers (no parentId) connected by chain edges.
     expect(nodes.map((n) => n.id)).toEqual([
-      'seq:root',
       'seq:root/step:greet',
       'seq:root/step:farewell',
       'seq:root/step:cleanup',
     ]);
 
-    const sequence_node = nodes[0];
-    expect(sequence_node?.type).toBe('sequence');
-    expect(sequence_node?.parentId).toBeUndefined();
-
-    for (const child of nodes.slice(1)) {
+    for (const child of nodes) {
       expect(child.type).toBe('step');
-      expect(child.parentId).toBe('seq:root');
+      expect(child.parentId).toBeUndefined();
     }
 
     const sequence_edges = edges.filter((e) => e.data?.kind === 'structural');
@@ -90,11 +87,14 @@ describe('tree_to_graph: containers and wrappers', () => {
     const tree = parse_fixture('nested_parallel.json');
     const { nodes } = tree_to_graph(tree);
     // C-deluxe: parallel is a junction; its children are lifted to be
-    // peers of the parallel itself, not nested inside.
+    // peers of the parallel itself, not nested inside. With the
+    // sequence chrome removed, the lifted peers sit at the root level
+    // (no parentId) — the sequence used to host them but no longer
+    // exists as a node.
     const par_outer = find_by_id(nodes, 'seq:fanout/par:outer');
     expect(par_outer?.type).toBe('parallel');
-    // Children of par:outer share the parallel's parent (the sequence).
-    const peers = nodes.filter((n) => n.parentId === 'seq:fanout');
+    expect(par_outer?.parentId).toBeUndefined();
+    const peers = nodes.filter((n) => n.parentId === undefined);
     const peer_ids = peers.map((n) => n.id);
     expect(peer_ids).toContain('seq:fanout/par:outer');
     expect(peer_ids).toContain('seq:fanout/par:outer/par:alpha');
@@ -107,8 +107,9 @@ describe('tree_to_graph: containers and wrappers', () => {
     // Retry wrapper itself is no longer emitted as a node (B-deluxe).
     expect(find_by_id(nodes, 'seq:everything/retry:flaky')).toBeUndefined();
     const retry_child = find_by_id(nodes, 'seq:everything/retry:flaky/step:flaky');
-    // The wrapped child sits as a peer of the retry's parent (sequence).
-    expect(retry_child?.parentId).toBe('seq:everything');
+    // The wrapped child sits at the root level — its retry parent
+    // disappeared, and the outer sequence is structural-only.
+    expect(retry_child?.parentId).toBeUndefined();
     // A self-loop edge attaches to the child carrying retry's config.
     const self_loops = edges.filter(
       (e) => e.data?.kind === 'self-loop' && e.source === 'seq:everything/retry:flaky/step:flaky',
@@ -127,8 +128,10 @@ describe('tree_to_graph: containers and wrappers', () => {
       nodes,
       'seq:everything/scope:root/pipe:upper/use:greeting',
     );
-    // Lift: the wrapped child's parentId is the wrapper's parent (the scope).
-    expect(pipe_child?.parentId).toBe('seq:everything/scope:root');
+    // Lift: the wrapped child's parentId is the wrapper's parent.
+    // With both the outer sequence and the enclosing scope now
+    // structural-only, the lifted child surfaces at the root level.
+    expect(pipe_child?.parentId).toBeUndefined();
     // Wrapper info lands on the child as a badge.
     const badges = pipe_child?.data.wrappers ?? [];
     const pipe_badge = badges.find((b) => b.kind === 'pipe');
@@ -405,7 +408,7 @@ describe('tree_to_graph: new primitive kinds', () => {
     }
   });
 
-  it('renders compose collapsed by default, omitting its inner subgraph', () => {
+  it('renders compose expanded by default, revealing its inner subgraph', () => {
     const tree: FlowTree = {
       version: 1,
       root: {
@@ -416,11 +419,12 @@ describe('tree_to_graph: new primitive kinds', () => {
     };
     const { nodes } = tree_to_graph(tree);
     expect(find_by_id(nodes, 'compose_1')?.type).toBe('compose');
-    expect(find_by_id(nodes, 'compose_1')?.data.is_expanded).toBe(false);
-    expect(find_by_id(nodes, 'compose_1/inner')).toBeUndefined();
+    expect(find_by_id(nodes, 'compose_1')?.data.is_expanded).toBe(true);
+    const child = find_by_id(nodes, 'compose_1/inner');
+    expect(child?.parentId).toBe('compose_1');
   });
 
-  it('renders compose expanded when its graph id is passed in expanded_composes', () => {
+  it('renders compose collapsed when its graph id is passed in collapsed_composes', () => {
     const tree: FlowTree = {
       version: 1,
       root: {
@@ -430,12 +434,10 @@ describe('tree_to_graph: new primitive kinds', () => {
       },
     };
     const { nodes } = tree_to_graph(tree, {
-      expanded_composes: new Set(['compose_1']),
+      collapsed_composes: new Set(['compose_1']),
     });
-    const wrapper = find_by_id(nodes, 'compose_1');
-    const child = find_by_id(nodes, 'compose_1/inner');
-    expect(wrapper?.data.is_expanded).toBe(true);
-    expect(child?.parentId).toBe('compose_1');
+    expect(find_by_id(nodes, 'compose_1')?.data.is_expanded).toBe(false);
+    expect(find_by_id(nodes, 'compose_1/inner')).toBeUndefined();
   });
 
   it('renders suspend as a leaf with no children', () => {

@@ -141,12 +141,17 @@ function CanvasInner({
   const [nodes, set_nodes] = useState<WeftNode[]>([]);
   const [edges, set_edges] = useState<WeftEdge[]>([]);
   const [is_panning, set_is_panning] = useState(false);
-  // Compose nodes start collapsed — the abstraction the user opted into
-  // with phase D is what they see first. Clicking a compose toggles its
-  // graph id in this set, which re-runs tree_to_graph + layout.
-  const [expanded_composes, set_expanded_composes] = useState<ReadonlySet<string>>(
+  // Compose nodes default to **expanded** — the user opted into seeing
+  // the full machine, so the first load shows it. Clicking a compose
+  // toggles its graph id into `collapsed_composes`, which re-runs
+  // `tree_to_graph` + layout to hide its subgraph. Reset on tree
+  // change so a freshly loaded tree starts fully expanded again.
+  const [collapsed_composes, set_collapsed_composes] = useState<ReadonlySet<string>>(
     () => new Set<string>(),
   );
+  useEffect(() => {
+    set_collapsed_composes(new Set<string>());
+  }, [tree]);
 
   const debounced_layout = useMemo(
     () => make_latest_wins_debounce(layout_graph, LAYOUT_DEBOUNCE_MS),
@@ -154,22 +159,23 @@ function CanvasInner({
   );
 
   /*
-   * Reset the auto-fit guard when the tree changes OR when the user expands
-   * a compose. A compose-expand materially changes the visible graph
-   * (multiple new nodes appear, the bounding box jumps); fitting once at
-   * mount and never again leaves the user staring at the original framing
-   * with the new content half-off-screen. Tree change still gets a fresh
-   * fit; runtime-state overlays leave the user's pan/zoom alone because
-   * neither `tree` nor `expanded_composes` changes for them.
+   * Reset the auto-fit guard when the tree changes OR when the user
+   * collapses/expands a compose. A toggle materially changes the
+   * visible graph (multiple nodes appear/disappear, the bounding box
+   * jumps); fitting once at mount and never again leaves the user
+   * staring at the original framing with the new content half off
+   * screen. Tree change still gets a fresh fit; runtime-state overlays
+   * leave the user's pan/zoom alone because neither `tree` nor
+   * `collapsed_composes` changes for them.
    */
   useEffect(() => {
     has_auto_fit_ref.current = false;
-  }, [tree, expanded_composes]);
+  }, [tree, collapsed_composes]);
 
   useEffect(() => {
     let cancelled = false;
     const { nodes: raw_nodes, edges: raw_edges } = tree_to_graph(tree, {
-      expanded_composes,
+      collapsed_composes,
     });
     void debounced_layout
       .call(raw_nodes, raw_edges, layout_options)
@@ -187,7 +193,7 @@ function CanvasInner({
     return () => {
       cancelled = true;
     };
-  }, [tree, layout_options, debounced_layout, expanded_composes]);
+  }, [tree, layout_options, debounced_layout, collapsed_composes]);
 
   // Overlay runtime state onto the already-laid-out nodes without triggering
   // a re-layout. The id segment after the last `/` is the FlowNode.id (the key
@@ -319,7 +325,7 @@ function CanvasInner({
       // chevron hit-target.
       if (rf_node.data?.kind === 'compose') {
         const id = rf_node.id;
-        set_expanded_composes((prev) => {
+        set_collapsed_composes((prev) => {
           const next = new Set(prev);
           if (next.has(id)) next.delete(id);
           else next.add(id);

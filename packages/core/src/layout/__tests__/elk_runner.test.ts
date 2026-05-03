@@ -55,15 +55,18 @@ describe('build_elk_graph', () => {
   });
 
   it('sets nodeSize constraints, minimum size, and padding on container nodes that have children', () => {
-    const { nodes, edges } = graph_for('full_primitive_set.json');
+    // After the visual-simplification pass, only `compose` (when
+    // expanded) is a parent-grouping container. `all_primitives.json`'s
+    // root is a compose; its inner subgraph hosts every other kind.
+    const { nodes, edges } = graph_for('all_primitives.json');
     const graph = build_elk_graph(nodes, edges, resolve_options());
-    const seq = graph.children?.find((c) => c.id === 'seq:everything');
-    expect(seq?.children?.length).toBeGreaterThan(0);
-    expect(seq?.layoutOptions?.['org.eclipse.elk.nodeSize.constraints']).toBe(
+    const compose = graph.children?.find((c) => c.id === 'agent_pipeline_1');
+    expect(compose?.children?.length).toBeGreaterThan(0);
+    expect(compose?.layoutOptions?.['org.eclipse.elk.nodeSize.constraints']).toBe(
       '[NODE_LABELS, PORTS, MINIMUM_SIZE]',
     );
-    expect(seq?.layoutOptions?.['org.eclipse.elk.nodeSize.minimum']).toBeDefined();
-    expect(seq?.layoutOptions?.['org.eclipse.elk.padding']).toContain('top=');
+    expect(compose?.layoutOptions?.['org.eclipse.elk.nodeSize.minimum']).toBeDefined();
+    expect(compose?.layoutOptions?.['org.eclipse.elk.padding']).toContain('top=');
   });
 
   it('produces sources/targets pairs for every weft edge', () => {

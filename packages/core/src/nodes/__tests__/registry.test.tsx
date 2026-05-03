@@ -65,15 +65,6 @@ describe('StepNode', () => {
   });
 });
 
-describe('SequenceNode', () => {
-  it('renders a sequence chrome with id and badge', () => {
-    mounted = mount_canvas([leaf('seq:root', 'sequence')], []);
-    const node = mounted.container.querySelector('[data-weft-kind="sequence"]');
-    expect(node?.textContent).toContain('seq:root');
-    expect(node?.textContent?.toLowerCase()).toContain('sequence');
-  });
-});
-
 describe('ParallelNode', () => {
   it('declares one source handle per key plus an input handle (junction shape, no title text)', () => {
     const nodes: WeftNode[] = [
@@ -130,10 +121,12 @@ describe('PipeNode', () => {
   // tree_to_graph + edge components.
 });
 
-describe('ScopeNode + StashNode + UseNode', () => {
-  it('renders scope chrome and stash/use badges', () => {
+describe('StashNode + UseNode', () => {
+  it('renders stash/use marker chrome', () => {
+    // Scope is structural-only after the visual-simplification pass —
+    // it emits no node. Stash and use remain visible marker
+    // containers around their inner step.
     const nodes: WeftNode[] = [
-      leaf('scope:1', 'scope'),
       {
         id: 'stash:1',
         type: 'stash',
@@ -148,7 +141,6 @@ describe('ScopeNode + StashNode + UseNode', () => {
       },
     ];
     mounted = mount_canvas(nodes, []);
-    expect(mounted.container.querySelector('[data-weft-kind="scope"]')?.textContent).toContain('scope');
     expect(mounted.container.querySelector('[data-weft-kind="stash"]')?.textContent).toContain('greeting');
     const use_node = mounted.container.querySelector('[data-weft-kind="use"]');
     expect(use_node?.textContent).toContain('greeting');
@@ -206,12 +198,12 @@ describe('CycleNode (<cycle> sentinel)', () => {
 
 describe('Registry covers every transform-tagged type', () => {
   it('does not crash when every kind is rendered together', () => {
+    // sequence / scope intentionally absent: post visual-simplification
+    // they emit no node and are not in the renderer registry.
     const nodes: WeftNode[] = [
       leaf('a', 'step'),
-      { id: 'b', type: 'sequence', position: { x: 220, y: 0 }, data: { kind: 'sequence', id: 'b' } },
       { id: 'c', type: 'parallel', position: { x: 440, y: 0 }, data: { kind: 'parallel', id: 'c', config: { keys: [] } } },
       { id: 'd', type: 'pipe', position: { x: 660, y: 0 }, data: { kind: 'pipe', id: 'd' } },
-      { id: 'f', type: 'scope', position: { x: 220, y: 220 }, data: { kind: 'scope', id: 'f' } },
       { id: 'g', type: 'stash', position: { x: 440, y: 220 }, data: { kind: 'stash', id: 'g', config: { key: 'k' } } },
       { id: 'h', type: 'use', position: { x: 660, y: 220 }, data: { kind: 'use', id: 'h', config: { keys: ['k'] } } },
       { id: 'i', type: 'cycle', position: { x: 0, y: 440 }, data: { kind: '<cycle>', id: 'i', cycle_target: 'a' } },
@@ -318,34 +310,30 @@ describe('New primitive renderers', () => {
 
 describe('display_name from meta surfaces in container titles', () => {
   it('uses meta.display_name on every kind that supports it', () => {
+    // Sequence / scope omitted: structural-only post visual-simplification.
+    // pipe / retry / loop omitted: pipe renders as a marker (no visible
+    // text), retry/loop don't render as nodes at all — their config
+    // rides on the self-loop / loop-back edges.
+    // parallel / branch / fallback omitted: rendered as small diamond
+    // junctions (no visible text). Display name surfaces in the inspector.
+    // timeout / map / checkpoint omitted: marker renderers (no visible text).
+    // What's left that hosts a display_name is `compose` (the only
+    // outer-box container) and the `suspend` leaf.
     const cases: Array<[string, WeftNode]> = [
       [
-        'sequence',
+        'compose',
         {
-          id: 'seq:1',
-          type: 'sequence',
+          id: 'compose:1',
+          type: 'compose',
           position: { x: 0, y: 0 },
-          data: { kind: 'sequence', id: 'seq:1', meta: { display_name: 'main_pipeline' } },
+          data: {
+            kind: 'compose',
+            id: 'compose:1',
+            is_expanded: true,
+            meta: { display_name: 'main_pipeline' },
+          },
         },
       ],
-      // pipe / retry / loop omitted: B-deluxe renders pipe as a marker
-      // (no visible text), and retry/loop don't render as nodes at all
-      // — their config rides on the self-loop / loop-back edges.
-      [
-        'scope',
-        {
-          id: 'scope:1',
-          type: 'scope',
-          position: { x: 0, y: 0 },
-          data: { kind: 'scope', id: 'scope:1', meta: { display_name: 'shared_state' } },
-        },
-      ],
-      // parallel/branch/fallback omitted: C-deluxe renders all three as
-      // small diamond junctions (no visible text). Their display_name
-      // surfaces in the inspector; the junction only carries the glyph.
-      // timeout / map / checkpoint omitted: B-deluxe renders them as
-      // markers (no visible text). loop / retry omitted: dropped from
-      // the registry entirely.
       [
         'suspend',
         {

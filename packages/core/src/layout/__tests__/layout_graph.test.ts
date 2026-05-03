@@ -62,22 +62,22 @@ describe('fallback_layout (deterministic naive grid)', () => {
   });
 
   it('emits parent-relative coordinates: a true container child sits inside its parent', () => {
-    const { nodes, edges } = graph_for('full_primitive_set.json');
+    // After the visual-simplification pass only `compose` is a true
+    // parent-grouping container. `all_primitives.json`'s root is a
+    // compose hosting the rest of the graph as children.
+    const { nodes, edges } = graph_for('all_primitives.json');
     const result = fallback_layout(nodes, edges);
     const by_id = new Map(result.nodes.map((n) => [n.id, n]));
-    // Sequence is still a container post-deluxe; its direct step
-    // children retain `parentId === 'seq:everything'` and their
-    // positions are parent-relative.
-    const seq = by_id.get('seq:everything');
-    const par_junction = by_id.get('seq:everything/par:report');
-    expect(seq).toBeDefined();
-    expect(par_junction).toBeDefined();
-    if (seq === undefined || par_junction === undefined) throw new Error('missing');
-    // The parallel is now a junction (peer of the sequence's other
-    // children, parented to the sequence).
-    expect(par_junction.parentId).toBe('seq:everything');
-    expect(par_junction.position.x).toBeGreaterThanOrEqual(0);
-    expect(par_junction.position.y).toBeGreaterThanOrEqual(0);
+    const compose = by_id.get('agent_pipeline_1');
+    const child = by_id.get('agent_pipeline_1/sequence_1/parallel_1');
+    expect(compose).toBeDefined();
+    expect(child).toBeDefined();
+    if (compose === undefined || child === undefined) throw new Error('missing');
+    // The parallel junction (a former sequence child) is parented to
+    // the compose box now that sequence is structural-only.
+    expect(child.parentId).toBe('agent_pipeline_1');
+    expect(child.position.x).toBeGreaterThanOrEqual(0);
+    expect(child.position.y).toBeGreaterThanOrEqual(0);
   });
 });
 

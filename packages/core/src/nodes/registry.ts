@@ -21,22 +21,21 @@ import { GenericNode } from './GenericNode.js';
 import { MapNode } from './MapNode.js';
 import { ParallelNode } from './ParallelNode.js';
 import { PipeNode } from './PipeNode.js';
-import { ScopeNode } from './ScopeNode.js';
-import { SequenceNode } from './SequenceNode.js';
 import { StashNode } from './StashNode.js';
 import { StepNode } from './StepNode.js';
 import { SuspendNode } from './SuspendNode.js';
 import { TimeoutNode } from './TimeoutNode.js';
 import { UseNode } from './UseNode.js';
 
-// Retry and loop intentionally absent: B-deluxe (commit f5ef7c3) drops
-// the wrapper from the graph entirely; the wrapped child is the visible
-// node, and a self-loop / loop-back edge carries the wrapper config.
-// `tree_to_graph` no longer emits nodes of type 'retry' or 'loop', so
-// no renderer is needed.
+// Several kinds intentionally absent:
+//   - retry / loop — B-deluxe drops the wrapper entirely; the wrapped
+//     child is visible and a self-loop / loop-back edge carries config.
+//   - sequence / scope — visual-simplification pass makes them
+//     structural-only. Sequence chains its children with edges; scope
+//     hosts overlay edges; neither emits a node.
+// `tree_to_graph` therefore never emits nodes of those types.
 export const node_types: NodeTypes = {
   step: StepNode,
-  sequence: SequenceNode,
   parallel: ParallelNode,
   branch: BranchNode,
   map: MapNode,
@@ -46,7 +45,6 @@ export const node_types: NodeTypes = {
   compose: ComposeNode,
   checkpoint: CheckpointNode,
   suspend: SuspendNode,
-  scope: ScopeNode,
   stash: StashNode,
   use: UseNode,
   cycle: CycleNode,

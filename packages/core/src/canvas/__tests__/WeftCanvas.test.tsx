@@ -89,7 +89,7 @@ afterEach(() => {
 });
 
 describe('WeftCanvas: renders fixture trees end-to-end', () => {
-  it('renders simple_sequence.json with all four nodes', async () => {
+  it('renders simple_sequence.json as three top-level steps with no sequence chrome', async () => {
     const tree = flow_tree_schema.parse(simple_sequence_fixture);
     mounted = mount(
       createElement(WeftCanvas, {
@@ -97,12 +97,13 @@ describe('WeftCanvas: renders fixture trees end-to-end', () => {
         layout_options: { worker_factory: null },
       }),
     );
-    await wait_for_nodes(mounted.container, 4);
+    await wait_for_nodes(mounted.container, 3);
     const kinds = Array.from(
       mounted.container.querySelectorAll('[data-weft-kind]'),
     ).map((el) => el.getAttribute('data-weft-kind'));
     expect(kinds.filter((k) => k === 'step').length).toBe(3);
-    expect(kinds.filter((k) => k === 'sequence').length).toBe(1);
+    // Sequence is structural-only — no visible chrome.
+    expect(kinds.filter((k) => k === 'sequence').length).toBe(0);
   });
 });
 
@@ -154,7 +155,7 @@ describe('WeftCanvas: imperative canvas_api via on_ready', () => {
         },
       }),
     );
-    await wait_for_nodes(mounted.container, 4);
+    await wait_for_nodes(mounted.container, 3);
     for (let i = 0; i < 20; i += 1) {
       if (received !== null) break;
       // eslint-disable-next-line no-await-in-loop -- polling for callback
@@ -198,7 +199,7 @@ describe('WeftCanvas: large_threshold performance toggle', () => {
         large_threshold: 1000,
       }),
     );
-    await wait_for_nodes(mounted.container, 4);
+    await wait_for_nodes(mounted.container, 3);
     const canvas = mounted.container.querySelector('[data-weft-canvas]');
     expect(canvas?.getAttribute('data-weft-large')).toBe('false');
   });
@@ -222,7 +223,7 @@ describe('WeftCanvas: F6 unknown-kind tolerance', () => {
         layout_options: { worker_factory: null },
       }),
     );
-    await wait_for_nodes(mounted.container, 2);
+    await wait_for_nodes(mounted.container, 1);
     const generic = mounted.container.querySelector('[data-weft-generic="true"]');
     expect(generic).not.toBeNull();
     expect(generic?.textContent).toContain('fresh_kind_from_future_fascicle');
@@ -252,7 +253,7 @@ describe('WeftCanvas: runtime_state overlay', () => {
         runtime_state,
       }),
     );
-    await wait_for_nodes(mounted.container, 4);
+    await wait_for_nodes(mounted.container, 3);
     // Wait a beat so the post-layout overlay effect runs.
     await delay(60);
     const greet = Array.from(
@@ -281,7 +282,7 @@ describe('WeftCanvas: respects an initial_viewport', () => {
         },
       }),
     );
-    await wait_for_nodes(mounted.container, 4);
+    await wait_for_nodes(mounted.container, 3);
     for (let i = 0; i < 30; i += 1) {
       if (api !== null) break;
       // eslint-disable-next-line no-await-in-loop -- polling for callback
