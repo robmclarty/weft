@@ -12,6 +12,7 @@ coverage/
 *.log
 .DS_Store
 .claude/settings.local.json
+.claude/*.lock
 .pnpm-store/
 
 # Copied from node_modules at dev time for the libavoid spike — see
