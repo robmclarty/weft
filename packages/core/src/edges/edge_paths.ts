@@ -80,7 +80,6 @@ export function compute_loop_back_path(
 }
 
 const ORTHOGONAL_CORNER_RADIUS = 8;
-const ORTHOGONAL_LABEL_FRACTION = 0.5;
 
 export type OrthogonalGeometry = {
   readonly path: string;
@@ -153,25 +152,22 @@ export function compute_orthogonal_path(
   const last = points[points.length - 1]!;
   d += ` L ${String(last.x)} ${String(last.y)}`;
 
-  // Pick a label anchor at the segment containing arc-length midpoint. This
-  // keeps "primary"/"otherwise"/"<fn:name>" chips readable on long routes.
-  let total_len = 0;
-  for (let i = 0; i < points.length - 1; i += 1) {
-    total_len += distance(points[i]!, points[i + 1]!);
-  }
-  let target_len = total_len * ORTHOGONAL_LABEL_FRACTION;
-  let midpoint: Point = points[0]!;
+  // Pick the longest segment and anchor the label at its midpoint. Labels
+  // landing on the arc-length midpoint frequently fell on a node body when
+  // the polyline straddled a node — picking the longest run avoids the
+  // tightest elbows and gives "primary"/"otherwise"/"<fn:name>" chips a
+  // chance to land on open canvas. Single-segment polylines land at the
+  // straight midpoint either way.
+  let best_mid: Point = points[0]!;
+  let best_len = -Infinity;
   for (let i = 0; i < points.length - 1; i += 1) {
     const a = points[i]!;
     const b = points[i + 1]!;
     const seg_len = distance(a, b);
-    if (target_len <= seg_len) {
-      const t = seg_len === 0 ? 0 : target_len / seg_len;
-      midpoint = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
-      break;
+    if (seg_len > best_len) {
+      best_len = seg_len;
+      best_mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     }
-    target_len -= seg_len;
-    midpoint = b;
   }
-  return { path: d, midpoint };
+  return { path: d, midpoint: best_mid };
 }

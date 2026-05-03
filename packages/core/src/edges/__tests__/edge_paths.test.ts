@@ -157,15 +157,28 @@ describe('compute_orthogonal_path', () => {
     expect(path).toContain('L 0.1 0');
   });
 
-  it('places the label midpoint at the arc-length midpoint of the polyline', () => {
-    // L-shaped polyline: 100px right, then 100px down. Midpoint by arc
-    // length sits at the corner (100, 0).
+  it('places the label at the midpoint of the longest segment', () => {
+    // Z-shape: short top run, long middle run, short bottom run. Label must
+    // anchor in the middle of the long run, not at a corner.
     const { midpoint } = compute_orthogonal_path(
       { x: 0, y: 0 },
-      { x: 100, y: 100 },
-      [{ x: 100, y: 0 }],
+      { x: 200, y: 20 },
+      [
+        { x: 20, y: 0 },
+        { x: 20, y: 20 },
+        { x: 180, y: 20 },
+      ],
     );
     expect(midpoint.x).toBeCloseTo(100, 5);
-    expect(midpoint.y).toBeCloseTo(0, 5);
+    expect(midpoint.y).toBeCloseTo(20, 5);
+  });
+
+  it('places the label at the straight midpoint when the polyline has no bends', () => {
+    const { midpoint } = compute_orthogonal_path(
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      [],
+    );
+    expect(midpoint).toEqual({ x: 50, y: 0 });
   });
 });

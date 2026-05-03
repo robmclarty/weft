@@ -254,19 +254,14 @@
 .weft-node-checkpoint { border-left-color: var(--weft-checkpoint-accent); }
 
 /*
- * Wrappers that *still* render as containers (retry, loop, timeout, map,
- * checkpoint, expanded-compose) hug their wrapped child as a labeled
- * bracket instead of a 280×120 bay. Pipe has been lifted to a marker
- * node and so is excluded from this rule. Real subgraph containers
- * (sequence/scope/branch/fallback/parallel) keep the larger minimum
- * from `:root`. ELK's per-container `nodeSize.minimum` is set to match
- * in `elk_runner.ts`.
+ * Expanded-compose is the only wrapper that still renders as a container —
+ * a labeled bracket around the inner subgraph. Pipe / timeout / map /
+ * checkpoint became markers, branch / fallback / parallel became junctions,
+ * retry / loop got dropped from the graph entirely; their dimensions come
+ * from the `.weft-node-marker` and `.weft-node-junction` rules below, and
+ * applying the wrapper min-width here would balloon them into 212×114
+ * ovals. ELK's per-container `nodeSize.minimum` matches in `elk_runner.ts`.
  */
-.weft-node-retry,
-.weft-node-timeout,
-.weft-node-loop,
-.weft-node-map,
-.weft-node-checkpoint,
 .weft-node-container.weft-node-compose {
   min-width: 212px;
   min-height: 114px;
@@ -685,7 +680,8 @@
 }
 
 .weft-edge-self-loop-label,
-.weft-edge-loop-back-label {
+.weft-edge-loop-back-label,
+.weft-edge-orth-label {
   font-family: var(--weft-font-mono);
   font-size: 10px;
   font-weight: 700;
@@ -698,6 +694,45 @@
   white-space: nowrap;
   color: var(--weft-color-fg);
   box-shadow: 0 1px 0 0 var(--weft-color-fg);
+}
+
+/*
+ * Orthogonal-edge labels are HTML overlays positioned by `WeftOrthogonalEdge`
+ * at the polyline's arc-length midpoint. They sit above edges and nodes so a
+ * label landing near a node body still reads — the alternative is to compute
+ * a node-aware offset, which ELK does not give us for free.
+ */
+.weft-edge-orth-label {
+  z-index: 1;
+}
+
+/*
+ * Per-role tinting on the orthogonal edge label so the chip's border matches
+ * its line. Reads as "this label belongs to that line" without us having to
+ * draw a leader.
+ */
+.react-flow__edge.weft-edge-pipe-fn .weft-edge-orth-label,
+.react-flow__edge.weft-edge-checkpoint-key .weft-edge-orth-label {
+  border-color: var(--weft-hue-blue);
+  color: var(--weft-hue-blue);
+}
+
+.react-flow__edge.weft-edge-timeout-deadline .weft-edge-orth-label {
+  border-color: var(--weft-hue-yellow);
+  color: color-mix(in srgb, var(--weft-hue-yellow) 60%, var(--weft-color-fg));
+}
+
+.react-flow__edge.weft-edge-map-cardinality .weft-edge-orth-label {
+  border-color: var(--weft-hue-teal);
+  color: var(--weft-hue-teal);
+}
+
+.react-flow__edge.weft-edge-role-then .weft-edge-orth-label,
+.react-flow__edge.weft-edge-role-otherwise .weft-edge-orth-label,
+.react-flow__edge.weft-edge-role-primary .weft-edge-orth-label,
+.react-flow__edge.weft-edge-role-backup .weft-edge-orth-label {
+  border-color: var(--weft-hue-orange);
+  color: var(--weft-hue-orange);
 }
 
 .weft-edge-self-loop-label {
