@@ -34,6 +34,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 
+import { compute_metrics } from './lib/layout-geometry.mjs';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repo_root = join(here, '..');
 const out_dir = join(repo_root, '.check');
@@ -49,11 +51,15 @@ const STABILITY_POLL_MS = 300;
 const STABILITY_REQUIRED_READS = 3;
 const STABILITY_TIMEOUT_MS = 15_000;
 
-const FIXTURES = [
-  { name: 'simple_sequence', path: `/view?src=${STUDIO_ORIGIN}/fixtures/simple_sequence.json` },
-  { name: 'all_primitives', path: `/view?src=${STUDIO_ORIGIN}/fixtures/all_primitives.json` },
-  { name: 'full_primitive_set', path: `/view?src=${STUDIO_ORIGIN}/fixtures/full_primitive_set.json` },
-];
+const FIXTURE_NAMES = ['simple_sequence', 'all_primitives', 'full_primitive_set'];
+
+function build_fixtures(router) {
+  const router_qs = router === null ? '' : `&router=${router}`;
+  return FIXTURE_NAMES.map((name) => ({
+    name,
+    path: `/view?src=${STUDIO_ORIGIN}/fixtures/${name}.json${router_qs}`,
+  }));
+}
 
 async function wait_for_stable_layout(page) {
   // Layout is "stable" when node count is unchanged for N consecutive polls.
@@ -197,137 +203,6 @@ function extract_geometry() {
   return { nodes, edges };
 }
 
-// ────────────────────────────────────────────────────────────────────
-// Geometry helpers (run in Node, on the data extracted from the page).
-// ────────────────────────────────────────────────────────────────────
-
-function ccw(ax, ay, bx, by, cx, cy) {
-  return (cy - ay) * (bx - ax) - (by - ay) * (cx - ax);
-}
-
-function segments_cross(ax, ay, bx, by, cx, cy, dx, dy) {
-  // Proper intersection only — shared endpoints (the common case where two
-  // edges meet at a junction node port) do not count as a crossing.
-  const d1 = ccw(cx, cy, dx, dy, ax, ay);
-  const d2 = ccw(cx, cy, dx, dy, bx, by);
-  const d3 = ccw(ax, ay, bx, by, cx, cy);
-  const d4 = ccw(ax, ay, bx, by, dx, dy);
-  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
-      ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
-    return true;
-  }
-  return false;
-}
-
-function edge_segments(edge) {
-  const segs = [];
-  for (let i = 0; i < edge.points.length - 1; i += 1) {
-    const [ax, ay] = edge.points[i];
-    const [bx, by] = edge.points[i + 1];
-    segs.push({ ax, ay, bx, by, edge_id: edge.id, source: edge.source, target: edge.target });
-  }
-  return segs;
-}
-
-function count_crossings(edges) {
-  const all_segs = [];
-  for (const e of edges) {
-    for (const s of edge_segments(e)) all_segs.push(s);
-  }
-  let n = 0;
-  for (let i = 0; i < all_segs.length; i += 1) {
-    for (let j = i + 1; j < all_segs.length; j += 1) {
-      const a = all_segs[i];
-      const b = all_segs[j];
-      // Segments from the same edge can't cross meaningfully.
-      if (a.edge_id === b.edge_id) continue;
-      if (segments_cross(a.ax, a.ay, a.bx, a.by, b.ax, b.ay, b.bx, b.by)) {
-        n += 1;
-      }
-    }
-  }
-  return n;
-}
-
-function count_bends(edges) {
-  let n = 0;
-  for (const e of edges) {
-    // A polyline with k points has k-1 segments and k-2 interior bends.
-    if (e.points.length >= 3) n += e.points.length - 2;
-  }
-  return n;
-}
-
-function total_edge_length(edges) {
-  let total = 0;
-  for (const e of edges) {
-    for (let i = 0; i < e.points.length - 1; i += 1) {
-      const dx = e.points[i + 1][0] - e.points[i][0];
-      const dy = e.points[i + 1][1] - e.points[i][1];
-      total += Math.sqrt(dx * dx + dy * dy);
-    }
-  }
-  return total;
-}
-
-function seg_intersects_rect(ax, ay, bx, by, rx, ry, rw, rh) {
-  const x1 = rx;
-  const y1 = ry;
-  const x2 = rx + rw;
-  const y2 = ry + rh;
-  if (Math.max(ax, bx) < x1) return false;
-  if (Math.min(ax, bx) > x2) return false;
-  if (Math.max(ay, by) < y1) return false;
-  if (Math.min(ay, by) > y2) return false;
-  const inside = (px, py) => px >= x1 && px <= x2 && py >= y1 && py <= y2;
-  if (inside(ax, ay) || inside(bx, by)) return true;
-  if (segments_cross(ax, ay, bx, by, x1, y1, x2, y1)) return true;
-  if (segments_cross(ax, ay, bx, by, x2, y1, x2, y2)) return true;
-  if (segments_cross(ax, ay, bx, by, x2, y2, x1, y2)) return true;
-  if (segments_cross(ax, ay, bx, by, x1, y2, x1, y1)) return true;
-  return false;
-}
-
-function count_node_edge_overlaps(nodes, edges) {
-  // Containers (compose etc.) legitimately enclose their children's edges, so
-  // we use a simple proxy: skip overlaps with the edge's own source/target,
-  // and skip nodes that geometrically contain BOTH endpoints (presumed
-  // ancestor containers).
-  let n = 0;
-  for (const e of edges) {
-    const segs = edge_segments(e);
-    if (segs.length === 0) continue;
-    const start = e.points[0];
-    const end = e.points[e.points.length - 1];
-    for (const node of nodes) {
-      if (node.id === e.source || node.id === e.target) continue;
-      const startInside = start[0] >= node.x && start[0] <= node.x + node.w &&
-                          start[1] >= node.y && start[1] <= node.y + node.h;
-      const endInside = end[0] >= node.x && end[0] <= node.x + node.w &&
-                        end[1] >= node.y && end[1] <= node.y + node.h;
-      if (startInside && endInside) continue;
-      for (const s of segs) {
-        if (seg_intersects_rect(s.ax, s.ay, s.bx, s.by, node.x, node.y, node.w, node.h)) {
-          n += 1;
-          break;
-        }
-      }
-    }
-  }
-  return n;
-}
-
-function compute_metrics({ nodes, edges }) {
-  return {
-    nodes: nodes.length,
-    edges: edges.length,
-    crossings: count_crossings(edges),
-    bends: count_bends(edges),
-    totalEdgeLength: Math.round(total_edge_length(edges) * 10) / 10,
-    nodeEdgeOverlaps: count_node_edge_overlaps(nodes, edges),
-  };
-}
-
 async function read_previous() {
   try {
     const raw = await readFile(out_path, 'utf8');
@@ -350,6 +225,13 @@ async function main() {
   const args = process.argv.slice(2);
   const label_idx = args.indexOf('--label');
   const label = label_idx >= 0 ? args[label_idx + 1] : null;
+  const router_idx = args.indexOf('--router');
+  const router = router_idx >= 0 ? args[router_idx + 1] : null;
+  if (router !== null && router !== 'elk' && router !== 'libavoid') {
+    process.stderr.write(`--router must be 'elk' or 'libavoid' (got ${router})\n`);
+    process.exit(2);
+  }
+  const fixtures = build_fixtures(router);
 
   if (!(await check_server_up())) {
     process.stderr.write(
@@ -378,7 +260,7 @@ async function main() {
     });
 
     const results = [];
-    for (const fixture of FIXTURES) {
+    for (const fixture of fixtures) {
       console_errors.length = 0;
       await page.goto(`${STUDIO_ORIGIN}/`);
       await page.evaluate(() => {
@@ -436,6 +318,7 @@ async function main() {
     const report = {
       timestamp: new Date().toISOString(),
       ...(label !== null ? { label } : {}),
+      ...(router !== null ? { router } : {}),
       fixtures: results,
       ...(previous !== null ? { previous: { timestamp: previous.timestamp, label: previous.label ?? null } } : {}),
     };

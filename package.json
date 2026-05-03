@@ -24,11 +24,14 @@
     "test:agent-browser": "node scripts/agent-browser-smoke.mjs",
     "screenshots": "node scripts/screenshot-scenarios.mjs",
     "metrics": "node scripts/layout-metrics.mjs",
+    "metrics:vision": "node scripts/layout-vision-score.mjs",
+    "metrics:graphviz": "node scripts/layout-graphviz-benchmark.mjs",
     "types": "tsc --noEmit"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.42.1",
     "@axe-core/playwright": "4.11.2",
+    "@hpcc-js/wasm-graphviz": "1.21.5",
     "@playwright/test": "1.59.1",
     "@repo/watch": "workspace:*",
     "@repo/weft": "workspace:*",

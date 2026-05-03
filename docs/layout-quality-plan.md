@@ -271,3 +271,77 @@ boundaries).
   Phase 4 (libavoid-js) and Phase 5 (Graphviz benchmark) remain
   optional follow-ups should the 13 remaining `all_primitives`
   overlaps or the 20 bends become a problem in real flows.
+
+- 2026-05-02 — Phase 3 LANDED as `pnpm metrics:vision`
+  (`scripts/layout-vision-score.mjs`). Reads the screenshots written by
+  `pnpm metrics`, sends each to Claude Sonnet 4.6 with a four-axis
+  rubric (`edge_clutter`, `label_readability`, `container_clarity`,
+  `balance`, each scored 1–5 plus a weighted `overall`). Each axis
+  returns a one-sentence rationale and up to three issues with pixel
+  coordinates. The metrics summary is included in the prompt as
+  ground-truth context so the model adds visual judgement instead of
+  re-counting bends. Output lands at `.check/layout-vision-scores.json`.
+
+  The original framing was "tiebreaker between two ELK option sets",
+  but Phase 2b found no real ties to break — every option produced
+  zero deltas. The script is still useful as a complementary signal
+  when comparing routers (Phase 4) or external benchmarks (Phase 5),
+  so it is kept on-demand rather than retired.
+
+  Requires `ANTHROPIC_API_KEY` in the environment.
+
+- 2026-05-02 — Phase 4 LANDED as a behind-flag spike. New module
+  `packages/core/src/layout/libavoid_router.ts` lazy-imports
+  `libavoid-js` (added as `optionalDependencies` of `@repo/core`),
+  exposes `route_with_libavoid(positioned_nodes, edges)`, accumulates
+  parent offsets so libavoid sees absolute screen-space rectangles,
+  registers leaf nodes (NOT containers — child-to-sibling edges must
+  legitimately cross those boundaries) as `ShapeRef` obstacles, and
+  pulls the orthogonal `displayRoute()` polyline back as
+  `EdgeWaypoint[]`. `LayoutOptions.router: 'elk' | 'libavoid'`
+  (defaulting to `'elk'`) selects the engine; `layout_graph` swaps in
+  the libavoid routes after `apply_positions` when the flag is on,
+  and silently keeps the ELK routes when the WASM is unavailable.
+
+  Studio plumbing: `ViewRoute` reads `?router=libavoid` and threads
+  it through `CanvasShell` → `WeftCanvas` → `layout_options`. Metrics
+  script accepts `--router libavoid`, which appends the query
+  parameter when navigating each fixture URL.
+
+  Tests `libavoid_router.test.ts` mock the dynamic import three ways:
+  load failure (warns once), missing `AvoidLib` export, wrong shape;
+  plus a happy-path test with a fake `Avoid` module that verifies
+  centre coordinates, ancestor-offset accumulation, and that
+  containers are NOT registered as obstacles.
+
+  License caveat noted prominently in `layout_options.ts` and the
+  router header: `libavoid-js` is LGPL-2.1-or-later. The plan
+  originally cited MPL-2.0; that was wrong. Acceptable behind a flag
+  for spike use, but a license review is required before flipping
+  the default.
+
+  Functional benchmark on `all_primitives` is the next step: needs a
+  manual `pnpm --filter @repo/studio dev` + `pnpm metrics --router
+  libavoid --label libavoid` run to compare against the
+  `phase-2b-final` baseline. Decision criterion (per original plan)
+  was crossings -30%, but `all_primitives` is already at 0
+  crossings; the relevant criteria become bends (currently 20) and
+  overlaps (currently 13).
+
+- 2026-05-02 — Phase 5 LANDED as `pnpm metrics:graphviz`
+  (`scripts/layout-graphviz-benchmark.mjs`). Pulls the canonical
+  `{nodes, edges}` from the live studio DOM (same Playwright
+  extraction as `pnpm metrics`), serializes to DOT with `splines=ortho`
+  and `rankdir=LR` (the standard Graphviz top-level options), runs
+  `@hpcc-js/wasm-graphviz` (Apache-2.0) in
+  Node, parses the `plain` output (inches × 72 DPI, y-axis flipped
+  back), and computes the four standard metrics via the new
+  `scripts/lib/layout-geometry.mjs` shared helpers (extracted from
+  `layout-metrics.mjs` so the two scorers stay byte-comparable).
+  Reports each fixture with a `(±N vs elk)` delta vs the most recent
+  `.check/layout-metrics.json`.
+
+  Diagnostic only — Graphviz `splines=ortho` does not understand the
+  cluster boundaries or per-node ports the studio relies on, so this
+  is for ceiling-detection ("is the residual overlap an engine
+  problem or an input-shape problem?"), not a shipping path.
