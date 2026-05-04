@@ -406,6 +406,11 @@
   display: block;
   width: 100%;
   height: 100%;
+  /* Diamond vertices sit on the SVG's viewBox edges so React Flow's
+   * handles (which anchor at the node's bounding-box edge) line up with
+   * the visual corners. The 2px stroke draws 1px outside the box on
+   * each side; allow that overflow so the corner stroke isn't clipped. */
+  overflow: visible;
 }
 
 .weft-node-junction .weft-node-junction-glyph {

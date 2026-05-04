@@ -24,7 +24,7 @@ function FallbackNodeImpl({ data }: NodeProps<WeftNode>): JSX.Element {
       <Handle type="target" position={Position.Left} id="in" />
       <svg viewBox="0 0 56 56" aria-hidden="true">
         <polygon
-          points="28,2 54,28 28,54 2,28"
+          points="28,0 56,28 28,56 0,28"
           fill="var(--weft-fallback-fill)"
           stroke="var(--weft-fallback-accent)"
           strokeWidth="2"
