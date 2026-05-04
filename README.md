@@ -1,10 +1,10 @@
 # weft
 
+<p>
+  <img src="./docs/assets/logo-wordmark-tiles2.svg" width="286" height="156" alt="weft wordmark with paint-stroke connectors" />
+</p>
+
 UI for [Fascicle](https://github.com/robmclarty/fascicle). A React Flow canvas that visualizes fascicle composition trees — every primitive, every wrapper, every labeled edge — with ELK layout and a live watch loop.
-
-![weft studio rendering a fascicle FlowTree with the inspector open on a loop primitive](./docs/assets/studio-overview.png)
-
-The shot above shows the studio in `EMPTY` mode: header tabs (`EMPTY` / `VIEW` / `WATCH`), node search, the canvas rendering a fascicle FlowTree with steps, branches, a labeled `LOOP`, and a `parallel` fan-out, and the right-hand inspector populated with the selected loop's config (`max_rounds`, guard, raw JSON) plus a PNG export action.
 
 ## Why weft exists
 
@@ -15,6 +15,12 @@ weft renders the tree so you can see it. Three commitments shape the project:
 - **Faithful, never stylized.** Every primitive in the tree gets a renderer. Wrappers (retry, semaphore, timeout, cache) are visible badges. Edge labels reflect what fascicle actually emits — `THEN`, `OTHERWISE`, `PRIMARY`, `BACKUP`, `SUMMARY`, the cycle's bound. If a fascicle program does it, the canvas shows it.
 - **Live by default.** Write a fascicle test, dump the tree to JSON, and the canvas re-renders within ~500 ms of every save. The hacking loop is `weft-watch <file>` plus a browser tab — the same tightness as a REPL, applied to composition.
 - **Embeddable.** The canvas is a React component (`@robmclarty/weft`). Anything that can mount React can host a fascicle diagram — docs sites, internal tools, post-mortem timelines, runtime overlays of in-flight executions.
+
+## The studio at a glance
+
+![weft studio rendering a fascicle FlowTree with the inspector open on a loop primitive](./docs/assets/studio-overview.png)
+
+The shot above shows the studio in `EMPTY` mode: header tabs (`EMPTY` / `VIEW` / `WATCH`), node search, the canvas rendering a fascicle FlowTree with steps, branches, a labeled `LOOP`, and a `parallel` fan-out, and the right-hand inspector populated with the selected loop's config (`max_rounds`, guard, raw JSON) plus a PNG export action. The whole interface is keyboard-driven — `?` opens the shortcuts modal, `/` jumps into search, arrow keys walk siblings on the canvas — so the studio behaves the same whether you're poking at a tree by hand or watching one stream in over the WebSocket.
 
 ## The pieces
 

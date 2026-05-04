@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" width="320" height="120" role="img" aria-label="weft ransom-note wordmark">
+  <!--
+    Carson-style ransom: mixed case, mixed size, mixed family hue, mixed
+    rotation. Letters touch and overlap like a torn poster. The "W" is
+    huge ink; "e" small orange; "F" giant teal stretched up; "t" magenta
+    italic-ish via skewX. Each letter sits on its own baseline. Flat fills,
+    no textures — the dislocation does the work.
+
+    Order in the DOM is back-to-front so the W (drawn first) sits behind
+    the colored letters that overlap into its body — Carson would have
+    layered photographs here; we layer color blocks instead.
+  -->
+
+  <!-- W: uppercase, 96px, ink, anchor lower-left, no rotation -->
+  <text x="6" y="100"
+        font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+        font-weight="700" font-size="96" letter-spacing="-0.04em"
+        fill="#1a1611">W</text>
+
+  <!-- e: lowercase, 56px, orange, dropped low, rotated -8° -->
+  <g transform="translate(96 92) rotate(-8)">
+    <text x="0" y="0"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+          font-weight="700" font-size="56" letter-spacing="-0.02em"
+          fill="#f25f1f">e</text>
+  </g>
+
+  <!-- F: uppercase, 112px, teal, towering, rotated +4° -->
+  <g transform="translate(146 110) rotate(4)">
+    <text x="0" y="0"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+          font-weight="700" font-size="112" letter-spacing="-0.04em"
+          fill="#1f9b8e">F</text>
+  </g>
+
+  <!-- t: lowercase, 80px, magenta, skewed -12° (faux italic), rotated -2° -->
+  <g transform="translate(238 100) rotate(-2) skewX(-12)">
+    <text x="0" y="0"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+          font-weight="700" font-size="80" letter-spacing="-0.02em"
+          fill="#d6347f">t</text>
+  </g>
+
+  <!-- tiny mono-caps subtitle pinned bottom-right, the only thing that sits
+       perfectly straight — a Carson tic: chaos answered by one rigid
+       caption -->
+  <text x="312" y="116" text-anchor="end"
+        font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+        font-weight="700" font-size="9" letter-spacing="0.18em"
+        fill="#1a1611">— A FASCICLE CANVAS</text>
+</svg>

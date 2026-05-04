@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80" role="img" aria-label="weft emblem: a woven weft and warp">
+  <!--
+    Three horizontal weft threads (family hues, the word "weft" lives here)
+    woven over three vertical ink warp bars. Over/under is a checkerboard:
+    weft goes OVER at the four corners and the center, UNDER at the cardinal
+    points. We draw the weft, then draw the warp on top with gaps cut where
+    weft should win. Pure flat shapes, no gradients, no strokes.
+  -->
+
+  <!-- horizontal weft -->
+  <rect x="0" y="11" width="80" height="8" fill="#f25f1f"/>
+  <rect x="0" y="36" width="80" height="8" fill="#1f9b8e"/>
+  <rect x="0" y="61" width="80" height="8" fill="#d6347f"/>
+
+  <!-- vertical warp at x=15: weft over at y=15 and y=65 -->
+  <rect x="11" y="0"  width="8" height="11" fill="#1a1611"/>
+  <rect x="11" y="19" width="8" height="42" fill="#1a1611"/>
+  <rect x="11" y="69" width="8" height="11" fill="#1a1611"/>
+
+  <!-- vertical warp at x=40: weft over at y=40 only -->
+  <rect x="36" y="0"  width="8" height="36" fill="#1a1611"/>
+  <rect x="36" y="44" width="8" height="36" fill="#1a1611"/>
+
+  <!-- vertical warp at x=65: weft over at y=15 and y=65 -->
+  <rect x="61" y="0"  width="8" height="11" fill="#1a1611"/>
+  <rect x="61" y="19" width="8" height="42" fill="#1a1611"/>
+  <rect x="61" y="69" width="8" height="11" fill="#1a1611"/>
+</svg>

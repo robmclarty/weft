@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 266 96" width="266" height="96" role="img" aria-label="weft wordmark: four colored subway tiles">
+  <!--
+    Subway-tile wordmark. Four 56x56 tiles spelling W E F T, each in a family
+    hue with a 1.5px ink stroke and 4px corners (matches the weft-radius var). Each
+    tile is rotated and baseline-shifted to give the row a Carson-style
+    dislocated rhythm; the reader can still parse the word, but it visibly
+    refuses to sit straight. Yellow tile uses ink type (the "on" token); the
+    rest use cream paper.
+  -->
+
+  <!-- W tile: orange, no rotation, on baseline -->
+  <g transform="translate(40 48)">
+    <rect x="-28" y="-28" width="56" height="56" rx="4"
+          fill="#f25f1f" stroke="#1a1611" stroke-width="1.5"/>
+    <text x="0" y="2" text-anchor="middle" dominant-baseline="central"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+          font-weight="700" font-size="32" letter-spacing="0.02em"
+          fill="#fbf6ea">W</text>
+  </g>
+
+  <!-- E tile: teal, +3°, dropped 8px -->
+  <g transform="translate(102 56) rotate(3)">
+    <rect x="-28" y="-28" width="56" height="56" rx="4"
+          fill="#1f9b8e" stroke="#1a1611" stroke-width="1.5"/>
+    <text x="0" y="2" text-anchor="middle" dominant-baseline="central"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+          font-weight="700" font-size="32" letter-spacing="0.02em"
+          fill="#fbf6ea">E</text>
+  </g>
+
+  <!-- F tile: yellow, -2°, lifted 8px (yellow needs ink type for contrast) -->
+  <g transform="translate(164 40) rotate(-2)">
+    <rect x="-28" y="-28" width="56" height="56" rx="4"
+          fill="#f4c20d" stroke="#1a1611" stroke-width="1.5"/>
+    <text x="0" y="2" text-anchor="middle" dominant-baseline="central"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+          font-weight="700" font-size="32" letter-spacing="0.02em"
+          fill="#1a1611">F</text>
+  </g>
+
+  <!-- T tile: magenta, +6°, dropped 4px -->
+  <g transform="translate(226 52) rotate(6)">
+    <rect x="-28" y="-28" width="56" height="56" rx="4"
+          fill="#d6347f" stroke="#1a1611" stroke-width="1.5"/>
+    <text x="0" y="2" text-anchor="middle" dominant-baseline="central"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+          font-weight="700" font-size="32" letter-spacing="0.02em"
+          fill="#fbf6ea">T</text>
+  </g>
+</svg>

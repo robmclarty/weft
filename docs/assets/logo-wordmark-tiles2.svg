@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -36 286 156" width="286" height="156" role="img" aria-label="weft wordmark with paint-stroke flowchart connectors">
+  <!--
+    Subway-tile wordmark plus graffiti-style paint-stroke connectors:
+    each tile is wired to the next with a bundle of ink arcs that swoop
+    above or below the row, with a chunky arrowhead landing on the next
+    tile. Three primary arcs alternate top, bottom, top so the eye
+    traces a zigzag that mirrors a fascicle flow on the canvas. Each
+    primary is shadowed by two thinner echo strokes (raked-brush
+    effect), with paint splatter dots, short flick marks, and a pair of
+    drips for hand-painted attitude. The magenta flick marks on the
+    right are the only color accent — the rest of the connector grammar
+    reads as black spray paint over the colored tiles. Pure flat shapes,
+    no gradients; the energy comes from rotation, asymmetry, stroke
+    bundles, and round caps.
+  -->
+
+  <defs>
+    <marker id="arrow_ink" viewBox="0 0 14 14" refX="11" refY="7"
+            markerWidth="18" markerHeight="18" orient="auto"
+            markerUnits="userSpaceOnUse">
+      <path d="M 0 0 L 14 7 L 0 14 z" fill="#1a1611"/>
+    </marker>
+  </defs>
+
+  <!-- four subway tiles, identical to logo-wordmark-tiles.svg -->
+  <g transform="translate(40 48)">
+    <rect x="-28" y="-28" width="56" height="56" rx="4"
+          fill="#f25f1f" stroke="#1a1611" stroke-width="1.5"/>
+    <text x="0" y="2" text-anchor="middle" dominant-baseline="central"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+          font-weight="700" font-size="32" letter-spacing="0.02em"
+          fill="#fbf6ea">W</text>
+  </g>
+  <g transform="translate(102 56) rotate(3)">
+    <rect x="-28" y="-28" width="56" height="56" rx="4"
+          fill="#1f9b8e" stroke="#1a1611" stroke-width="1.5"/>
+    <text x="0" y="2" text-anchor="middle" dominant-baseline="central"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+          font-weight="700" font-size="32" letter-spacing="0.02em"
+          fill="#fbf6ea">E</text>
+  </g>
+  <g transform="translate(164 40) rotate(-2)">
+    <rect x="-28" y="-28" width="56" height="56" rx="4"
+          fill="#f4c20d" stroke="#1a1611" stroke-width="1.5"/>
+    <text x="0" y="2" text-anchor="middle" dominant-baseline="central"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+          font-weight="700" font-size="32" letter-spacing="0.02em"
+          fill="#1a1611">F</text>
+  </g>
+  <g transform="translate(226 52) rotate(6)">
+    <rect x="-28" y="-28" width="56" height="56" rx="4"
+          fill="#d6347f" stroke="#1a1611" stroke-width="1.5"/>
+    <text x="0" y="2" text-anchor="middle" dominant-baseline="central"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+          font-weight="700" font-size="32" letter-spacing="0.02em"
+          fill="#fbf6ea">T</text>
+  </g>
+
+  <!-- arc 1: W top to E top, ink raked brush bundle -->
+  <g transform="translate(-4 -5)" opacity="0.4">
+    <path d="M 42 24 C 28 -32, 100 -34, 104 34" fill="none"
+          stroke="#1a1611" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(4 5)" opacity="0.5">
+    <path d="M 42 24 C 28 -32, 100 -34, 104 34" fill="none"
+          stroke="#1a1611" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <path d="M 42 24 C 28 -32, 100 -34, 104 34" fill="none"
+        stroke="#1a1611" stroke-width="7" stroke-linecap="round"
+        marker-end="url(#arrow_ink)"/>
+  <!-- drip from arc 1 peak -->
+  <path d="M 70 -28 L 70 -16" fill="none" stroke="#1a1611"
+        stroke-width="3" stroke-linecap="round"/>
+  <circle cx="70" cy="-13" r="2" fill="#1a1611"/>
+
+  <!-- arc 2: E bottom to F bottom, ink raked brush bundle -->
+  <g transform="translate(-5 4)" opacity="0.4">
+    <path d="M 100 84 C 102 122, 168 116, 162 62" fill="none"
+          stroke="#1a1611" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(5 -4)" opacity="0.5">
+    <path d="M 100 84 C 102 122, 168 116, 162 62" fill="none"
+          stroke="#1a1611" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <path d="M 100 84 C 102 122, 168 116, 162 62" fill="none"
+        stroke="#1a1611" stroke-width="7" stroke-linecap="round"
+        marker-end="url(#arrow_ink)"/>
+
+  <!-- arc 3: F top to T top, ink raked brush bundle -->
+  <g transform="translate(-4 -5)" opacity="0.4">
+    <path d="M 162 14 C 156 -32, 224 -34, 230 30" fill="none"
+          stroke="#1a1611" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(4 5)" opacity="0.5">
+    <path d="M 162 14 C 156 -32, 224 -34, 230 30" fill="none"
+          stroke="#1a1611" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <path d="M 162 14 C 156 -32, 224 -34, 230 30" fill="none"
+        stroke="#1a1611" stroke-width="7" stroke-linecap="round"
+        marker-end="url(#arrow_ink)"/>
+  <!-- drip from arc 3 peak -->
+  <path d="M 192 -32 L 192 -20" fill="none" stroke="#1a1611"
+        stroke-width="3" stroke-linecap="round"/>
+  <circle cx="192" cy="-17" r="2" fill="#1a1611"/>
+
+  <!-- paint splatter dots and flick marks -->
+  <circle cx="56"  cy="-22" r="3.5" fill="#1a1611"/>
+  <circle cx="84"  cy="-30" r="2"   fill="#1a1611"/>
+  <circle cx="34"  cy="-2"  r="1.5" fill="#1a1611"/>
+  <circle cx="122" cy="108" r="3"   fill="#1a1611"/>
+  <circle cx="148" cy="118" r="2"   fill="#1a1611"/>
+  <circle cx="178" cy="92"  r="1.5" fill="#1a1611"/>
+  <circle cx="206" cy="-30" r="3"   fill="#1a1611"/>
+  <circle cx="178" cy="-26" r="1.5" fill="#1a1611"/>
+  <circle cx="246" cy="-4"  r="2"   fill="#1a1611"/>
+
+  <!-- short flick / speed marks -->
+  <path d="M 22 30 L 12 24" fill="none" stroke="#1a1611"
+        stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M 22 38 L 14 38" fill="none" stroke="#1a1611"
+        stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M 256 32 L 264 26" fill="none" stroke="#d6347f"
+        stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M 258 42 L 266 42" fill="none" stroke="#d6347f"
+        stroke-width="2.5" stroke-linecap="round"/>
+</svg>
