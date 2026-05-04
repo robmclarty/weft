@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.1.8 — 2026-05-03
+
+### Added
+
+- The `loop` primitive now renders as a labeled container box wrapping body + guard + back-arc, with the loop-back chip riding the curve's visual apex and external edges anchoring on the box so the exit reads as a single labeled arrow leaving the loop.
+- Workflows end with an explicit `END` terminator pill, except on diverging tails (parallel / branch / fallback) where a single terminator would falsely imply convergence.
+
+### Changed
+
+- Diamond junctions (parallel / branch / fallback) pin their input/output ports at the visible vertices via ELK `FIXED_POS` and hide their React Flow handle dots, so arrow heads land directly on the diamond's tips. Parallel inputs sit on the WEST vertex; outputs spread along the EAST side so N edges don't crash through one point. Parallel port IDs use the edge `sourceHandle` verbatim so wrapper-lifted children (e.g. `pipe(step)`) don't break port resolution.
+- Role-tagged edge labels (`then` / `otherwise` / `primary` / `backup`) stack vertically above their line instead of beside it, ending the chip-over-step collisions on tight branches.
+- Loop-back arcs extend their control points past each endpoint with a 160px minimum radius, and the loop container's padding budgets the visible curve extent — the arc reads as a quarter-turn wrap-around instead of a hairpin diving into the body.
+
+### Fixed
+
+- The studio dev server serves every fixture under `/fixtures/` via a vite middleware (previously only a hand-curated subset was reachable), never auto-collapses the root, and skips the collapse toggle on leaf nodes that have nothing to collapse.
+- Cross-container edge waypoints translate by the LCA's absolute position so sibling-to-sibling edges inside a nested container land in the right place, instead of rendering at the container-local origin well off-canvas.
+
 ## v0.1.7 — 2026-05-03
 
 ### Changed
