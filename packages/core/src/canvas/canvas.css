@@ -694,6 +694,25 @@
 .weft-node-suspend .react-flow__handle { background: var(--weft-suspend-accent); }
 
 /*
+ * Junctions (parallel / branch / fallback) render as small diamond
+ * shapes with the handles anchored at the diamond's tips. The default
+ * 10px handle dot creates a visible gap between the arrow head and the
+ * diamond's visual corner — the arrow tip ends at the dot's edge, not
+ * at the vertex behind it. Hide the handle visual entirely on junctions
+ * so the arrow head lands cleanly at the diamond's point. ELK still
+ * sees the handle for routing; React Flow still uses it as the path
+ * endpoint.
+ */
+.weft-node-junction .react-flow__handle {
+  background: transparent;
+  border: 0;
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+}
+
+/*
  * edges — first-class subway lines. Thick ink stroke by default; selected
  * gets a slightly thicker stroke. Edge labels read as paper pills with
  * monospace caps text. Source-kind tinting will arrive in Phase B via a
