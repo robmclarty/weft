@@ -869,7 +869,7 @@
   border-radius: 0;
   white-space: nowrap;
   color: var(--weft-color-fg);
-  -webkit-text-stroke: 3px var(--weft-color-paper);
+  -webkit-text-stroke: 5px var(--weft-color-paper);
   paint-order: stroke fill;
 }
 
@@ -878,9 +878,13 @@
  * at the polyline's arc-length midpoint. They sit above edges and nodes so a
  * label landing near a node body still reads — the alternative is to compute
  * a node-aware offset, which ELK does not give us for free.
+ *
+ * z-index 3 keeps the label above the SVG edge stroke; at z-index 1 the path
+ * stroke draws on top of the label glyphs in dense graphs and the text reads
+ * as crossed-out.
  */
 .weft-edge-orth-label {
-  z-index: 1;
+  z-index: 3;
 }
 
 /*
