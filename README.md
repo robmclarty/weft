@@ -1,7 +1,5 @@
-# weft
-
 <p>
-  <img src="./docs/assets/logo-wordmark-tiles2.svg" width="286" height="156" alt="weft wordmark with paint-stroke connectors" />
+  <img src="./docs/assets/logo-wordmark-tiles2.svg" width="256" height="156" alt="weft" />
 </p>
 
 UI for [Fascicle](https://github.com/robmclarty/fascicle). A React Flow canvas that visualizes fascicle composition trees — every primitive, every wrapper, every labeled edge — with ELK layout and a live watch loop.
