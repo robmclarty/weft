@@ -703,13 +703,18 @@
  * sees the handle for routing; React Flow still uses it as the path
  * endpoint.
  */
-.weft-node-junction .react-flow__handle {
+/* Higher-specificity selector (two `.weft-node-*` classes on the same
+ * element) so the per-kind rules above — `.weft-node-parallel
+ * .react-flow__handle { background: var(--weft-parallel-accent); }` and
+ * its branch / fallback siblings — can't repaint the handle. */
+.weft-node.weft-node-junction .react-flow__handle {
   background: transparent;
   border: 0;
   width: 1px;
   height: 1px;
   min-width: 0;
   min-height: 0;
+  opacity: 0;
 }
 
 /*
