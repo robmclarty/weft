@@ -64,7 +64,6 @@ const DEFAULT_NODE_HEIGHT = 60;
 
 const PARALLEL_KIND = 'parallel';
 const PARALLEL_INPUT_PORT = 'in';
-const PARALLEL_OUTPUT_PORT_PREFIX = 'out:';
 
 // Branch / fallback junctions: one input on the WEST side and two output ports
 // — happy-path (`then` / `primary`) on the EAST and alt-path (`otherwise` /
@@ -144,7 +143,7 @@ function junction_port_with_pos(
   };
 }
 
-function ports_for(node: WeftNode, fan_out_targets: ReadonlyArray<string>): ElkNode['ports'] | undefined {
+function ports_for(node: WeftNode, fan_out_handles: ReadonlyArray<string>): ElkNode['ports'] | undefined {
   const kind = node.data?.kind ?? '';
   if (kind === PARALLEL_KIND) {
     // Input on WEST at the left vertex; outputs distributed along the
@@ -152,7 +151,14 @@ function ports_for(node: WeftNode, fan_out_targets: ReadonlyArray<string>): ElkN
     // would crash N edges through one point). The center output sits
     // exactly on the right vertex; flanking outputs spread above/below
     // proportionally to their slot among the keys.
-    const n = fan_out_targets.length;
+    //
+    // Port IDs use the edge's `sourceHandle` verbatim (e.g.
+    // `out:typescript`) so they match the port-qualified `sources` we
+    // emit in `build_elk_edges`. Using target-ids here would crash ELK
+    // with "Referenced shape does not exist" the moment the parallel's
+    // child is anything other than a plain step (a wrapper lifts the
+    // child up, so `target` no longer matches the key-based handle).
+    const n = fan_out_handles.length;
     const ports: NonNullable<ElkNode['ports']> = [
       {
         id: `${node.id}::${PARALLEL_INPUT_PORT}`,
@@ -162,13 +168,13 @@ function ports_for(node: WeftNode, fan_out_targets: ReadonlyArray<string>): ElkN
       },
     ];
     for (let i = 0; i < n; i += 1) {
-      const target = fan_out_targets[i];
-      if (target === undefined) continue;
+      const handle = fan_out_handles[i];
+      if (handle === undefined) continue;
       // Spread N ports across the EAST side. With one output that's the
       // center; with N >= 2 they fan out from y = h/(N+1) to y = N*h/(N+1).
       const y = ((i + 1) / (n + 1)) * JUNCTION_DIM;
       ports.push({
-        id: `${node.id}::${PARALLEL_OUTPUT_PORT_PREFIX}${target}`,
+        id: `${node.id}::${handle}`,
         x: JUNCTION_DIM,
         y,
         layoutOptions: junction_port_layout('EAST'),
@@ -294,10 +300,14 @@ function build_subtree(
   const direct = children_of(parent, nodes);
   const result: ElkNode[] = [];
   for (const n of direct) {
+    // Pass the `sourceHandle` strings (e.g. `out:typescript`) of each
+    // outgoing structural edge so port IDs and edge sources stay in
+    // sync — see the comment in `ports_for` for why this matters.
     const fan_out = (n.data?.kind ?? '') === PARALLEL_KIND
       ? edges
         .filter((e) => e.source === n.id && e.data?.kind === 'structural')
-        .map((e) => e.target)
+        .map((e) => (typeof e.sourceHandle === 'string' ? e.sourceHandle : ''))
+        .filter((h) => h !== '')
       : [];
     const sub = build_subtree(n.id, nodes, edges, spacing);
     const has_children = sub.length > 0;

@@ -48,11 +48,13 @@ describe('build_elk_graph', () => {
     // 1 input + 4 fan-out outputs
     expect(port_ids.length).toBe(5);
     expect(port_ids[0]).toBe('par:ordered::in');
+    // Output port IDs use the edge `sourceHandle` (key-based) so they
+    // match the port-qualified `sources` emitted in build_elk_edges.
     expect(port_ids.slice(1)).toEqual([
-      'par:ordered::out:par:ordered/step:first',
-      'par:ordered::out:par:ordered/step:second',
-      'par:ordered::out:par:ordered/step:third',
-      'par:ordered::out:par:ordered/step:fourth',
+      'par:ordered::out:first',
+      'par:ordered::out:second',
+      'par:ordered::out:third',
+      'par:ordered::out:fourth',
     ]);
     // Input port pinned to the diamond's left vertex (x=0, y=h/2).
     const in_port = par?.ports?.find((p) => p.id === 'par:ordered::in');
