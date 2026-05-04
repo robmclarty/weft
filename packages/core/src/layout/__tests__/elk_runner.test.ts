@@ -36,12 +36,14 @@ describe('build_elk_graph', () => {
     expect(graph.layoutOptions?.['elk.direction']).toBe('DOWN');
   });
 
-  it('annotates parallel containers with FIXED_ORDER and one port per fan-out edge', () => {
+  it('annotates parallel containers with FIXED_POS and one port per fan-out edge', () => {
     const { nodes, edges } = graph_for('parallel_ordering.json');
     const graph = build_elk_graph(nodes, edges, resolve_options());
     const par = graph.children?.find((c) => c.id === 'par:ordered');
     expect(par).toBeDefined();
-    expect(par?.layoutOptions?.['org.eclipse.elk.portConstraints']).toBe('FIXED_ORDER');
+    // FIXED_POS pins each port at the diamond's vertex so ELK can't
+    // shift the path endpoint off the visual corner during routing.
+    expect(par?.layoutOptions?.['org.eclipse.elk.portConstraints']).toBe('FIXED_POS');
     const port_ids = par?.ports?.map((p) => p.id) ?? [];
     // 1 input + 4 fan-out outputs
     expect(port_ids.length).toBe(5);
@@ -52,6 +54,10 @@ describe('build_elk_graph', () => {
       'par:ordered::out:par:ordered/step:third',
       'par:ordered::out:par:ordered/step:fourth',
     ]);
+    // Input port pinned to the diamond's left vertex (x=0, y=h/2).
+    const in_port = par?.ports?.find((p) => p.id === 'par:ordered::in');
+    expect(in_port?.x).toBe(0);
+    expect(in_port?.y).toBe(28);
   });
 
   it('sets nodeSize constraints, minimum size, and padding on container nodes that have children', () => {
@@ -79,7 +85,7 @@ describe('build_elk_graph', () => {
     }
   });
 
-  it('annotates branch / fallback junctions with FIXED_SIDE ports (happy=EAST, alt=SOUTH)', () => {
+  it('annotates branch / fallback junctions with FIXED_POS ports (happy=EAST, alt=SOUTH)', () => {
     // Build a minimal graph by hand so the assertion doesn't depend on
     // fixture structure. Two junctions at root: one branch (then/otherwise),
     // one fallback (primary/backup).
@@ -98,21 +104,21 @@ describe('build_elk_graph', () => {
     const graph = build_elk_graph(nodes, edges, resolve_options());
 
     const branch = graph.children?.find((c) => c.id === 'br');
-    expect(branch?.layoutOptions?.['org.eclipse.elk.portConstraints']).toBe('FIXED_SIDE');
+    expect(branch?.layoutOptions?.['org.eclipse.elk.portConstraints']).toBe('FIXED_POS');
     const branch_ports = branch?.ports ?? [];
     expect(branch_ports.find((p) => p.id === 'br::in')?.layoutOptions?.['org.eclipse.elk.port.side']).toBe('WEST');
     expect(branch_ports.find((p) => p.id === 'br::out:then')?.layoutOptions?.['org.eclipse.elk.port.side']).toBe('EAST');
     expect(branch_ports.find((p) => p.id === 'br::out:otherwise')?.layoutOptions?.['org.eclipse.elk.port.side']).toBe('SOUTH');
 
     const fallback = graph.children?.find((c) => c.id === 'fb');
-    expect(fallback?.layoutOptions?.['org.eclipse.elk.portConstraints']).toBe('FIXED_SIDE');
+    expect(fallback?.layoutOptions?.['org.eclipse.elk.portConstraints']).toBe('FIXED_POS');
     const fallback_ports = fallback?.ports ?? [];
     expect(fallback_ports.find((p) => p.id === 'fb::out:primary')?.layoutOptions?.['org.eclipse.elk.port.side']).toBe('EAST');
     expect(fallback_ports.find((p) => p.id === 'fb::out:backup')?.layoutOptions?.['org.eclipse.elk.port.side']).toBe('SOUTH');
   });
 
   it('binds branch / fallback edges to specific ports via `sources`', () => {
-    // The FIXED_SIDE side assignment only takes effect when ELK can match
+    // The FIXED_POS port placement only takes effect when ELK can match
     // each edge to its declared port. A branch's `then` edge must list
     // `<branch>::out:then` as its source, not the bare junction id.
     const nodes: WeftNode[] = [

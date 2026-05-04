@@ -117,22 +117,62 @@ function children_of(parent: string | null, nodes: ReadonlyArray<WeftNode>): Wef
 function elk_options_for(node: WeftNode): Record<string, string> {
   const options: Record<string, string> = {};
   const kind = node.data?.kind ?? '';
-  if (kind === PARALLEL_KIND) {
-    options['org.eclipse.elk.portConstraints'] = 'FIXED_ORDER';
-  } else if (kind === BRANCH_KIND || kind === FALLBACK_KIND) {
-    options['org.eclipse.elk.portConstraints'] = 'FIXED_SIDE';
+  if (kind === PARALLEL_KIND || kind === BRANCH_KIND || kind === FALLBACK_KIND) {
+    // FIXED_POS pins each port at the explicit (x, y) we declare below
+    // so the path endpoint lands ON the diamond's visible vertex
+    // instead of ELK shifting it for routing convenience. With auto
+    // port placement the input port could end up several pixels above
+    // or below the node center, leaving a visible gap between the
+    // arrow tip and the diamond corner.
+    options['org.eclipse.elk.portConstraints'] = 'FIXED_POS';
   }
   return options;
+}
+
+const JUNCTION_DIM = 56;
+
+function junction_port_with_pos(
+  side: 'WEST' | 'EAST' | 'SOUTH',
+  y_factor: number,
+): { x: number; y: number; layoutOptions: Record<string, string> } {
+  const cy = (JUNCTION_DIM / 2) * (1 + (y_factor - 1)); // y_factor = 1 → center
+  const south = side === 'SOUTH';
+  return {
+    x: side === 'WEST' ? 0 : side === 'EAST' ? JUNCTION_DIM : JUNCTION_DIM / 2,
+    y: south ? JUNCTION_DIM : cy,
+    layoutOptions: junction_port_layout(side),
+  };
 }
 
 function ports_for(node: WeftNode, fan_out_targets: ReadonlyArray<string>): ElkNode['ports'] | undefined {
   const kind = node.data?.kind ?? '';
   if (kind === PARALLEL_KIND) {
+    // Input on WEST at the left vertex; outputs distributed along the
+    // EAST side so they don't all stack at the right vertex (which
+    // would crash N edges through one point). The center output sits
+    // exactly on the right vertex; flanking outputs spread above/below
+    // proportionally to their slot among the keys.
+    const n = fan_out_targets.length;
     const ports: NonNullable<ElkNode['ports']> = [
-      { id: `${node.id}::${PARALLEL_INPUT_PORT}` },
+      {
+        id: `${node.id}::${PARALLEL_INPUT_PORT}`,
+        x: 0,
+        y: JUNCTION_DIM / 2,
+        layoutOptions: junction_port_layout('WEST'),
+      },
     ];
-    for (const target of fan_out_targets) {
-      ports.push({ id: `${node.id}::${PARALLEL_OUTPUT_PORT_PREFIX}${target}` });
+    for (let i = 0; i < n; i += 1) {
+      const target = fan_out_targets[i];
+      if (target === undefined) continue;
+      // Spread N ports across the EAST side. With one output that's the
+      // center; with N >= 2 they fan out from y = h/(N+1) to y = N*h/(N+1).
+      const y = ((i + 1) / (n + 1)) * JUNCTION_DIM;
+      ports.push({
+        id: `${node.id}::${PARALLEL_OUTPUT_PORT_PREFIX}${target}`,
+        x: JUNCTION_DIM,
+        y,
+        layoutOptions: junction_port_layout('EAST'),
+      });
     }
     return ports;
   }
@@ -142,15 +182,15 @@ function ports_for(node: WeftNode, fan_out_targets: ReadonlyArray<string>): ElkN
     return [
       {
         id: `${node.id}::${JUNCTION_INPUT_PORT}`,
-        layoutOptions: junction_port_layout('WEST'),
+        ...junction_port_with_pos('WEST', 1),
       },
       {
         id: `${node.id}::out:${happy}`,
-        layoutOptions: junction_port_layout('EAST'),
+        ...junction_port_with_pos('EAST', 1),
       },
       {
         id: `${node.id}::out:${alt}`,
-        layoutOptions: junction_port_layout('SOUTH'),
+        ...junction_port_with_pos('SOUTH', 1),
       },
     ];
   }
@@ -311,6 +351,10 @@ function build_subtree(
 // excluding them gives layered cycle-breaking a clean DAG to work with.
 const LAYOUT_IGNORED_EDGE_KINDS = new Set(['loop-back', 'self-loop']);
 
+function is_junction(kind: string): boolean {
+  return kind === BRANCH_KIND || kind === FALLBACK_KIND || kind === PARALLEL_KIND;
+}
+
 function build_elk_edges(
   edges: ReadonlyArray<WeftEdge>,
   nodes: ReadonlyArray<WeftNode>,
@@ -320,22 +364,25 @@ function build_elk_edges(
   const out: NonNullable<ElkNode['edges']> = [];
   for (const e of edges) {
     if (LAYOUT_IGNORED_EDGE_KINDS.has(e.data?.kind ?? '')) continue;
-    // Branch / fallback junctions declare ports with FIXED_SIDE so the
-    // happy-path edge exits east and the alt-path edge exits south. Bind
-    // the edge to the specific port via `sources` so ELK actually honors
-    // the side assignment — without a port-qualified source, ELK is free
-    // to pick any side and we lose the routing benefit.
+    // Junction nodes declare ports with FIXED_POS at the diamond's
+    // visible vertices. Port-qualify both ends of every edge that
+    // touches a junction so ELK routes to/from the pinned port instead
+    // of inventing a free position on the side — which used to leave
+    // the arrow tip a few pixels above or below the visible corner.
     const src = by_id.get(e.source);
+    const tgt = by_id.get(e.target);
     const src_kind = src?.data?.kind ?? '';
-    const has_fixed_side = src_kind === BRANCH_KIND || src_kind === FALLBACK_KIND;
+    const tgt_kind = tgt?.data?.kind ?? '';
     const source_port =
-      has_fixed_side && typeof e.sourceHandle === 'string'
+      is_junction(src_kind) && typeof e.sourceHandle === 'string'
         ? `${e.source}::${e.sourceHandle}`
         : null;
+    // Junction inputs always come in via the `in` port (the only WEST port).
+    const target_port = is_junction(tgt_kind) ? `${e.target}::${JUNCTION_INPUT_PORT}` : null;
     out.push({
       id: e.id,
       sources: [source_port ?? e.source],
-      targets: [e.target],
+      targets: [target_port ?? e.target],
     });
   }
   return out;
