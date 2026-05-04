@@ -1,0 +1,1027 @@
+{
+  "version": 1,
+  "root": {
+    "kind": "compose",
+    "id": "the_loom",
+    "config": { "display_name": "The Loom" },
+    "meta": {
+      "display_name": "The Loom",
+      "description": "A multi-agent research engine — every primitive, woven into one circuit."
+    },
+    "children": [
+      {
+        "kind": "sequence",
+        "id": "spine",
+        "children": [
+
+          {
+            "kind": "compose",
+            "id": "p1__ingest",
+            "config": { "display_name": "Ingestion Lattice" },
+            "children": [
+              {
+                "kind": "sequence",
+                "id": "p1__seq",
+                "children": [
+                  {
+                    "kind": "checkpoint",
+                    "id": "p1__checkpoint__raw_query",
+                    "config": { "key": "raw_query", "display_name": "cache_input" },
+                    "children": [
+                      {
+                        "kind": "step",
+                        "id": "p1__step__fetch_query",
+                        "config": { "fn": { "kind": "<fn>", "name": "ingest" } }
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "scope",
+                    "id": "p1__scope",
+                    "children": [
+                      {
+                        "kind": "stash",
+                        "id": "p1__stash__query",
+                        "config": { "key": "query" },
+                        "children": [
+                          {
+                            "kind": "step",
+                            "id": "p1__step__normalize",
+                            "config": { "fn": { "kind": "<fn>", "name": "normalize" } }
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "parallel",
+                        "id": "p1__par__search",
+                        "config": { "keys": ["broad", "deep", "exact"] },
+                        "children": [
+                          {
+                            "kind": "retry",
+                            "id": "p1__retry__broad",
+                            "config": { "max_attempts": 3, "backoff_ms": 250 },
+                            "children": [
+                              {
+                                "kind": "timeout",
+                                "id": "p1__timeout__broad",
+                                "config": { "ms": 6000 },
+                                "children": [
+                                  {
+                                    "kind": "step",
+                                    "id": "p1__step__search_broad",
+                                    "config": { "fn": { "kind": "<fn>", "name": "search_broad" } }
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "kind": "retry",
+                            "id": "p1__retry__deep",
+                            "config": { "max_attempts": 5, "backoff_ms": 500 },
+                            "children": [
+                              {
+                                "kind": "timeout",
+                                "id": "p1__timeout__deep",
+                                "config": { "ms": 12000 },
+                                "children": [
+                                  {
+                                    "kind": "map",
+                                    "id": "p1__map__urls",
+                                    "config": {
+                                      "items": { "kind": "<fn>", "name": "urls" },
+                                      "concurrency": 4
+                                    },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p1__step__crawl_deep",
+                                        "config": { "fn": { "kind": "<fn>", "name": "crawl_deep" } }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "kind": "pipe",
+                            "id": "p1__pipe__normalize_url",
+                            "config": { "fn": { "kind": "<fn>", "name": "normalize_url" } },
+                            "children": [
+                              {
+                                "kind": "step",
+                                "id": "p1__step__search_exact",
+                                "config": { "fn": { "kind": "<fn>", "name": "search_exact" } }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "stash",
+                        "id": "p1__stash__candidates",
+                        "config": { "key": "candidates" },
+                        "children": [
+                          {
+                            "kind": "step",
+                            "id": "p1__step__merge_dedupe",
+                            "config": { "fn": { "kind": "<fn>", "name": "merge_dedupe" } }
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "use",
+                        "id": "p1__use__filter",
+                        "config": { "keys": ["query", "candidates"] },
+                        "children": [
+                          {
+                            "kind": "step",
+                            "id": "p1__step__filter_relevant",
+                            "config": { "fn": { "kind": "<fn>", "name": "filter_relevant" } }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+
+          {
+            "kind": "compose",
+            "id": "p2__tournament",
+            "config": { "display_name": "Ensemble Tournament" },
+            "children": [
+              {
+                "kind": "loop",
+                "id": "p2__loop",
+                "config": { "max_rounds": 5, "display_name": "tournament_rounds" },
+                "children": [
+                  {
+                    "kind": "sequence",
+                    "id": "p2__loop_body",
+                    "children": [
+                      {
+                        "kind": "parallel",
+                        "id": "p2__par__agents",
+                        "config": { "keys": ["critic", "oracle", "curator", "architect"] },
+                        "children": [
+                          {
+                            "kind": "compose",
+                            "id": "p2__agent_critic",
+                            "config": { "display_name": "critic" },
+                            "children": [
+                              {
+                                "kind": "sequence",
+                                "id": "p2__critic__seq",
+                                "children": [
+                                  {
+                                    "kind": "timeout",
+                                    "id": "p2__critic__timeout",
+                                    "config": { "ms": 8000 },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__critic__step_think",
+                                        "config": { "fn": { "kind": "<fn>", "name": "think_critic" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "retry",
+                                    "id": "p2__critic__retry",
+                                    "config": { "max_attempts": 3, "backoff_ms": 200 },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__critic__step_critique",
+                                        "config": { "fn": { "kind": "<fn>", "name": "critique" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "pipe",
+                                    "id": "p2__critic__pipe",
+                                    "config": { "fn": { "kind": "<fn>", "name": "format_md" } },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__critic__step_emit",
+                                        "config": { "fn": { "kind": "<fn>", "name": "emit_critic" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "checkpoint",
+                                    "id": "p2__critic__checkpoint",
+                                    "config": { "key": "critic_out" },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__critic__step_record",
+                                        "config": { "fn": { "kind": "<fn>", "name": "record_critic" } }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "kind": "compose",
+                            "id": "p2__agent_oracle",
+                            "config": { "display_name": "oracle" },
+                            "children": [
+                              {
+                                "kind": "sequence",
+                                "id": "p2__oracle__seq",
+                                "children": [
+                                  {
+                                    "kind": "timeout",
+                                    "id": "p2__oracle__timeout",
+                                    "config": { "ms": 8000 },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__oracle__step_think",
+                                        "config": { "fn": { "kind": "<fn>", "name": "think_oracle" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "retry",
+                                    "id": "p2__oracle__retry",
+                                    "config": { "max_attempts": 3, "backoff_ms": 200 },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__oracle__step_predict",
+                                        "config": { "fn": { "kind": "<fn>", "name": "predict" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "pipe",
+                                    "id": "p2__oracle__pipe",
+                                    "config": { "fn": { "kind": "<fn>", "name": "format_md" } },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__oracle__step_emit",
+                                        "config": { "fn": { "kind": "<fn>", "name": "emit_oracle" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "checkpoint",
+                                    "id": "p2__oracle__checkpoint",
+                                    "config": { "key": "oracle_out" },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__oracle__step_record",
+                                        "config": { "fn": { "kind": "<fn>", "name": "record_oracle" } }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "kind": "compose",
+                            "id": "p2__agent_curator",
+                            "config": { "display_name": "curator" },
+                            "children": [
+                              {
+                                "kind": "sequence",
+                                "id": "p2__curator__seq",
+                                "children": [
+                                  {
+                                    "kind": "timeout",
+                                    "id": "p2__curator__timeout",
+                                    "config": { "ms": 8000 },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__curator__step_think",
+                                        "config": { "fn": { "kind": "<fn>", "name": "think_curator" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "retry",
+                                    "id": "p2__curator__retry",
+                                    "config": { "max_attempts": 3, "backoff_ms": 200 },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__curator__step_curate",
+                                        "config": { "fn": { "kind": "<fn>", "name": "curate" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "pipe",
+                                    "id": "p2__curator__pipe",
+                                    "config": { "fn": { "kind": "<fn>", "name": "format_md" } },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__curator__step_emit",
+                                        "config": { "fn": { "kind": "<fn>", "name": "emit_curator" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "checkpoint",
+                                    "id": "p2__curator__checkpoint",
+                                    "config": { "key": "curator_out" },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__curator__step_record",
+                                        "config": { "fn": { "kind": "<fn>", "name": "record_curator" } }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "kind": "compose",
+                            "id": "p2__agent_architect",
+                            "config": { "display_name": "architect" },
+                            "children": [
+                              {
+                                "kind": "sequence",
+                                "id": "p2__architect__seq",
+                                "children": [
+                                  {
+                                    "kind": "timeout",
+                                    "id": "p2__architect__timeout",
+                                    "config": { "ms": 8000 },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__architect__step_think",
+                                        "config": { "fn": { "kind": "<fn>", "name": "think_architect" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "retry",
+                                    "id": "p2__architect__retry",
+                                    "config": { "max_attempts": 3, "backoff_ms": 200 },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__architect__step_design",
+                                        "config": { "fn": { "kind": "<fn>", "name": "design" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "pipe",
+                                    "id": "p2__architect__pipe",
+                                    "config": { "fn": { "kind": "<fn>", "name": "format_md" } },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__architect__step_emit",
+                                        "config": { "fn": { "kind": "<fn>", "name": "emit_architect" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "checkpoint",
+                                    "id": "p2__architect__checkpoint",
+                                    "config": { "key": "architect_out" },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p2__architect__step_record",
+                                        "config": { "fn": { "kind": "<fn>", "name": "record_architect" } }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "fallback",
+                        "id": "p2__fb__judge",
+                        "config": { "display_name": "judge" },
+                        "children": [
+                          {
+                            "kind": "step",
+                            "id": "p2__step__consensus_vote",
+                            "config": { "fn": { "kind": "<fn>", "name": "consensus_vote" } }
+                          },
+                          {
+                            "kind": "step",
+                            "id": "p2__step__majority_vote",
+                            "config": { "fn": { "kind": "<fn>", "name": "majority_vote" } }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "branch",
+                    "id": "p2__guard",
+                    "config": {
+                      "when": { "kind": "<fn>", "name": "is_improving" },
+                      "display_name": "improving?"
+                    },
+                    "children": [
+                      {
+                        "kind": "step",
+                        "id": "p2__step__continue_round",
+                        "config": { "fn": { "kind": "<fn>", "name": "continue_round" } }
+                      },
+                      {
+                        "kind": "step",
+                        "id": "p2__step__seal_winner",
+                        "config": { "fn": { "kind": "<fn>", "name": "seal_winner" } }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+
+          {
+            "kind": "compose",
+            "id": "p3__adversarial",
+            "config": { "display_name": "Adversarial Loop" },
+            "children": [
+              {
+                "kind": "loop",
+                "id": "p3__loop",
+                "config": { "max_rounds": 8, "display_name": "red_vs_blue" },
+                "children": [
+                  {
+                    "kind": "sequence",
+                    "id": "p3__loop_body",
+                    "children": [
+                      {
+                        "kind": "parallel",
+                        "id": "p3__par__teams",
+                        "config": { "keys": ["red_team", "blue_team"] },
+                        "children": [
+                          {
+                            "kind": "compose",
+                            "id": "p3__red",
+                            "config": { "display_name": "red team" },
+                            "children": [
+                              {
+                                "kind": "parallel",
+                                "id": "p3__red__par",
+                                "config": { "keys": ["propose", "attack", "defend"] },
+                                "children": [
+                                  {
+                                    "kind": "retry",
+                                    "id": "p3__red__retry__propose",
+                                    "config": { "max_attempts": 3, "backoff_ms": 100 },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p3__red__step__propose",
+                                        "config": { "fn": { "kind": "<fn>", "name": "red_propose" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "timeout",
+                                    "id": "p3__red__timeout__attack",
+                                    "config": { "ms": 4000 },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p3__red__step__attack",
+                                        "config": { "fn": { "kind": "<fn>", "name": "red_attack" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "pipe",
+                                    "id": "p3__red__pipe__defend",
+                                    "config": { "fn": { "kind": "<fn>", "name": "harden" } },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p3__red__step__defend",
+                                        "config": { "fn": { "kind": "<fn>", "name": "red_defend" } }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "kind": "compose",
+                            "id": "p3__blue",
+                            "config": { "display_name": "blue team" },
+                            "children": [
+                              {
+                                "kind": "parallel",
+                                "id": "p3__blue__par",
+                                "config": { "keys": ["propose", "attack", "defend"] },
+                                "children": [
+                                  {
+                                    "kind": "retry",
+                                    "id": "p3__blue__retry__propose",
+                                    "config": { "max_attempts": 3, "backoff_ms": 100 },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p3__blue__step__propose",
+                                        "config": { "fn": { "kind": "<fn>", "name": "blue_propose" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "timeout",
+                                    "id": "p3__blue__timeout__attack",
+                                    "config": { "ms": 4000 },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p3__blue__step__attack",
+                                        "config": { "fn": { "kind": "<fn>", "name": "blue_attack" } }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "kind": "pipe",
+                                    "id": "p3__blue__pipe__defend",
+                                    "config": { "fn": { "kind": "<fn>", "name": "harden" } },
+                                    "children": [
+                                      {
+                                        "kind": "step",
+                                        "id": "p3__blue__step__defend",
+                                        "config": { "fn": { "kind": "<fn>", "name": "blue_defend" } }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "fallback",
+                        "id": "p3__fb__resolve",
+                        "config": { "display_name": "resolve" },
+                        "children": [
+                          {
+                            "kind": "step",
+                            "id": "p3__step__consensus_resolve",
+                            "config": { "fn": { "kind": "<fn>", "name": "consensus_resolve" } }
+                          },
+                          {
+                            "kind": "step",
+                            "id": "p3__step__arbitrate",
+                            "config": { "fn": { "kind": "<fn>", "name": "arbitrate" } }
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "scope",
+                        "id": "p3__scope",
+                        "children": [
+                          {
+                            "kind": "stash",
+                            "id": "p3__stash__round_log",
+                            "config": { "key": "round_log" },
+                            "children": [
+                              {
+                                "kind": "step",
+                                "id": "p3__step__log_round",
+                                "config": { "fn": { "kind": "<fn>", "name": "log_round" } }
+                              }
+                            ]
+                          },
+                          {
+                            "kind": "use",
+                            "id": "p3__use__round_log",
+                            "config": { "keys": ["round_log"] },
+                            "children": [
+                              {
+                                "kind": "branch",
+                                "id": "p3__branch__converged",
+                                "config": {
+                                  "when": { "kind": "<fn>", "name": "converged" },
+                                  "display_name": "converged?"
+                                },
+                                "children": [
+                                  {
+                                    "kind": "step",
+                                    "id": "p3__step__stabilize",
+                                    "config": { "fn": { "kind": "<fn>", "name": "stabilize" } }
+                                  },
+                                  {
+                                    "kind": "step",
+                                    "id": "p3__step__escalate",
+                                    "config": { "fn": { "kind": "<fn>", "name": "escalate" } }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+
+          {
+            "kind": "compose",
+            "id": "p4__meta_research",
+            "config": { "display_name": "Self-Improving Meta-Research" },
+            "children": [
+              {
+                "kind": "loop",
+                "id": "p4__loop",
+                "config": { "max_rounds": 4, "display_name": "meta_rounds" },
+                "children": [
+                  {
+                    "kind": "sequence",
+                    "id": "p4__loop_body",
+                    "children": [
+                      {
+                        "kind": "parallel",
+                        "id": "p4__par__pipelines",
+                        "config": {
+                          "keys": ["hypothesize", "experiment", "evaluate", "refine"]
+                        },
+                        "children": [
+                          {
+                            "kind": "compose",
+                            "id": "p4__hypothesize",
+                            "config": { "display_name": "hypothesize" },
+                            "children": [
+                              {
+                                "kind": "parallel",
+                                "id": "p4__hypothesize__par",
+                                "config": { "keys": ["bold", "conservative", "contrarian"] },
+                                "children": [
+                                  {
+                                    "kind": "step",
+                                    "id": "p4__hypothesize__step_bold",
+                                    "config": { "fn": { "kind": "<fn>", "name": "h_bold" } }
+                                  },
+                                  {
+                                    "kind": "step",
+                                    "id": "p4__hypothesize__step_conservative",
+                                    "config": { "fn": { "kind": "<fn>", "name": "h_conservative" } }
+                                  },
+                                  {
+                                    "kind": "step",
+                                    "id": "p4__hypothesize__step_contrarian",
+                                    "config": { "fn": { "kind": "<fn>", "name": "h_contrarian" } }
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "kind": "compose",
+                            "id": "p4__experiment",
+                            "config": { "display_name": "experiment" },
+                            "children": [
+                              {
+                                "kind": "map",
+                                "id": "p4__experiment__map",
+                                "config": {
+                                  "items": { "kind": "<fn>", "name": "experiments" },
+                                  "concurrency": 4
+                                },
+                                "children": [
+                                  {
+                                    "kind": "retry",
+                                    "id": "p4__experiment__retry",
+                                    "config": { "max_attempts": 3, "backoff_ms": 250 },
+                                    "children": [
+                                      {
+                                        "kind": "timeout",
+                                        "id": "p4__experiment__timeout",
+                                        "config": { "ms": 10000 },
+                                        "children": [
+                                          {
+                                            "kind": "step",
+                                            "id": "p4__experiment__step_run",
+                                            "config": { "fn": { "kind": "<fn>", "name": "run_experiment" } }
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "kind": "compose",
+                            "id": "p4__evaluate",
+                            "config": { "display_name": "evaluate" },
+                            "children": [
+                              {
+                                "kind": "fallback",
+                                "id": "p4__evaluate__fb",
+                                "config": { "display_name": "judge_eval" },
+                                "children": [
+                                  {
+                                    "kind": "step",
+                                    "id": "p4__evaluate__step_llm_judge",
+                                    "config": { "fn": { "kind": "<fn>", "name": "llm_judge" } }
+                                  },
+                                  {
+                                    "kind": "step",
+                                    "id": "p4__evaluate__step_rubric_judge",
+                                    "config": { "fn": { "kind": "<fn>", "name": "rubric_judge" } }
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "kind": "compose",
+                            "id": "p4__refine",
+                            "config": { "display_name": "refine" },
+                            "children": [
+                              {
+                                "kind": "pipe",
+                                "id": "p4__refine__pipe",
+                                "config": { "fn": { "kind": "<fn>", "name": "improve_prompt" } },
+                                "children": [
+                                  {
+                                    "kind": "step",
+                                    "id": "p4__refine__step",
+                                    "config": { "fn": { "kind": "<fn>", "name": "refine_step" } }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "scope",
+                        "id": "p4__scope",
+                        "children": [
+                          {
+                            "kind": "stash",
+                            "id": "p4__stash__findings",
+                            "config": { "key": "findings" },
+                            "children": [
+                              {
+                                "kind": "step",
+                                "id": "p4__step__record_findings",
+                                "config": { "fn": { "kind": "<fn>", "name": "record_findings" } }
+                              }
+                            ]
+                          },
+                          {
+                            "kind": "use",
+                            "id": "p4__use__findings",
+                            "config": { "keys": ["findings"] },
+                            "children": [
+                              {
+                                "kind": "step",
+                                "id": "p4__step__distill_findings",
+                                "config": { "fn": { "kind": "<fn>", "name": "distill_findings" } }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+
+          {
+            "kind": "compose",
+            "id": "p5__synthesis",
+            "config": { "display_name": "Synthesis" },
+            "children": [
+              {
+                "kind": "scope",
+                "id": "p5__scope",
+                "children": [
+                  {
+                    "kind": "stash",
+                    "id": "p5__stash__best",
+                    "config": { "key": "best" },
+                    "children": [
+                      {
+                        "kind": "step",
+                        "id": "p5__step__pick_best",
+                        "config": { "fn": { "kind": "<fn>", "name": "pick_best" } }
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "parallel",
+                    "id": "p5__par__writers",
+                    "config": { "keys": ["outline", "intro", "body", "conclusion"] },
+                    "children": [
+                      {
+                        "kind": "pipe",
+                        "id": "p5__pipe__outline",
+                        "config": { "fn": { "kind": "<fn>", "name": "plan" } },
+                        "children": [
+                          {
+                            "kind": "step",
+                            "id": "p5__step__write_outline",
+                            "config": { "fn": { "kind": "<fn>", "name": "write_outline" } }
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "pipe",
+                        "id": "p5__pipe__intro",
+                        "config": { "fn": { "kind": "<fn>", "name": "hook" } },
+                        "children": [
+                          {
+                            "kind": "step",
+                            "id": "p5__step__write_intro",
+                            "config": { "fn": { "kind": "<fn>", "name": "write_intro" } }
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "map",
+                        "id": "p5__map__body",
+                        "config": {
+                          "items": { "kind": "<fn>", "name": "sections" },
+                          "concurrency": 3
+                        },
+                        "children": [
+                          {
+                            "kind": "step",
+                            "id": "p5__step__write_body",
+                            "config": { "fn": { "kind": "<fn>", "name": "write_body" } }
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "pipe",
+                        "id": "p5__pipe__conclusion",
+                        "config": { "fn": { "kind": "<fn>", "name": "close" } },
+                        "children": [
+                          {
+                            "kind": "step",
+                            "id": "p5__step__write_conclusion",
+                            "config": { "fn": { "kind": "<fn>", "name": "write_conclusion" } }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "use",
+                    "id": "p5__use__weave",
+                    "config": {
+                      "keys": ["query", "candidates", "findings", "best", "round_log"]
+                    },
+                    "children": [
+                      {
+                        "kind": "fallback",
+                        "id": "p5__fb__combine",
+                        "config": { "display_name": "combine" },
+                        "children": [
+                          {
+                            "kind": "step",
+                            "id": "p5__step__weave",
+                            "config": { "fn": { "kind": "<fn>", "name": "weave" } }
+                          },
+                          {
+                            "kind": "step",
+                            "id": "p5__step__concat",
+                            "config": { "fn": { "kind": "<fn>", "name": "concat" } }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+
+          {
+            "kind": "branch",
+            "id": "p6__branch__validate",
+            "config": {
+              "when": { "kind": "<fn>", "name": "quality_pass" },
+              "display_name": "validate"
+            },
+            "children": [
+              {
+                "kind": "step",
+                "id": "p6__step__approve",
+                "config": { "fn": { "kind": "<fn>", "name": "approve" } }
+              },
+              {
+                "kind": "retry",
+                "id": "p6__retry__revise",
+                "config": { "max_attempts": 2, "backoff_ms": 500 },
+                "children": [
+                  {
+                    "kind": "step",
+                    "id": "p6__step__revise",
+                    "config": { "fn": { "kind": "<fn>", "name": "revise" } }
+                  }
+                ]
+              }
+            ]
+          },
+
+          {
+            "kind": "suspend",
+            "id": "p7__suspend__ship_review",
+            "config": { "id": "ship_review" },
+            "meta": {
+              "display_name": "Human Approval",
+              "description": "Pause for human review before publishing."
+            }
+          },
+
+          {
+            "kind": "parallel",
+            "id": "p8__par__publish",
+            "config": { "keys": ["markdown", "html", "json", "slides"] },
+            "children": [
+              {
+                "kind": "pipe",
+                "id": "p8__pipe__md",
+                "config": { "fn": { "kind": "<fn>", "name": "to_md" } },
+                "children": [
+                  {
+                    "kind": "step",
+                    "id": "p8__step__emit_md",
+                    "config": { "fn": { "kind": "<fn>", "name": "emit_md" } }
+                  }
+                ]
+              },
+              {
+                "kind": "pipe",
+                "id": "p8__pipe__html",
+                "config": { "fn": { "kind": "<fn>", "name": "to_html" } },
+                "children": [
+                  {
+                    "kind": "step",
+                    "id": "p8__step__emit_html",
+                    "config": { "fn": { "kind": "<fn>", "name": "emit_html" } }
+                  }
+                ]
+              },
+              {
+                "kind": "pipe",
+                "id": "p8__pipe__json",
+                "config": { "fn": { "kind": "<fn>", "name": "to_json" } },
+                "children": [
+                  {
+                    "kind": "step",
+                    "id": "p8__step__emit_json",
+                    "config": { "fn": { "kind": "<fn>", "name": "emit_json" } }
+                  }
+                ]
+              },
+              {
+                "kind": "pipe",
+                "id": "p8__pipe__slides",
+                "config": { "fn": { "kind": "<fn>", "name": "to_slides" } },
+                "children": [
+                  {
+                    "kind": "step",
+                    "id": "p8__step__emit_slides",
+                    "config": { "fn": { "kind": "<fn>", "name": "emit_slides" } }
+                  }
+                ]
+              }
+            ]
+          }
+
+        ]
+      }
+    ]
+  }
+}
