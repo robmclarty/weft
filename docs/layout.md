@@ -1,16 +1,53 @@
-# Layout-quality improvement plan
+# Layout quality
 
-Working doc for the canvas-layout cleanup pass. Goal: stop iterating blind on
-ELK options. Build a quantitative feedback loop, then sweep ELK, then decide
-whether to add a separate orthogonal routing pass.
+The work documented in this file landed across v0.1.4 → v0.1.6. Today's pipeline is what those phases produced; the rest of the document is the decision log that got us there. Read this top section for the current state, the rest for context.
 
-The pain we're solving: `all_primitives.json` renders with squiggly,
-criss-crossing edges that take detours and are hard to read. Current setup
-in [packages/core/src/layout/elk_runner.ts](../packages/core/src/layout/elk_runner.ts):
-ELK `layered` + `ORTHOGONAL` + `INCLUDE_CHILDREN` with default node placement
-and minimal spacing tuning.
+## Current state
 
-## Phases
+The layout pipeline lives in [packages/core/src/layout/](../packages/core/src/layout/):
+
+- **Engine.** `elkjs` `layered` + `ORTHOGONAL` + `INCLUDE_CHILDREN`, run in a Web Worker via `elkjs/lib/elk-worker.min.js` (no `unsafe-eval`). Falls back to `fallback_layout` when `Worker` is unavailable or ELK exceeds the 10s timeout (`layout_graph.ts`).
+- **Edge routing.** `apply_edge_routes` in `elk_runner.ts` harvests ELK's computed `sections` per edge and writes them onto `WeftEdgeData.waypoints` in root (flow) coordinate space, accumulating ancestor offsets so cross-container edges land in the right place. `WeftOrthogonalEdge` (registered as `weft-orth`, the default edge type) renders the polyline with rounded corners (8 px, clamped to half the shorter incident segment). `self-loop` and `loop-back` keep their dedicated arc components — those are synthetic, ELK can't usefully route them.
+- **Spacing defaults.** `node_spacing: 120`, `rank_spacing: 200`. Tuned for "see the flow first, fit-everything second" — thick orthogonal edges with arrowheads need a long visible run between adjacent stops or the head dominates and the line vanishes (`layout_options.ts`).
+- **Junction ports.** Branch / fallback junctions use `FIXED_SIDE`: input WEST, happy-path EAST, alt-path SOUTH. Parallel uses `FIXED_ORDER` so declaration order survives. v0.1.8 added `FIXED_POS` so arrowheads land directly on the diamond's visible vertex.
+- **Auto-fit.** `padding: 0.06`, `minZoom: 0.1`, `maxZoom: 1`. A staggered retry fan (`80, 220, 480 ms`) catches React Flow's late measurement pass on deeply-nested subflows; `useNodesInitialized()` proved unreliable when ELK supplies explicit node sizes (its ResizeObserver path doesn't always fire). MiniMap hides under 12 nodes.
+
+The metric numbers on the canonical fixtures, after Phase 2 (ELK waypoints piped through React Flow) plus the v0.1.6 visual cleanup:
+
+| fixture            | crossings | bends | totalEdgeLength | nodeEdgeOverlaps |
+|--------------------|----------:|------:|----------------:|-----------------:|
+| simple_sequence    |         0 |     0 |              40 |                0 |
+| all_primitives     |         0 |    18 |          1967.9 |                1 |
+| full_primitive_set |         0 |     4 |           155.5 |                0 |
+
+## Tooling
+
+The same tools used to drive this work are wired into `pnpm`:
+
+- **`pnpm metrics`** ([scripts/layout-metrics.mjs](../scripts/layout-metrics.mjs)) — Playwright walks each canonical fixture, parses every `.react-flow__edge-path` polyline and `.react-flow__node` transform, computes crossings / bends / total-edge-length / node-edge-overlaps. Output: `.check/layout-metrics.json` plus a per-fixture screenshot at `.check/layout-metrics-screenshots/<name>.png`. Expects the studio dev server already running on `:5173`. Compose nodes are auto-expanded before measurement.
+- **`pnpm metrics:vision`** ([scripts/layout-vision-score.mjs](../scripts/layout-vision-score.mjs)) — spawns the local `claude` CLI with each screenshot and a four-axis rubric (`edge_clutter`, `label_readability`, `container_clarity`, `balance`, scored 1–5 plus weighted `overall`), and writes `.check/layout-vision-scores.json`. Picks up the user's existing Claude Code auth (OAuth, API key, Bedrock, Vertex). `CLAUDE_CLI_BIN` overrides the binary path.
+- **`pnpm metrics:graphviz`** ([scripts/layout-graphviz-benchmark.mjs](../scripts/layout-graphviz-benchmark.mjs)) — diagnostic-only Graphviz `dot` benchmark with `splines=ortho rankdir=LR`. Tells you whether residual visual issues are an engine ceiling or a property of the input shape. Not a shipping path: Graphviz `splines=ortho` ignores cluster boundaries and per-node ports.
+
+## Optional: libavoid spike
+
+`LayoutOptions.router: 'elk' | 'libavoid'` (default `'elk'`) selects the edge router. `libavoid-js` (LGPL-2.1-or-later, `optionalDependencies` of `@repo/core`) routes orthogonally with object avoidance and parallel-edge nudging.
+
+The studio exposes the spike as `?router=libavoid`; copy the WASM blob into the studio's `public/` first:
+
+```sh
+cp node_modules/.pnpm/libavoid-js@*/node_modules/libavoid-js/dist/libavoid.wasm \
+   packages/studio/public/libavoid.wasm
+```
+
+The `libavoid_wasm_url` option threads through `LayoutGraphOptions` so the lazy `AvoidLib.load(url)` finds the blob.
+
+Phase 4 benchmark (May 2026) found libavoid loses on every axis on these fixtures (`displayRoute()` returns endpoint-only polylines, drawing straight diagonals through obstacles). The spike stays for reproducibility but the default is ELK.
+
+## History
+
+What follows is the record of how the current architecture got built. Useful if you're considering changes to layout — the dead ends are documented so you don't repeat them. Original framing was "Phases" because that's how the work was sequenced; the chronological notes follow under "Decision log".
+
+### Phases
 
 ### Phase 1 — Metrics scaffolding (the unlock)
 

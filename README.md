@@ -2,9 +2,9 @@
 
 UI for [Fascicle](https://github.com/robmclarty/fascicle). A React Flow canvas that visualizes fascicle composition trees — every primitive, every wrapper, every labeled edge — with ELK layout and a live watch loop.
 
-![weft studio rendering an agent_pipeline FlowTree](./docs/assets/studio-canvas.png)
+![weft studio rendering a fascicle FlowTree with the inspector open on a loop primitive](./docs/assets/studio-overview.png)
 
-The shot above is one fascicle FlowTree rendered by the studio: a `compose` root containing `stash`, a `branch` (the diamond, with `THEN` / `OTHERWISE`), a `use` reading the stashed key, a `cycle` with its `u ≤ 5` back-edge, a `parallel` of language-specific translations, and a `suspend` resume gate.
+The shot above shows the studio in `EMPTY` mode: header tabs (`EMPTY` / `VIEW` / `WATCH`), node search, the canvas rendering a fascicle FlowTree with steps, branches, a labeled `LOOP`, and a `parallel` fan-out, and the right-hand inspector populated with the selected loop's config (`max_rounds`, guard, raw JSON) plus a PNG export action.
 
 ## Why weft exists
 
@@ -25,12 +25,19 @@ weft renders the tree so you can see it. Three commitments shape the project:
 | `packages/watch` | `@repo/watch` | `@robmclarty/weft-watch` | Node CLI: tails a JSON file, broadcasts changes over a localhost WS  |
 | `packages/studio` | `@repo/studio` | — (unpublished SPA)   | Vite app with `/view?src=…` (URL fetch) and `/watch?ws=…` (live)      |
 
-## Getting started
+## Documentation
 
-- New to the repo? Start with [docs/getting-started.md](./docs/getting-started.md).
-- Working with an agent in this repo? Read [AGENTS.md](./AGENTS.md) (universal) and [CLAUDE.md](./CLAUDE.md) (Claude-specific).
-- Visual testing strategy lives in [docs/visual-testing.md](./docs/visual-testing.md).
-- Layout quality work is tracked in [docs/layout-quality-plan.md](./docs/layout-quality-plan.md).
+- [docs/getting-started.md](./docs/getting-started.md) — clone, install, see the canvas.
+- [docs/architecture.md](./docs/architecture.md) — how a `FlowTree` becomes pixels.
+- [docs/primitives.md](./docs/primitives.md) — visual catalogue of every primitive.
+- [docs/studio.md](./docs/studio.md) — studio routes, loader, inspector, shortcuts.
+- [docs/watch.md](./docs/watch.md) — the live-watch agent loop with `weft-watch`.
+- [docs/embedding.md](./docs/embedding.md) — mounting `<WeftCanvas>` in your own app.
+- [docs/layout.md](./docs/layout.md) — layout pipeline, metrics tooling, libavoid spike.
+- [docs/visual-testing.md](./docs/visual-testing.md) — Playwright, screenshots, agent-browser.
+- [docs/canvas-redesign-bc-deluxe.md](./docs/canvas-redesign-bc-deluxe.md) — topology decisions reference.
+
+Working with an agent in this repo? Read [AGENTS.md](./AGENTS.md) (universal) and [CLAUDE.md](./CLAUDE.md) (Claude-specific).
 
 ## License
 

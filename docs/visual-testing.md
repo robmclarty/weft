@@ -1,6 +1,6 @@
 # Visual testing
 
-Two browser automation tools are wired into this repo. They have different jobs.
+Four tools cover the visual surface, each with a different job.
 
 ## Playwright — deterministic e2e
 
@@ -15,30 +15,46 @@ Config: [test/e2e/playwright.config.ts](../test/e2e/playwright.config.ts).
 Default smoke spec: [test/e2e/smoke.spec.ts](../test/e2e/smoke.spec.ts).
 Fixtures (static HTML): [test/e2e/fixtures/](../test/e2e/fixtures/).
 
-The `e2e` check is opt-in (like `mutation`). It does not run in default
-`pnpm check` because Playwright launches a browser and is slower than the
-unit-test loop. Wire it into a phase build by passing `--include e2e`.
+The `e2e` check is opt-in (like `mutation`). It does not run in default `pnpm check` because Playwright launches a browser and is slower than the unit-test loop. Wire it into a phase build by passing `--include e2e`.
 
 Output:
 
 - `.check/e2e.json` — Playwright JSON reporter
 - `.check/e2e-artifacts/` — traces and failure screenshots
 
-The studio's dev server is auto-booted by Playwright's `webServer` block
-(`pnpm --filter @repo/studio build && preview`, port 4173). Override with
-`WEFT_E2E_NO_WEBSERVER=1` if you've already launched the studio yourself.
+The studio's dev server is auto-booted by Playwright's `webServer` block (`pnpm --filter @repo/studio build && preview`, port 4173). Override with `WEFT_E2E_NO_WEBSERVER=1` if you've already launched the studio yourself.
 
-In sandboxed environments where Chromium can't launch (some macOS harnesses,
-Linux containers without nested user namespaces), `scripts/run-e2e.mjs`
-detects the failure and exits 0 with a notice. Override with `WEFT_FORCE_E2E=1`
-to always run.
+In sandboxed environments where Chromium can't launch (some macOS harnesses, Linux containers without nested user namespaces), `scripts/run-e2e.mjs` detects the failure and exits 0 with a notice. Override with `WEFT_FORCE_E2E=1` to always run.
+
+## `pnpm screenshots` — canonical canvas snapshots
+
+Drives Playwright through every fixture in `fixtures/` (plus the empty state) and writes one PNG per scenario to `.screenshots/<name>.png`, with `.screenshots/manifest.json` indexing the set. Compose nodes are auto-expanded before the snap so you see the full machine, not the collapsed root.
+
+```bash
+pnpm screenshots
+```
+
+Diff `.screenshots/<name>.png` against the previous run after any change to canvas chrome, node renderers, or layout. The output is gitignored — capture it locally per change set.
+
+## `pnpm metrics` — quantitative layout scores
+
+Drives Playwright through the canonical fixtures and walks the rendered DOM to compute four numbers per fixture: edge crossings, bend count, total edge length, node-edge overlaps. Writes `.check/layout-metrics.json` plus a side-by-side screenshot at `.check/layout-metrics-screenshots/<name>.png`.
+
+```bash
+pnpm --filter @repo/studio dev   # in one terminal
+pnpm metrics                     # in another; expects :5173 already running
+```
+
+Use this for regressions on layout-quality work. See [docs/layout.md](./layout.md) for the pipeline the numbers measure and the option-sweep history.
+
+Companion scorers live alongside:
+
+- `pnpm metrics:vision` — Claude vision-LLM rubric (edge clutter, label readability, container clarity, balance) per screenshot. Spawns the local `claude` CLI; uses your existing Claude Code auth. Output: `.check/layout-vision-scores.json`.
+- `pnpm metrics:graphviz` — diagnostic-only Graphviz `dot` benchmark with `splines=ortho rankdir=LR`. Tells you whether residual visual issues are an engine ceiling or a property of the input shape.
 
 ## agent-browser — exploratory verification
 
-Use when the builder needs an LLM-friendly browser loop:
-`open` → `snapshot` (returns `ref=eN` element refs) → `click @eN` /
-`fill @eN`. Annotated screenshots overlay numbered labels matching the
-snapshot refs, which is exactly what an agent wants to see.
+Use when the builder needs an LLM-friendly browser loop: `open` → `snapshot` (returns `ref=eN` element refs) → `click @eN` / `fill @eN`. Annotated screenshots overlay numbered labels matching the snapshot refs, which is exactly what an agent wants to see.
 
 ```bash
 pnpm exec agent-browser open https://example.com
@@ -54,8 +70,7 @@ Or load the bundled skill for the full reference:
 pnpm exec agent-browser skills get core --full
 ```
 
-Smoke script: [scripts/agent-browser-smoke.mjs](../scripts/agent-browser-smoke.mjs).
-Run it any time to confirm the CLI and Chrome binary are healthy:
+Smoke script: [scripts/agent-browser-smoke.mjs](../scripts/agent-browser-smoke.mjs). Run it any time to confirm the CLI and Chrome binary are healthy:
 
 ```bash
 pnpm test:agent-browser
@@ -69,5 +84,7 @@ Output:
 ## When to reach for which
 
 - Writing a regression test that should pass on every build → **Playwright**.
-- Asking "does this UI actually work, does it look right" mid-task → **agent-browser**.
+- Snapping the canonical fixtures after a chrome / renderer change → **`pnpm screenshots`**.
+- Measuring whether a layout change improved or regressed crossings / bends / overlaps → **`pnpm metrics`** (+ `metrics:vision` for taste, `metrics:graphviz` for engine ceiling).
+- Asking "does this UI actually work, does it look right" mid-task → **agent-browser**, or [Playwright MCP](../CLAUDE.md) when an agent is driving.
 - Need a screenshot to attach to a result for a human reviewer → either; agent-browser is faster from the command line, Playwright is better when you already have a spec context.
