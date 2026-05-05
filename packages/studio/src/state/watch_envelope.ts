@@ -29,6 +29,12 @@ export type WatchEnvelope =
   | {
       readonly kind: 'event';
       readonly event: Readonly<Record<string, unknown>>;
+    }
+  | {
+      readonly kind: 'events_invalid';
+      readonly path: string;
+      readonly line_number: number;
+      readonly message: string;
     };
 
 function get(value: object, key: string): unknown {
@@ -57,6 +63,13 @@ export function is_watch_envelope(raw: unknown): raw is WatchEnvelope {
   if (kind === 'event') {
     const event = get(raw, 'event');
     return typeof event === 'object' && event !== null;
+  }
+  if (kind === 'events_invalid') {
+    return (
+      typeof get(raw, 'path') === 'string' &&
+      typeof get(raw, 'line_number') === 'number' &&
+      typeof get(raw, 'message') === 'string'
+    );
   }
   return false;
 }

@@ -47,6 +47,7 @@ export function WatchRoute({ socket_factory }: WatchRouteProps = {}): JSX.Elemen
   const [tree, set_tree] = useState<FlowTree | null>(null);
   const [invalid_msg, set_invalid_msg] = useState<string | null>(null);
   const [unreachable_msg, set_unreachable_msg] = useState<string | null>(null);
+  const [events_invalid_msg, set_events_invalid_msg] = useState<string | null>(null);
   const [loader_error, set_loader_error] = useState<LoaderError | null>(null);
 
   useEffect(() => {
@@ -72,10 +73,21 @@ export function WatchRoute({ socket_factory }: WatchRouteProps = {}): JSX.Elemen
     }
     if (env.kind === 'unreachable') {
       set_unreachable_msg(`${env.path} is ${env.reason}`);
+      return;
+    }
+    if (env.kind === 'events_invalid') {
+      set_events_invalid_msg(
+        `${env.path}:${String(env.line_number)}: ${env.message}`,
+      );
     }
   }, [socket_state.last_envelope]);
 
-  const banner = build_status_banner(socket_state, unreachable_msg, invalid_msg);
+  const banner = build_status_banner(
+    socket_state,
+    unreachable_msg,
+    invalid_msg,
+    events_invalid_msg,
+  );
 
   return (
     <main className="weft-main" data-weft-route="watch">
@@ -110,6 +122,7 @@ function build_status_banner(
   state: ReturnType<typeof use_watch_socket>,
   unreachable_msg: string | null,
   invalid_msg: string | null,
+  events_invalid_msg: string | null,
 ): JSX.Element | undefined {
   if (state.status === 'gave_up') {
     return (
@@ -148,6 +161,9 @@ function build_status_banner(
   }
   if (invalid_msg !== null) {
     return <Banner tone="error">{invalid_msg}</Banner>;
+  }
+  if (events_invalid_msg !== null) {
+    return <Banner tone="warn">trajectory line dropped — {events_invalid_msg}</Banner>;
   }
   return undefined;
 }

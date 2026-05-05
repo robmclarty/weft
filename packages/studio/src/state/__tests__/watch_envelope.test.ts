@@ -55,4 +55,38 @@ describe('is_watch_envelope', () => {
       is_watch_envelope({ kind: 'invalid', path: '/tmp/x' }),
     ).toBe(false);
   });
+
+  it('accepts an event envelope', () => {
+    expect(
+      is_watch_envelope({
+        kind: 'event',
+        event: { kind: 'span_start', span_id: 's1', name: 'step', id: 'fetch' },
+      }),
+    ).toBe(true);
+  });
+
+  it('accepts an events_invalid envelope', () => {
+    expect(
+      is_watch_envelope({
+        kind: 'events_invalid',
+        path: '/tmp/trajectory.jsonl',
+        line_number: 7,
+        message: 'invalid JSON: unexpected token',
+      }),
+    ).toBe(true);
+  });
+
+  it('rejects an events_invalid envelope without all fields', () => {
+    expect(
+      is_watch_envelope({ kind: 'events_invalid', path: '/tmp/x' }),
+    ).toBe(false);
+    expect(
+      is_watch_envelope({
+        kind: 'events_invalid',
+        path: '/tmp/x',
+        line_number: '7',
+        message: 'x',
+      }),
+    ).toBe(false);
+  });
 });
