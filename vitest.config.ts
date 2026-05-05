@@ -63,18 +63,18 @@ const projects: NonNullable<NonNullable<Parameters<typeof defineConfig>[0]['test
     test: {
       name: 'unit',
       include: [
-        'packages/*/src/**/*.{test,spec}.ts',
-        'test/integration/**/*.{test,spec}.ts',
+        'packages/*/src/**/*.test.ts',
+        'test/integration/**/*.test.ts',
       ],
       // Component-level tests (.tsx) need a DOM and run in the react-jsdom
       // and (when chromium is available) browser projects. .ts files in
       // canvas/nodes/ — pure helpers like node_helpers.test.ts — stay here.
       exclude: [
-        'packages/core/src/canvas/**/*.{test,spec}.tsx',
-        'packages/core/src/nodes/**/*.{test,spec}.tsx',
-        'packages/core/src/edges/**/*.{test,spec}.tsx',
-        'packages/studio/src/**/*.{test,spec}.tsx',
-        'packages/studio/src/state/**/use_*.{test,spec}.{ts,tsx}',
+        'packages/core/src/canvas/**/*.test.tsx',
+        'packages/core/src/nodes/**/*.test.tsx',
+        'packages/core/src/edges/**/*.test.tsx',
+        'packages/studio/src/**/*.test.tsx',
+        'packages/studio/src/state/**/use_*.test.{ts,tsx}',
       ],
       environment: 'node',
     },
@@ -84,11 +84,11 @@ const projects: NonNullable<NonNullable<Parameters<typeof defineConfig>[0]['test
     test: {
       name: 'react-jsdom',
       include: [
-        'packages/core/src/canvas/**/*.{test,spec}.tsx',
-        'packages/core/src/nodes/**/*.{test,spec}.tsx',
-        'packages/core/src/edges/**/*.{test,spec}.tsx',
-        'packages/studio/src/**/*.{test,spec}.tsx',
-        'packages/studio/src/state/**/use_*.{test,spec}.{ts,tsx}',
+        'packages/core/src/canvas/**/*.test.tsx',
+        'packages/core/src/nodes/**/*.test.tsx',
+        'packages/core/src/edges/**/*.test.tsx',
+        'packages/studio/src/**/*.test.tsx',
+        'packages/studio/src/state/**/use_*.test.{ts,tsx}',
       ],
       environment: 'jsdom',
       setupFiles: ['packages/core/test/setup_jsdom.ts'],
@@ -102,9 +102,9 @@ if (include_browser) {
     test: {
       name: 'browser',
       include: [
-        'packages/core/src/canvas/**/*.{test,spec}.tsx',
-        'packages/core/src/nodes/**/*.{test,spec}.tsx',
-        'packages/core/src/edges/**/*.{test,spec}.tsx',
+        'packages/core/src/canvas/**/*.test.tsx',
+        'packages/core/src/nodes/**/*.test.tsx',
+        'packages/core/src/edges/**/*.test.tsx',
       ],
       browser: {
         enabled: true,
@@ -122,7 +122,7 @@ export default defineConfig({
       provider: 'v8',
       include: ['packages/*/src/**/*.{ts,tsx}'],
       exclude: [
-        'packages/*/src/**/*.{test,spec}.{ts,tsx}',
+        'packages/*/src/**/*.test.{ts,tsx}',
         'packages/*/src/**/*.d.ts',
         'packages/*/src/test_helpers.ts',
         'packages/*/src/nodes/render_helpers.ts',

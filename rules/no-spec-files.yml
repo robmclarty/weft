@@ -1,0 +1,9 @@
+id: no-spec-files
+message: Test files must use the .test.ts extension, not .spec.ts.
+severity: error
+language: typescript
+files:
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
+rule:
+  kind: program

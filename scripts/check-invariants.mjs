@@ -42,7 +42,7 @@ const OUTPUT_DIR = join(ROOT, '.check');
 
 const PACKAGE_NAMES = ['core', 'weft', 'studio', 'watch'];
 
-const TEST_FILE = /\.(test|spec)\.tsx?$/;
+const TEST_FILE = /\.test\.tsx?$/;
 const DECLARATION_FILE = /\.d\.ts$/;
 const SOURCE_FILE = /\.tsx?$/;
 

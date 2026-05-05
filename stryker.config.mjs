@@ -13,7 +13,7 @@ export default {
   reporters: ['clear-text', 'html', 'json'],
   htmlReporter: { fileName: '.check/mutation/report.html' },
   jsonReporter: { fileName: '.check/mutation.json' },
-  mutate: ['packages/*/src/**/*.ts', '!packages/*/src/**/*.test.ts', '!packages/*/src/**/*.spec.ts'],
+  mutate: ['packages/*/src/**/*.ts', '!packages/*/src/**/*.test.ts'],
   coverageAnalysis: 'perTest',
   incremental: true,
   incrementalFile: '.check/mutation.incremental.json',

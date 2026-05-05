@@ -15,6 +15,7 @@ const STUDIO_PORT = 4173;
  */
 export default defineConfig({
   testDir: here,
+  testMatch: '**/*.test.ts',
   fullyParallel: false,
   forbidOnly: Boolean(process.env['CI']),
   retries: process.env['CI'] ? 2 : 0,
