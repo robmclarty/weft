@@ -78,6 +78,7 @@
     "tsgolint",
     "unrefs",
     "vitest",
+    "wordmark",
     "xyflow",
     "zoomable"
   ]
