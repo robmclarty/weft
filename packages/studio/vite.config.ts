@@ -6,16 +6,16 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const fixtures_dir = resolve(here, '../../fixtures');
+const examples_dir = resolve(here, '../../examples');
 
-// Serve `/fixtures/*.json` from the repo root so the studio always picks
-// up new fixtures without a copy step. Keeps `fixtures/` as the single
+// Serve `/examples/*.json` from the repo root so the studio always picks
+// up new examples without a copy step. Keeps `examples/` as the single
 // source of truth across studio, scripts/, and test/e2e/.
-function serve_root_fixtures(): Plugin {
+function serve_root_examples(): Plugin {
   return {
-    name: 'weft-serve-root-fixtures',
+    name: 'weft-serve-root-examples',
     configureServer(server) {
-      server.middlewares.use('/fixtures', (req, res, next) => {
+      server.middlewares.use('/examples', (req, res, next) => {
         const url = req.url ?? '';
         if (!url.endsWith('.json')) {
           next();
@@ -27,7 +27,7 @@ function serve_root_fixtures(): Plugin {
           res.end('bad request');
           return;
         }
-        readFile(join(fixtures_dir, safe))
+        readFile(join(examples_dir, safe))
           .then((body) => {
             res.setHeader('content-type', 'application/json');
             res.end(body);
@@ -41,7 +41,7 @@ function serve_root_fixtures(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), serve_root_fixtures()],
+  plugins: [react(), serve_root_examples()],
   server: {
     port: 5173,
     strictPort: true,

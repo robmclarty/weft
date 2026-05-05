@@ -76,7 +76,7 @@ Output schema:
 ```json
 {
   "timestamp": "...",
-  "fixtures": [
+  "examples": [
     {
       "name": "all_primitives",
       "metrics": {

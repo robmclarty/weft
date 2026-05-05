@@ -3,10 +3,10 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const fixture_url = `file://${join(here, 'fixtures', 'blank.html')}`;
+const smoke_url = `file://${join(here, 'smoke.html')}`;
 
-test('smoke: fixture renders, button toggles state, screenshot captured', async ({ page }, test_info) => {
-  await page.goto(fixture_url);
+test('smoke: page renders, button toggles state, screenshot captured', async ({ page }, test_info) => {
+  await page.goto(smoke_url);
 
   await expect(page).toHaveTitle('weft e2e smoke');
   await expect(page.locator('#hello')).toHaveText('Hello, weft.');

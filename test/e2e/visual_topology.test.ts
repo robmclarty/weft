@@ -18,7 +18,7 @@ import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo_root = join(here, '..', '..');
-const fixtures_dir = join(repo_root, 'fixtures');
+const examples_dir = join(repo_root, 'examples');
 
 const VIEWPORT = { width: 1440, height: 900 } as const;
 // React Flow's auto-fit + ELK layout settle inside ~900ms; pad to 1500
@@ -40,8 +40,8 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/');
 });
 
-async function load_fixture_via_paste(page: import('@playwright/test').Page, name: string): Promise<void> {
-  const text = await readFile(join(fixtures_dir, name), 'utf8');
+async function load_example_via_paste(page: import('@playwright/test').Page, name: string): Promise<void> {
+  const text = await readFile(join(examples_dir, name), 'utf8');
   await page.locator('textarea').fill(text);
   await page.getByRole('button', { name: 'load pasted JSON' }).click();
   await page.waitForSelector('[data-weft-kind]', { timeout: 5000 });
@@ -49,7 +49,7 @@ async function load_fixture_via_paste(page: import('@playwright/test').Page, nam
 }
 
 test('all_primitives: no sequence or scope chrome appears in the DOM', async ({ page }) => {
-  await load_fixture_via_paste(page, 'all_primitives.json');
+  await load_example_via_paste(page, 'all_primitives.json');
   const sequences = await page.locator('[data-weft-kind="sequence"]').count();
   const scopes = await page.locator('[data-weft-kind="scope"]').count();
   expect(sequences).toBe(0);
@@ -57,7 +57,7 @@ test('all_primitives: no sequence or scope chrome appears in the DOM', async ({ 
 });
 
 test('all_primitives: every compose mounts expanded by default', async ({ page }) => {
-  await load_fixture_via_paste(page, 'all_primitives.json');
+  await load_example_via_paste(page, 'all_primitives.json');
   const composes = page.locator('[data-weft-kind="compose"]');
   const total = await composes.count();
   expect(total).toBeGreaterThanOrEqual(1);
@@ -71,7 +71,7 @@ test('all_primitives: every compose mounts expanded by default', async ({ page }
 });
 
 test('all_primitives: every step is connected to the edge graph', async ({ page }) => {
-  await load_fixture_via_paste(page, 'all_primitives.json');
+  await load_example_via_paste(page, 'all_primitives.json');
   // Every visible step node must appear as the source or target of at
   // least one rendered edge. React Flow tags edges with
   // `data-source` / `data-target` on the .react-flow__edge wrapper.

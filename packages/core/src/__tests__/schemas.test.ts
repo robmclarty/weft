@@ -5,36 +5,36 @@ import {
   flow_tree_schema,
   flow_value_schema,
 } from '../schemas.js';
-import { load_fixture_raw } from '../test_helpers.js';
+import { load_example_raw } from '../test_helpers.js';
 
 describe('flow_tree_schema', () => {
   it('accepts simple_sequence.json', () => {
-    const result = flow_tree_schema.safeParse(load_fixture_raw('simple_sequence.json'));
+    const result = flow_tree_schema.safeParse(load_example_raw('simple_sequence.json'));
     expect(result.success).toBe(true);
   });
 
   it('accepts nested_parallel.json', () => {
-    const result = flow_tree_schema.safeParse(load_fixture_raw('nested_parallel.json'));
+    const result = flow_tree_schema.safeParse(load_example_raw('nested_parallel.json'));
     expect(result.success).toBe(true);
   });
 
   it('accepts full_primitive_set.json', () => {
-    const result = flow_tree_schema.safeParse(load_fixture_raw('full_primitive_set.json'));
+    const result = flow_tree_schema.safeParse(load_example_raw('full_primitive_set.json'));
     expect(result.success).toBe(true);
   });
 
   it('accepts cycle_bug.json', () => {
-    const result = flow_tree_schema.safeParse(load_fixture_raw('cycle_bug.json'));
+    const result = flow_tree_schema.safeParse(load_example_raw('cycle_bug.json'));
     expect(result.success).toBe(true);
   });
 
   it('accepts parallel_ordering.json', () => {
-    const result = flow_tree_schema.safeParse(load_fixture_raw('parallel_ordering.json'));
+    const result = flow_tree_schema.safeParse(load_example_raw('parallel_ordering.json'));
     expect(result.success).toBe(true);
   });
 
   it('accepts all_primitives.json', () => {
-    const result = flow_tree_schema.safeParse(load_fixture_raw('all_primitives.json'));
+    const result = flow_tree_schema.safeParse(load_example_raw('all_primitives.json'));
     expect(result.success).toBe(true);
   });
 

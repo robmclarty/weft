@@ -3,7 +3,7 @@
  * agent-browser smoke test.
  *
  * Exercises the full open → snapshot → click → eval → screenshot loop against
- * the same fixture used by the Playwright smoke spec. Proves the CLI, browser
+ * the same page used by the Playwright smoke test. Proves the CLI, browser
  * binary, and screenshot capture are all wired up before the builder needs to
  * rely on them in phase 03 (layout-and-canvas).
  *
@@ -24,7 +24,7 @@ import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo_root = join(here, '..');
-const fixture_url = `file://${join(repo_root, 'test', 'e2e', 'fixtures', 'blank.html')}`;
+const smoke_url = `file://${join(repo_root, 'test', 'e2e', 'smoke.html')}`;
 const screenshots_dir = join(repo_root, '.check', 'screenshots');
 const screenshot_path = join(screenshots_dir, 'agent-browser-smoke.png');
 const result_path = join(repo_root, '.check', 'agent-browser-smoke.json');
@@ -61,7 +61,7 @@ async function main() {
 
   const steps = [];
 
-  const open_step = run(['open', fixture_url], 'open');
+  const open_step = run(['open', smoke_url], 'open');
   steps.push(open_step);
   if (open_step.exit_code !== 0) {
     return fail(steps, 'open failed');
@@ -117,7 +117,7 @@ try {
 
   const report = {
     timestamp: new Date().toISOString(),
-    fixture: fixture_url,
+    page: smoke_url,
     screenshot: result.ok ? screenshot_path : null,
     ...result,
   };

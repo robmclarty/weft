@@ -3,7 +3,7 @@
  * Visual snapshots of the studio for design iteration.
  *
  * Boots the dev server (or expects one on :5173), drives Playwright through
- * the canonical fixture scenarios, and writes PNGs into `.screenshots/`.
+ * the canonical example scenarios, and writes PNGs into `.screenshots/`.
  * Run after a CSS or rendering change to compare side-by-side.
  *
  *   pnpm screenshots                    # all scenarios at default zoom
@@ -29,27 +29,27 @@ const SCENARIOS = [
   { name: 'empty', path: '/' },
   {
     name: 'simple_sequence',
-    path: '/view?src=http://127.0.0.1:5173/fixtures/simple_sequence.json',
+    path: '/view?src=http://127.0.0.1:5173/examples/simple_sequence.json',
   },
   {
     name: 'all_primitives',
-    path: '/view?src=http://127.0.0.1:5173/fixtures/all_primitives.json',
+    path: '/view?src=http://127.0.0.1:5173/examples/all_primitives.json',
   },
   {
     name: 'full_primitive_set',
-    path: '/view?src=http://127.0.0.1:5173/fixtures/full_primitive_set.json',
+    path: '/view?src=http://127.0.0.1:5173/examples/full_primitive_set.json',
   },
   {
     name: 'cycle_bug',
-    path: '/view?src=http://127.0.0.1:5173/fixtures/cycle_bug.json',
+    path: '/view?src=http://127.0.0.1:5173/examples/cycle_bug.json',
   },
   {
     name: 'nested_parallel',
-    path: '/view?src=http://127.0.0.1:5173/fixtures/nested_parallel.json',
+    path: '/view?src=http://127.0.0.1:5173/examples/nested_parallel.json',
   },
   {
     name: 'parallel_ordering',
-    path: '/view?src=http://127.0.0.1:5173/fixtures/parallel_ordering.json',
+    path: '/view?src=http://127.0.0.1:5173/examples/parallel_ordering.json',
   },
 ];
 
@@ -66,17 +66,11 @@ async function ensure_server_up(url, max_attempts = 40) {
   throw new Error(`dev server never came up at ${url}`);
 }
 
-function copy_fixtures_to_public() {
-  // Cheap: rely on the public/fixtures path the studio's vite serves.
-  // Nothing to do here at runtime — this script assumes copies exist.
-}
-
 async function main() {
   const args = new Set(process.argv.slice(2));
   const keep_server = args.has('--keep-server');
 
   await mkdir(out_dir, { recursive: true });
-  copy_fixtures_to_public();
 
   const dev = spawn(
     'pnpm',

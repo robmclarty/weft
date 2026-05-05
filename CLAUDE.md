@@ -21,7 +21,7 @@ Read [AGENTS.md](./AGENTS.md) for the universal contract. This file only adds wh
 When changing canvas chrome, layout, or any per-node renderer:
 
 1. Boot the studio: `pnpm --filter @repo/studio dev`.
-2. Open `http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/fixtures/all_primitives.json` (the deepest-nesting fixture; covers every primitive).
+2. Open `http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/examples/all_primitives.json` (the deepest-nesting example; covers every primitive).
 3. Make the change; Vite HMRs.
 4. Compare against the previous baseline with `pnpm screenshots` — this writes `.screenshots/<scenario>.png`. Diff against the prior run.
 5. Auto-fit only fires once per tree per mount, gated by an in-component ref. Persistence stores the user's pinned viewport; the canvas treats `{zoom:1,x:0,y:0}` as "no preference" so the first load auto-fits even after the persistence layer touches the LRU index.

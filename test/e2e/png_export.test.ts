@@ -13,11 +13,11 @@ const repo_root = join(here, '..', '..');
 
 test('PNG export downloads a non-empty image/png blob', async ({ page }) => {
   await page.goto('/');
-  const fixture = await readFile(
-    join(repo_root, 'fixtures', 'simple_sequence.json'),
+  const example = await readFile(
+    join(repo_root, 'examples', 'simple_sequence.json'),
     'utf8',
   );
-  await page.locator('textarea').fill(fixture);
+  await page.locator('textarea').fill(example);
   await page.getByRole('button', { name: 'load pasted JSON' }).click();
   await page.waitForSelector('[data-weft-kind="step"]', { timeout: 5000 });
   // Wait for layout to settle so html-to-image has stable bounds.

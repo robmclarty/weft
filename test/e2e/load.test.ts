@@ -11,11 +11,11 @@ import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo_root = join(here, '..', '..');
-const fixture_path = join(repo_root, 'fixtures', 'full_primitive_set.json');
+const example_path = join(repo_root, 'examples', 'full_primitive_set.json');
 
-test('paste loader renders the fixture with the expected node kinds', async ({ page }) => {
+test('paste loader renders the example with the expected node kinds', async ({ page }) => {
   await page.goto('/');
-  const text = await readFile(fixture_path, 'utf8');
+  const text = await readFile(example_path, 'utf8');
   const textarea = page.locator('textarea');
   await textarea.fill(text);
   await page.getByRole('button', { name: 'load pasted JSON' }).click();

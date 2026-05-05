@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { flow_tree_schema, type FlowTree } from '../../schemas.js';
-import { load_fixture_raw } from '../../test_helpers.js';
+import { load_example_raw } from '../../test_helpers.js';
 import { tree_to_graph, type WeftEdge, type WeftNode } from '../tree_to_graph.js';
 
 function parse_fixture(name: string): FlowTree {
-  return flow_tree_schema.parse(load_fixture_raw(name));
+  return flow_tree_schema.parse(load_example_raw(name));
 }
 
 function find_by_id(nodes: ReadonlyArray<WeftNode>, id: string): WeftNode | undefined {
@@ -282,7 +282,7 @@ describe('tree_to_graph: parallel ordering regression', () => {
 
 describe('tree_to_graph: input is not mutated', () => {
   it('leaves the input deep-equal to a pre-call clone', () => {
-    const fixture = load_fixture_raw('full_primitive_set.json');
+    const fixture = load_example_raw('full_primitive_set.json');
     const before = JSON.parse(JSON.stringify(fixture)) as unknown;
     const tree = flow_tree_schema.parse(fixture);
     tree_to_graph(tree);

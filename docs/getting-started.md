@@ -1,6 +1,6 @@
 # Getting started
 
-weft is a TypeScript/Node pnpm workspace. Clone, install, verify, then load a fixture to see the canvas.
+weft is a TypeScript/Node pnpm workspace. Clone, install, verify, then load an example to see the canvas.
 
 ## Prerequisites
 
@@ -18,15 +18,15 @@ pnpm check
 
 ## See it run
 
-Boot the studio and load the kitchen-sink fixture:
+Boot the studio and load the kitchen-sink example:
 
 ```bash
 pnpm --filter @repo/studio dev
 # then open
-# http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/fixtures/all_primitives.json
+# http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/examples/all_primitives.json
 ```
 
-Every fixture under `fixtures/` is served at `/fixtures/<name>.json` by the dev server. `all_primitives.json` and `the_loom.json` exercise every primitive.
+Every example under `examples/` is served at `/examples/<name>.json` by the dev server. `all_primitives.json` and `the_loom.json` exercise every primitive.
 
 For the live-watch loop, run [`@robmclarty/weft-watch`](../packages/watch/README.md) against a JSON file your fascicle test rewrites — see [docs/watch.md](./watch.md).
 
@@ -38,7 +38,7 @@ packages/
   weft/     @repo/weft   — published as @robmclarty/weft (umbrella, re-exports only)
   studio/   @repo/studio — Vite SPA (unpublished)
   watch/    @repo/watch  — published as @robmclarty/weft-watch (Node CLI)
-fixtures/   canonical FlowTree JSON used by the studio dev server and tests
+examples/   canonical FlowTree JSON used by the studio dev server and tests
 rules/      ast-grep structural rules
 scripts/    check orchestrator + screenshot/metrics tooling
 test/       e2e specs (Playwright)

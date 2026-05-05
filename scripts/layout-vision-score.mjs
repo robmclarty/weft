@@ -6,7 +6,7 @@
  * but two layouts with identical numbers can still read very differently — a
  * pink U-turn near a junction port, a label sitting on top of a node, edges
  * grazing a container boundary. This script asks Claude to score the
- * fixture screenshots on a structured visual-quality rubric and cite the
+ * example screenshots on a structured visual-quality rubric and cite the
  * specific coordinates of each issue, giving us a tiebreaker the
  * geometry-only metrics can't provide.
  *
@@ -14,8 +14,8 @@
  *   pnpm metrics
  *   pnpm metrics:vision
  *
- *   # Score a single fixture:
- *   pnpm metrics:vision --fixture all_primitives
+ *   # Score a single example:
+ *   pnpm metrics:vision --example all_primitives
  *
  * Output: .check/layout-vision-scores.json (gitignored).
  *
@@ -93,19 +93,19 @@ async function read_metrics() {
   return JSON.parse(raw);
 }
 
-function build_prompt(fixture) {
+function build_prompt(example) {
   const metrics_summary = `Quantitative metrics for this layout:
-- nodes=${fixture.metrics.nodes}, edges=${fixture.metrics.edges}
-- crossings=${fixture.metrics.crossings}
-- bends=${fixture.metrics.bends}
-- totalEdgeLength=${fixture.metrics.totalEdgeLength}
-- nodeEdgeOverlaps=${fixture.metrics.nodeEdgeOverlaps}
+- nodes=${example.metrics.nodes}, edges=${example.metrics.edges}
+- crossings=${example.metrics.crossings}
+- bends=${example.metrics.bends}
+- totalEdgeLength=${example.metrics.totalEdgeLength}
+- nodeEdgeOverlaps=${example.metrics.nodeEdgeOverlaps}
 
 Use these as ground truth, not as the score itself — your job is to add
 visual judgement the geometry-only counts miss.`;
 
   return `Read the screenshot at this absolute path:
-${fixture.screenshot}
+${example.screenshot}
 
 ${metrics_summary}
 
@@ -134,9 +134,9 @@ function extract_inner_json(text) {
   }
 }
 
-async function spawn_claude(prompt, fixture) {
+async function spawn_claude(prompt, example) {
   // Allow Read on the screenshots directory so Claude can open the PNG.
-  const screenshot_dir = dirname(fixture.screenshot);
+  const screenshot_dir = dirname(example.screenshot);
   const argv = [
     '-p',
     '--output-format', 'json',
@@ -200,9 +200,9 @@ async function spawn_claude(prompt, fixture) {
   });
 }
 
-async function score_fixture(fixture) {
-  const prompt = build_prompt(fixture);
-  return spawn_claude(prompt, fixture);
+async function score_example(example) {
+  const prompt = build_prompt(example);
+  return spawn_claude(prompt, example);
 }
 
 function format_score(score) {
@@ -214,8 +214,8 @@ function format_score(score) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const fix_idx = args.indexOf('--fixture');
-  const only_fixture = fix_idx >= 0 ? args[fix_idx + 1] : null;
+  const ex_idx = args.indexOf('--example');
+  const only_example = ex_idx >= 0 ? args[ex_idx + 1] : null;
 
   let metrics_report;
   try {
@@ -228,25 +228,25 @@ async function main() {
     process.exit(2);
   }
 
-  const targets = only_fixture === null
-    ? metrics_report.fixtures
-    : metrics_report.fixtures.filter((f) => f.name === only_fixture);
+  const targets = only_example === null
+    ? metrics_report.examples
+    : metrics_report.examples.filter((f) => f.name === only_example);
 
   if (targets.length === 0) {
-    process.stderr.write(`no fixtures matched ${String(only_fixture)}\n`);
+    process.stderr.write(`no examples matched ${String(only_example)}\n`);
     process.exit(2);
   }
 
   const results = [];
-  for (const fixture of targets) {
-    process.stdout.write(`scoring ${fixture.name}…\n`);
+  for (const example of targets) {
+    process.stdout.write(`scoring ${example.name}…\n`);
     try {
-      const score = await score_fixture(fixture);
-      results.push({ name: fixture.name, score });
+      const score = await score_example(example);
+      results.push({ name: example.name, score });
       process.stdout.write(`  ${format_score(score)}\n`);
     } catch (err) {
       process.stderr.write(`  failed: ${String(err)}\n`);
-      results.push({ name: fixture.name, error: String(err) });
+      results.push({ name: example.name, error: String(err) });
     }
   }
 
@@ -258,7 +258,7 @@ async function main() {
     ...(metrics_report.label !== undefined && metrics_report.label !== null
       ? { metrics_label: metrics_report.label }
       : {}),
-    fixtures: results,
+    examples: results,
   };
   await writeFile(out_path, `${JSON.stringify(report, null, 2)}\n`);
   process.stdout.write(`\nwrote ${out_path}\n`);

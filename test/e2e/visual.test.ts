@@ -1,10 +1,10 @@
 /**
  * Visual regression: pin the studio's surface against committed snapshots so
  * the design language captured by the v0 re-evaluation does not silently
- * regress. Snapshots are pinned to a fixed viewport and a fixed fixture so
+ * regress. Snapshots are pinned to a fixed viewport and a fixed example so
  * the comparison is meaningful in CI.
  *
- * Snapshots live in `test/e2e/visual.spec.ts-snapshots/`. To refresh after
+ * Snapshots live in `test/e2e/visual.test.ts-snapshots/`. To refresh after
  * an intentional design change, run with `--update-snapshots`. Cross-OS
  * pixel drift is the known footgun; CI runs on Linux Chromium and these
  * baselines are pinned to that environment.
@@ -17,7 +17,7 @@ import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo_root = join(here, '..', '..');
-const fixtures = join(repo_root, 'fixtures');
+const examples = join(repo_root, 'examples');
 
 const VIEWPORT = { width: 1280, height: 720 } as const;
 // React Flow's auto-fit kicks in via two requestAnimationFrame ticks after
@@ -49,7 +49,7 @@ test('empty state is glanceable and guides the user to the loader', async ({
 test('full primitive set loads with kind-aware visual encoding', async ({
   page,
 }) => {
-  const text = await readFile(join(fixtures, 'full_primitive_set.json'), 'utf8');
+  const text = await readFile(join(examples, 'full_primitive_set.json'), 'utf8');
   await page.locator('textarea').fill(text);
   await page.getByRole('button', { name: 'load pasted JSON' }).click();
   await page.waitForSelector('[data-weft-kind="step"]');
@@ -60,7 +60,7 @@ test('full primitive set loads with kind-aware visual encoding', async ({
 test('inspector renders kind-aware retry summary and selection ring', async ({
   page,
 }) => {
-  const text = await readFile(join(fixtures, 'full_primitive_set.json'), 'utf8');
+  const text = await readFile(join(examples, 'full_primitive_set.json'), 'utf8');
   await page.locator('textarea').fill(text);
   await page.getByRole('button', { name: 'load pasted JSON' }).click();
   await page.waitForSelector('[data-weft-kind="step"]');
@@ -78,7 +78,7 @@ test('inspector renders kind-aware retry summary and selection ring', async ({
 test('search filter dims non-matching nodes and reports count', async ({
   page,
 }) => {
-  const text = await readFile(join(fixtures, 'full_primitive_set.json'), 'utf8');
+  const text = await readFile(join(examples, 'full_primitive_set.json'), 'utf8');
   await page.locator('textarea').fill(text);
   await page.getByRole('button', { name: 'load pasted JSON' }).click();
   await page.waitForSelector('[data-weft-kind="step"]');

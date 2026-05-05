@@ -15,8 +15,8 @@ import { flow_tree_schema, type FlowTree } from '../../schemas.js';
 import { WeftCanvas } from '../WeftCanvas.js';
 import type { CanvasApi } from '../canvas_api.js';
 
-import simple_sequence_fixture from '../../../../../fixtures/simple_sequence.json' with { type: 'json' };
-import parallel_ordering_fixture from '../../../../../fixtures/parallel_ordering.json' with { type: 'json' };
+import simple_sequence_example from '../../../../../examples/simple_sequence.json' with { type: 'json' };
+import parallel_ordering_example from '../../../../../examples/parallel_ordering.json' with { type: 'json' };
 
 type Mounted = {
   container: HTMLDivElement;
@@ -90,7 +90,7 @@ afterEach(() => {
 
 describe('WeftCanvas: renders fixture trees end-to-end', () => {
   it('renders simple_sequence.json as three top-level steps with no sequence chrome', async () => {
-    const tree = flow_tree_schema.parse(simple_sequence_fixture);
+    const tree = flow_tree_schema.parse(simple_sequence_example);
     mounted = mount(
       createElement(WeftCanvas, {
         tree,
@@ -109,7 +109,7 @@ describe('WeftCanvas: renders fixture trees end-to-end', () => {
 
 describe('WeftCanvas: parallel-ordering regression (render side)', () => {
   it('preserves declaration order across two layout passes after a config tweak', async () => {
-    const tree = flow_tree_schema.parse(parallel_ordering_fixture);
+    const tree = flow_tree_schema.parse(parallel_ordering_example);
     mounted = mount(
       createElement(WeftCanvas, {
         tree,
@@ -144,7 +144,7 @@ describe('WeftCanvas: parallel-ordering regression (render side)', () => {
 
 describe('WeftCanvas: imperative canvas_api via on_ready', () => {
   it('returns get_viewport, fit_view, focus_node, export_png on a real canvas', async () => {
-    const tree = flow_tree_schema.parse(simple_sequence_fixture);
+    const tree = flow_tree_schema.parse(simple_sequence_example);
     let received: CanvasApi | null = null;
     mounted = mount(
       createElement(WeftCanvas, {
@@ -191,7 +191,7 @@ describe('WeftCanvas: large_threshold performance toggle', () => {
   });
 
   it('keeps the canvas in non-large mode when the threshold is not exceeded', async () => {
-    const tree = flow_tree_schema.parse(simple_sequence_fixture);
+    const tree = flow_tree_schema.parse(simple_sequence_example);
     mounted = mount(
       createElement(WeftCanvas, {
         tree,
@@ -232,7 +232,7 @@ describe('WeftCanvas: F6 unknown-kind tolerance', () => {
 
 describe('WeftCanvas: runtime_state overlay', () => {
   it('attaches runtime data and applies the active class on the matching node', async () => {
-    const tree = flow_tree_schema.parse(simple_sequence_fixture);
+    const tree = flow_tree_schema.parse(simple_sequence_example);
     const runtime_state = new Map([
       [
         'step:greet',
@@ -270,7 +270,7 @@ describe('WeftCanvas: runtime_state overlay', () => {
 
 describe('WeftCanvas: respects an initial_viewport', () => {
   it('skips auto-fit when the caller pins a viewport', async () => {
-    const tree = flow_tree_schema.parse(simple_sequence_fixture);
+    const tree = flow_tree_schema.parse(simple_sequence_example);
     let api: CanvasApi | null = null;
     mounted = mount(
       createElement(WeftCanvas, {

@@ -52,7 +52,7 @@ describe('apply_collapse', () => {
 
   it('never collapses the root, so the canvas cannot go blank', () => {
     // A `<cycle>` sentinel borrows its target id, which can collide with
-    // the root sequence's id (see fixtures/cycle_bug.json: the cycle node's
+    // the root sequence's id (see examples/cycle_bug.json: the cycle node's
     // resolved FlowNode id is "seq:loop", same as the root). Collapsing the
     // root would strip every child and leave the canvas effectively empty.
     const next = apply_collapse(tree, ['seq:root']);

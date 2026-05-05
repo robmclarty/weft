@@ -4,16 +4,16 @@ Four tools cover the visual surface, each with a different job.
 
 ## Playwright — deterministic e2e
 
-Use for scripted regression and smoke tests. Specs live under `test/e2e/`.
+Use for scripted regression and smoke tests. Tests live under `test/e2e/` as `*.test.ts`.
 
 ```bash
-pnpm test:e2e                    # run all e2e specs
+pnpm test:e2e                    # run all e2e tests
 pnpm check --include e2e         # run e2e as part of pnpm check
 ```
 
 Config: [test/e2e/playwright.config.ts](../test/e2e/playwright.config.ts).
-Default smoke spec: [test/e2e/smoke.spec.ts](../test/e2e/smoke.spec.ts).
-Fixtures (static HTML): [test/e2e/fixtures/](../test/e2e/fixtures/).
+Default smoke test: [test/e2e/smoke.test.ts](../test/e2e/smoke.test.ts).
+Static HTML page used by the smoke test: [test/e2e/smoke.html](../test/e2e/smoke.html).
 
 The `e2e` check is opt-in (like `mutation`). It does not run in default `pnpm check` because Playwright launches a browser and is slower than the unit-test loop. Wire it into a phase build by passing `--include e2e`.
 
@@ -28,7 +28,7 @@ In sandboxed environments where Chromium can't launch (some macOS harnesses, Lin
 
 ## `pnpm screenshots` — canonical canvas snapshots
 
-Drives Playwright through every fixture in `fixtures/` (plus the empty state) and writes one PNG per scenario to `.screenshots/<name>.png`, with `.screenshots/manifest.json` indexing the set. Compose nodes are auto-expanded before the snap so you see the full machine, not the collapsed root.
+Drives Playwright through every example in `examples/` (plus the empty state) and writes one PNG per scenario to `.screenshots/<name>.png`, with `.screenshots/manifest.json` indexing the set. Compose nodes are auto-expanded before the snap so you see the full machine, not the collapsed root.
 
 ```bash
 pnpm screenshots
@@ -38,7 +38,7 @@ Diff `.screenshots/<name>.png` against the previous run after any change to canv
 
 ## `pnpm metrics` — quantitative layout scores
 
-Drives Playwright through the canonical fixtures and walks the rendered DOM to compute four numbers per fixture: edge crossings, bend count, total edge length, node-edge overlaps. Writes `.check/layout-metrics.json` plus a side-by-side screenshot at `.check/layout-metrics-screenshots/<name>.png`.
+Drives Playwright through the canonical examples and walks the rendered DOM to compute four numbers per example: edge crossings, bend count, total edge length, node-edge overlaps. Writes `.check/layout-metrics.json` plus a side-by-side screenshot at `.check/layout-metrics-screenshots/<name>.png`.
 
 ```bash
 pnpm --filter @repo/studio dev   # in one terminal
@@ -84,7 +84,7 @@ Output:
 ## When to reach for which
 
 - Writing a regression test that should pass on every build → **Playwright**.
-- Snapping the canonical fixtures after a chrome / renderer change → **`pnpm screenshots`**.
+- Snapping the canonical examples after a chrome / renderer change → **`pnpm screenshots`**.
 - Measuring whether a layout change improved or regressed crossings / bends / overlaps → **`pnpm metrics`** (+ `metrics:vision` for taste, `metrics:graphviz` for engine ceiling).
 - Asking "does this UI actually work, does it look right" mid-task → **agent-browser**, or [Playwright MCP](../CLAUDE.md) when an agent is driving.
 - Need a screenshot to attach to a result for a human reviewer → either; agent-browser is faster from the command line, Playwright is better when you already have a spec context.

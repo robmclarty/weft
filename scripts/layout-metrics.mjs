@@ -2,9 +2,9 @@
 /**
  * Quantitative layout-quality metrics for the studio canvas.
  *
- * Drives Playwright through the canonical fixtures and extracts edge/node
+ * Drives Playwright through the canonical examples and extracts edge/node
  * geometry from the rendered React Flow DOM. Computes four metrics per
- * fixture:
+ * example:
  *
  *   - crossings        edge-segment crossings (canonical aesthetic metric)
  *   - bends            total polyline bends across all edges
@@ -20,7 +20,7 @@
  *   pnpm --filter @repo/studio dev
  *
  *   # 2. Run metrics (in this terminal):
- *   pnpm metrics                       # all fixtures, write .check/layout-metrics.json
+ *   pnpm metrics                       # all examples, write .check/layout-metrics.json
  *   pnpm metrics --label baseline      # tag the run in the output
  *
  * Output: .check/layout-metrics.json (gitignored). When the file already
@@ -45,19 +45,19 @@ const screenshots_dir = join(out_dir, 'layout-metrics-screenshots');
 const STUDIO_ORIGIN = 'http://127.0.0.1:5173';
 const VIEWPORT = { width: 1440, height: 900 };
 // Layout settles via debounce + ELK worker. Poll node count instead of using
-// a fixed sleep so we cover both small and large fixtures without picking a
+// a fixed sleep so we cover both small and large examples without picking a
 // pessimistic ceiling.
 const STABILITY_POLL_MS = 300;
 const STABILITY_REQUIRED_READS = 3;
 const STABILITY_TIMEOUT_MS = 15_000;
 
-const FIXTURE_NAMES = ['simple_sequence', 'all_primitives', 'full_primitive_set'];
+const EXAMPLE_NAMES = ['simple_sequence', 'all_primitives', 'full_primitive_set'];
 
-function build_fixtures(router) {
+function build_examples(router) {
   const router_qs = router === null ? '' : `&router=${router}`;
-  return FIXTURE_NAMES.map((name) => ({
+  return EXAMPLE_NAMES.map((name) => ({
     name,
-    path: `/view?src=${STUDIO_ORIGIN}/fixtures/${name}.json${router_qs}`,
+    path: `/view?src=${STUDIO_ORIGIN}/examples/${name}.json${router_qs}`,
   }));
 }
 
@@ -236,7 +236,7 @@ async function main() {
     process.stderr.write(`--router must be 'elk' or 'libavoid' (got ${router})\n`);
     process.exit(2);
   }
-  const fixtures = build_fixtures(router);
+  const examples = build_examples(router);
 
   if (!(await check_server_up())) {
     process.stderr.write(
@@ -250,7 +250,7 @@ async function main() {
   await mkdir(screenshots_dir, { recursive: true });
   const previous = await read_previous();
   const previous_by_name = new Map(
-    (previous?.fixtures ?? []).map((f) => [f.name, f.metrics]),
+    (previous?.examples ?? []).map((f) => [f.name, f.metrics]),
   );
 
   const browser = await chromium.launch({ headless: true });
@@ -265,13 +265,13 @@ async function main() {
     });
 
     const results = [];
-    for (const fixture of fixtures) {
+    for (const example of examples) {
       console_errors.length = 0;
       await page.goto(`${STUDIO_ORIGIN}/`);
       await page.evaluate(() => {
         try { localStorage.clear(); } catch { /* ignore */ }
       });
-      await page.goto(`${STUDIO_ORIGIN}${fixture.path}`);
+      await page.goto(`${STUDIO_ORIGIN}${example.path}`);
       await page.waitForSelector('.react-flow__node', { timeout: 10_000 });
       await wait_for_stable_layout(page);
 
@@ -298,17 +298,17 @@ async function main() {
       // button; click it (idempotent) before snapping.
       await page.locator('.react-flow__controls-fitview').click().catch(() => undefined);
       await sleep(400);
-      const screenshot_path = join(screenshots_dir, `${fixture.name}.png`);
+      const screenshot_path = join(screenshots_dir, `${example.name}.png`);
       await page.screenshot({ path: screenshot_path, fullPage: false });
 
-      results.push({ name: fixture.name, metrics, screenshot: screenshot_path });
+      results.push({ name: example.name, metrics, screenshot: screenshot_path });
 
       if (console_errors.length > 0) {
-        process.stderr.write(`  ⚠ ${fixture.name} page errors:\n`);
+        process.stderr.write(`  ⚠ ${example.name} page errors:\n`);
         for (const err of console_errors) process.stderr.write(`    ${err}\n`);
       }
 
-      const prev = previous_by_name.get(fixture.name);
+      const prev = previous_by_name.get(example.name);
       const summary = [
         `nodes=${metrics.nodes}`,
         `edges=${metrics.edges}`,
@@ -317,14 +317,14 @@ async function main() {
         `len=${metrics.totalEdgeLength}${format_delta(metrics.totalEdgeLength, prev?.totalEdgeLength)}`,
         `overlaps=${metrics.nodeEdgeOverlaps}${format_delta(metrics.nodeEdgeOverlaps, prev?.nodeEdgeOverlaps)}`,
       ].join('  ');
-      process.stdout.write(`${fixture.name.padEnd(22)} ${summary}\n`);
+      process.stdout.write(`${example.name.padEnd(22)} ${summary}\n`);
     }
 
     const report = {
       timestamp: new Date().toISOString(),
       ...(label !== null ? { label } : {}),
       ...(router !== null ? { router } : {}),
-      fixtures: results,
+      examples: results,
       ...(previous !== null ? { previous: { timestamp: previous.timestamp, label: previous.label ?? null } } : {}),
     };
     await writeFile(out_path, `${JSON.stringify(report, null, 2)}\n`);

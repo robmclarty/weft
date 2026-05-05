@@ -10,9 +10,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const fixtures_dir = join(here, '..', '..', '..', 'fixtures');
+const examples_dir = join(here, '..', '..', '..', 'examples');
 
-export function load_fixture_raw(name: string): unknown {
-  const path = join(fixtures_dir, name);
+export function load_example_raw(name: string): unknown {
+  const path = join(examples_dir, name);
   return JSON.parse(readFileSync(path, 'utf8'));
 }

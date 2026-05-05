@@ -2,7 +2,7 @@
 /**
  * Graphviz `dot` benchmark — Phase 5 of docs/layout-quality-plan.md.
  *
- * Diagnostic only: lays the canonical fixtures out with Graphviz
+ * Diagnostic only: lays the canonical examples out with Graphviz
  * (`splines=ortho`, `rankdir=LR`) and computes the same crossings / bends /
  * length / overlap metrics as `pnpm metrics`. Tells us whether the residual
  * 13 overlaps and 20 bends on `all_primitives` are an ELK ceiling or a
@@ -43,7 +43,7 @@ const STABILITY_REQUIRED_READS = 3;
 const STABILITY_TIMEOUT_MS = 15_000;
 const GRAPHVIZ_DPI = 72;
 
-const FIXTURE_NAMES = ['simple_sequence', 'all_primitives', 'full_primitive_set'];
+const EXAMPLE_NAMES = ['simple_sequence', 'all_primitives', 'full_primitive_set'];
 
 async function check_server_up() {
   try {
@@ -209,7 +209,7 @@ async function read_baseline() {
   try {
     const raw = await readFile(metrics_path, 'utf8');
     const parsed = JSON.parse(raw);
-    return new Map(parsed.fixtures.map((f) => [f.name, f.metrics]));
+    return new Map(parsed.examples.map((f) => [f.name, f.metrics]));
   } catch {
     return new Map();
   }
@@ -243,12 +243,12 @@ async function main() {
     const context = await browser.newContext({ viewport: VIEWPORT });
     const page = await context.newPage();
 
-    for (const name of FIXTURE_NAMES) {
+    for (const name of EXAMPLE_NAMES) {
       await page.goto(`${STUDIO_ORIGIN}/`);
       await page.evaluate(() => {
         try { localStorage.clear(); } catch { /* ignore */ }
       });
-      await page.goto(`${STUDIO_ORIGIN}/view?src=${STUDIO_ORIGIN}/fixtures/${name}.json`);
+      await page.goto(`${STUDIO_ORIGIN}/view?src=${STUDIO_ORIGIN}/examples/${name}.json`);
       await page.waitForSelector('.react-flow__node', { timeout: 10_000 });
       await wait_for_stable_layout(page);
 
@@ -286,7 +286,7 @@ async function main() {
       timestamp: new Date().toISOString(),
       engine: 'graphviz-dot',
       splines: 'ortho',
-      fixtures: results,
+      examples: results,
     };
     await writeFile(out_path, `${JSON.stringify(report, null, 2)}\n`);
     process.stdout.write(`\nwrote ${out_path}\n`);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { flow_tree_schema } from '../../schemas.js';
-import { load_fixture_raw } from '../../test_helpers.js';
+import { load_example_raw } from '../../test_helpers.js';
 import { tree_to_graph, type WeftEdge, type WeftNode } from '../../transform/tree_to_graph.js';
 import {
   apply_edge_routes,
@@ -13,7 +13,7 @@ import {
 import { resolve_options } from '../layout_options.js';
 
 function graph_for(name: string): { nodes: WeftNode[]; edges: WeftEdge[] } {
-  const tree = flow_tree_schema.parse(load_fixture_raw(name));
+  const tree = flow_tree_schema.parse(load_example_raw(name));
   return tree_to_graph(tree);
 }
 

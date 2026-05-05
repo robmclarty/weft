@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { flow_node_schema, flow_tree_schema } from '../schemas.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const fixtures_dir = join(here, '..', '..', '..', '..', 'fixtures');
+const examples_dir = join(here, '..', '..', '..', '..', 'examples');
 
 function load(name: string): unknown {
-  return JSON.parse(readFileSync(join(fixtures_dir, name), 'utf8'));
+  return JSON.parse(readFileSync(join(examples_dir, name), 'utf8'));
 }
 
 describe('flow_tree_schema', () => {

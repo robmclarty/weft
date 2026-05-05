@@ -8,7 +8,7 @@ This doc walks the catalogue. For the topology decisions behind the rendering (w
 
 ![nested branches and parallels rendered as diamond junctions](./assets/nested-branches.png)
 
-The fixture above (`fixtures/all_primitives.json`, simplified view) shows the four reading rules:
+The example above (`examples/all_primitives.json`, simplified view) shows the four reading rules:
 
 1. **Black blocks are work** — every `step` is a black pill labelled with its id and its `<fn:name>`. The eye follows arrows between black blocks.
 2. **Coloured stations are control** — diamonds, containers, pills with non-black fills are decisions, parallel splits, scopes, composites. Each kind has a stable family color.
@@ -121,10 +121,10 @@ Boot the studio and load a fixture:
 
 ```bash
 pnpm --filter @repo/studio dev
-# http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/fixtures/all_primitives.json   — every primitive
-# http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/fixtures/the_loom.json          — kitchen-sink composition
-# http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/fixtures/parallel_ordering.json — FIXED_ORDER demo
-# http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/fixtures/nested_parallel.json   — junctions inside junctions
+# http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/examples/all_primitives.json   — every primitive
+# http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/examples/the_loom.json          — kitchen-sink composition
+# http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/examples/parallel_ordering.json — FIXED_ORDER demo
+# http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/examples/nested_parallel.json   — junctions inside junctions
 ```
 
 Click any node for the inspector view. See [studio.md](./studio.md) for the rest of the chrome.

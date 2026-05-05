@@ -18,11 +18,11 @@ Opens on `http://127.0.0.1:5173`. Three routes:
 | `/view` | `/view?src=<url>` | fetch a JSON `FlowTree` from the URL and render it |
 | `/watch` | `/watch?ws=<port>` | subscribe to a [`weft-watch`](./watch.md) WebSocket on `127.0.0.1:<port>` |
 
-Every fixture under `fixtures/` is served by the dev server at `/fixtures/<name>.json`. So:
+Every example under `examples/` is served by the dev server at `/examples/<name>.json`. So:
 
 ```text
-http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/fixtures/all_primitives.json
-http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/fixtures/the_loom.json
+http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/examples/all_primitives.json
+http://127.0.0.1:5173/view?src=http://127.0.0.1:5173/examples/the_loom.json
 ```
 
 `/view` only fetches `https:` and `http://localhost`/`http://127.0.0.1` URLs (per spec — prevents a hostile link from pointing at an arbitrary origin). The fetch uses `credentials: 'omit'` and `redirect: 'error'`. Validation failures never replace the previous canvas; the loader panel surfaces the JSON path of the offending field.

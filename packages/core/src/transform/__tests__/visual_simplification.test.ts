@@ -22,11 +22,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { flow_tree_schema, type FlowTree } from '../../schemas.js';
-import { load_fixture_raw } from '../../test_helpers.js';
+import { load_example_raw } from '../../test_helpers.js';
 import { tree_to_graph, type WeftEdge, type WeftNode } from '../tree_to_graph.js';
 
 function parse_fixture(name: string): FlowTree {
-  return flow_tree_schema.parse(load_fixture_raw(name));
+  return flow_tree_schema.parse(load_example_raw(name));
 }
 
 function structural_edges(edges: ReadonlyArray<WeftEdge>): WeftEdge[] {

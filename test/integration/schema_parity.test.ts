@@ -4,7 +4,7 @@
  * Constraints §3 forbids @repo/watch from importing @repo/core or @repo/weft,
  * so the watch CLI carries its own copy of the FlowNode / FlowTree zod
  * schemas. That duplication is safe only as long as the two schemas accept
- * and reject identical inputs. This test loads every fixture in fixtures/
+ * and reject identical inputs. This test loads every example in examples/
  * (plus a curated set of negative cases) and asserts that the umbrella's
  * schema and the watch CLI's schema agree on each one.
  *
@@ -26,7 +26,7 @@ import {
 } from '@repo/watch';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const fixtures_dir = join(here, '..', '..', 'fixtures');
+const examples_dir = join(here, '..', '..', 'examples');
 
 function load_json(file: string): unknown {
   return JSON.parse(readFileSync(file, 'utf8'));
@@ -36,7 +36,7 @@ function format_path(path: ReadonlyArray<PropertyKey>): string {
   return path.map((seg) => String(seg)).join('.');
 }
 
-const fixture_files = readdirSync(fixtures_dir).filter((f) => f.endsWith('.json'));
+const example_files = readdirSync(examples_dir).filter((f) => f.endsWith('.json'));
 
 const negative_cases: ReadonlyArray<{ name: string; value: unknown }> = [
   { name: 'missing version', value: { root: { kind: 'step', id: 's1' } } },
@@ -69,9 +69,9 @@ const negative_cases: ReadonlyArray<{ name: string; value: unknown }> = [
 ];
 
 describe('schema parity: @repo/weft ↔ @repo/watch', () => {
-  for (const file of fixture_files) {
-    it(`agrees on fixture: ${file}`, () => {
-      const value = load_json(join(fixtures_dir, file));
+  for (const file of example_files) {
+    it(`agrees on example: ${file}`, () => {
+      const value = load_json(join(examples_dir, file));
       const core_result = core_flow_tree_schema.safeParse(value);
       const watch_result = watch_flow_tree_schema.safeParse(value);
       expect(watch_result.success).toBe(core_result.success);
