@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.1.10 — 2026-05-04
+
+### Added
+
+- `weft-watch --events <path>` tails a fascicle trajectory JSONL log and forwards parsed events to the studio over the existing watch socket. The studio overlays per-step runtime state (active / error / emit / cost) on top of the static tree as new lines stream in.
+- Studio surfaces malformed JSONL lines as a non-blocking `events_invalid` warn banner so the tail keeps running and subsequent valid lines still render.
+
+### Internal
+
+- New e2e test spawns `weft-watch` with `--events`, appends synthetic JSONL, and asserts overlay markers reach the canvas in near real-time. Spawning the CLI from TS source required a small Node `resolve` hook because `--experimental-strip-types` doesn't rewrite NodeNext `.js` specifiers to their `.ts` counterparts.
+- Pinned a sample of fascicle's trajectory wire format as a fixture in `@repo/core` and parse it through `trajectory_event_schema` so future schema drift fails loudly instead of silently corrupting the overlay.
+- Renamed `start_watcher` to `start_tree_watcher` to disambiguate from the new `start_events_tail`; mirrored `trajectory_event_schema` inside `@repo/watch` to keep the published install graph React-free.
+
 ## v0.1.9 — 2026-05-04
 
 ### Changed
