@@ -14,6 +14,7 @@ import { dirname, join } from 'node:path';
 const here = dirname(fileURLToPath(import.meta.url));
 const repo_root = join(here, '..', '..', '..');
 const bin_source = join(repo_root, 'packages', 'watch', 'src', 'bin.ts');
+const resolver_url = `file://${join(here, 'strip_types_resolver.mjs')}`;
 
 export type WatchProcess = {
   readonly port: number;
@@ -27,7 +28,14 @@ export async function spawn_watch(
 ): Promise<WatchProcess> {
   const proc = spawn(
     'node',
-    [bin_source, file_path, '--no-open', ...extra_args],
+    [
+      '--import',
+      resolver_url,
+      bin_source,
+      file_path,
+      '--no-open',
+      ...extra_args,
+    ],
     { cwd: repo_root, stdio: ['ignore', 'pipe', 'pipe'] },
   );
   const stdout = proc.stdout;
