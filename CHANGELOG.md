@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.1.9 — 2026-05-04
+
+### Changed
+
+- Renamed root `fixtures/` to `examples/`; the studio dev server now mounts the canonical FlowTree JSONs at `/examples/<name>.json`. The shared loader `load_fixture_raw` becomes `load_example_raw`, and the `pnpm metrics:vision` flag changes from `--fixture` to `--example`.
+- Standardized every test file on `.test.ts`. The Playwright e2e suite (previously `.spec.ts`) now uses the same extension as Vitest, and `rules/no-spec-files.yml` (ast-grep) prevents `.spec.ts` from coming back.
+- Removed the empty `test/fixtures/` placeholder and moved `test/e2e/fixtures/blank.html` (used only by the smoke test) to `test/e2e/smoke.html`, eliminating the three-way "fixtures" name collision.
+
+### Fixed
+
+- Orthogonal edge labels now render above the SVG stroke instead of being clipped by it.
+
+### Internal
+
+- Refreshed `docs/` (primitives, studio, embedding, watch) to match shipped behavior; added the `the_loom` kitchen-sink FlowTree and per-route studio canvas screenshots.
+- Refocused `README.md` on weft's goals and added the connector wordmark hero; allowlisted `wordmark` in `cspell.json`.
+- Dropped the empty `scripts/build.mjs` placeholder.
+
 ## v0.1.8 — 2026-05-03
 
 ### Added
