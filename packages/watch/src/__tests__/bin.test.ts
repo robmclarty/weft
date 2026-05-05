@@ -1,4 +1,4 @@
-import { mkdtemp, rm, unlink, writeFile } from 'node:fs/promises';
+import { appendFile, mkdtemp, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -100,6 +100,7 @@ describe('parse_argv', () => {
     expect(opts.path).toBe('/tmp/flow.json');
     expect(opts.open).toBe(false);
     expect(opts.studio_url).toBe('http://localhost:9000/x?ws={port}');
+    expect(opts.events).toBeNull();
   });
 
   it('defaults --open to true and the studio URL to localhost:5173', () => {
@@ -107,6 +108,12 @@ describe('parse_argv', () => {
     expect(opts.open).toBe(true);
     expect(opts.studio_url).toContain('localhost:5173');
     expect(opts.studio_url).toContain('{port}');
+    expect(opts.events).toBeNull();
+  });
+
+  it('captures --events as an absolute path string', () => {
+    const opts = parse_argv(['/tmp/flow.json', '--events', '/tmp/trajectory.jsonl']);
+    expect(opts.events).toBe('/tmp/trajectory.jsonl');
   });
 });
 
@@ -359,6 +366,61 @@ describe.skipIf(!LOOPBACK_OK)('weft-watch (in-process)', () => {
     if (msg.kind === 'invalid') {
       expect(msg.path).toBe(file);
       expect(msg.zod_path.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('forwards JSONL trajectory events to the client when --events is set', async () => {
+    await writeFile(file, JSON.stringify(VALID_TREE));
+    const events_path = join(dir, 'trajectory.jsonl');
+    await writeFile(events_path, '');
+    handle = await main([file, '--no-open', '--events', events_path]);
+    client = await open_client(`ws://127.0.0.1:${handle.port}`);
+    await next_envelope(client); // initial tree
+
+    await appendFile(
+      events_path,
+      `${JSON.stringify({ kind: 'span_start', span_id: 's1', name: 'step', id: 's1' })}\n`,
+    );
+
+    // Drain until we see the event envelope; tree-watch envelopes from the
+    // initial connect are already drained above, so the next message must
+    // come from the events tail.
+    let seen: WeftWatchMessage | null = null;
+    for (let i = 0; i < 5; i += 1) {
+      const next = await next_envelope(client, 3000);
+      if (next.kind === 'event') {
+        seen = next;
+        break;
+      }
+    }
+    expect(seen).not.toBeNull();
+    if (seen?.kind === 'event') {
+      expect(seen.event['kind']).toBe('span_start');
+    }
+  });
+
+  it('forwards events_invalid envelopes for malformed JSONL lines', async () => {
+    await writeFile(file, JSON.stringify(VALID_TREE));
+    const events_path = join(dir, 'trajectory.jsonl');
+    await writeFile(events_path, '');
+    handle = await main([file, '--no-open', '--events', events_path]);
+    client = await open_client(`ws://127.0.0.1:${handle.port}`);
+    await next_envelope(client); // initial tree
+
+    await appendFile(events_path, '{ not json\n');
+
+    let seen: WeftWatchMessage | null = null;
+    for (let i = 0; i < 5; i += 1) {
+      const next = await next_envelope(client, 3000);
+      if (next.kind === 'events_invalid') {
+        seen = next;
+        break;
+      }
+    }
+    expect(seen).not.toBeNull();
+    if (seen?.kind === 'events_invalid') {
+      expect(seen.path).toBe(events_path);
+      expect(seen.line_number).toBe(1);
     }
   });
 

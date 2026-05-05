@@ -21,7 +21,8 @@ import { argv as process_argv, exit, stderr, stdout } from 'node:process';
 import { Command } from 'commander';
 import { open_browser } from './open_browser.js';
 import { read_and_validate } from './validate.js';
-import { start_watcher } from './watcher.js';
+import { start_tree_watcher } from './watcher.js';
+import { start_events_tail } from './events_tail.js';
 import { start_ws_server } from './ws_server.js';
 import type { WeftWatchMessage } from './messages.js';
 import type { WsServerHandle } from './ws_server.js';
@@ -32,6 +33,7 @@ export type CliOptions = {
   readonly path: string;
   readonly open: boolean;
   readonly studio_url: string;
+  readonly events: string | null;
 };
 
 export type CliHandle = {
@@ -54,6 +56,10 @@ function build_program(): Command {
       'override the default studio URL (use {port} as the port placeholder)',
       DEFAULT_STUDIO_URL,
     )
+    .option(
+      '--events <path>',
+      'tail a fascicle trajectory JSONL log and forward parsed events to the studio',
+    )
     .helpOption('-h, --help', 'show help');
   return program;
 }
@@ -61,7 +67,7 @@ function build_program(): Command {
 export function parse_argv(argv: ReadonlyArray<string>): CliOptions {
   const program = build_program();
   program.parse(['node', 'weft-watch', ...argv]);
-  const opts = program.opts<{ open: boolean; studioUrl: string }>();
+  const opts = program.opts<{ open: boolean; studioUrl: string; events?: string }>();
   const file_path = program.args[0];
   if (typeof file_path !== 'string' || file_path.length === 0) {
     throw new Error('weft-watch: missing required <path> argument');
@@ -70,6 +76,7 @@ export function parse_argv(argv: ReadonlyArray<string>): CliOptions {
     path: file_path,
     open: opts.open,
     studio_url: opts.studioUrl,
+    events: typeof opts.events === 'string' && opts.events.length > 0 ? opts.events : null,
   };
 }
 
@@ -133,7 +140,7 @@ export async function main(argv: ReadonlyArray<string>): Promise<CliHandle> {
     server.send_to(client, current);
   });
 
-  const watcher = start_watcher(absolute_path, {
+  const watcher = start_tree_watcher(absolute_path, {
     on_message: (message) => {
       if (message.kind === 'tree') {
         current = message;
@@ -146,8 +153,19 @@ export async function main(argv: ReadonlyArray<string>): Promise<CliHandle> {
     },
   });
 
+  const events_tail = options.events !== null
+    ? start_events_tail(resolve(options.events), {
+        on_message: (message) => {
+          server.broadcast(message);
+        },
+      })
+    : null;
+
   stdout.write(`weft-watch listening on ws://127.0.0.1:${server.port}\n`);
   stdout.write(`weft-watch studio url ${url}\n`);
+  if (events_tail !== null) {
+    stdout.write(`weft-watch tailing events ${resolve(options.events ?? '')}\n`);
+  }
 
   if (options.open) {
     open_browser(url);
@@ -155,6 +173,7 @@ export async function main(argv: ReadonlyArray<string>): Promise<CliHandle> {
 
   const close = async (): Promise<void> => {
     await watcher.close();
+    if (events_tail !== null) await events_tail.close();
     await server.close();
   };
 

@@ -48,7 +48,7 @@ async function dispatch_current_state(
   });
 }
 
-export function start_watcher(
+export function start_tree_watcher(
   file_path: string,
   callbacks: WatcherCallbacks,
 ): WatcherHandle {

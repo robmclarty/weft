@@ -3,17 +3,20 @@
  *
  * The `kind` discriminator allows the protocol to grow without breaking
  * clients (per spec §5.5). v0 shipped three kinds (`tree`, `unreachable`,
- * `invalid`) for streaming the static structure. v1 adds `event` for
- * trajectory-event overlays (active/error/emit/cost) — older CLIs that don't
- * produce them are forward-compatible because the studio's reducer ignores
- * absent envelopes.
+ * `invalid`) for streaming the static structure. v1 adds two more for
+ * trajectory-event overlays:
  *
- * The `event` payload is intentionally typed as `Record<string, unknown>` at
- * this boundary: the watch CLI is a passthrough proxy and does not interpret
- * trajectory events. The studio (which depends on `@repo/core`) parses them
- * through `trajectory_event_schema` on receipt. Keeping the schema out of
- * `@repo/watch` preserves the published `@robmclarty/weft-watch` install
- * graph (zod + ws + chokidar; no React peers).
+ *   - `event`           a parsed JSONL line, validated against
+ *                       `trajectory_event_schema`. Studio feeds it through
+ *                       `derive_runtime_state`.
+ *   - `events_invalid`  a JSONL line that failed JSON.parse or zod validation.
+ *                       Studio surfaces it as a banner; the tail keeps
+ *                       running so subsequent valid lines still flow.
+ *
+ * The CLI mirrors `trajectory_event_schema` locally (see
+ * `trajectory_event_schema.ts`) so it can validate per line without pulling
+ * `@repo/core` into the published install graph. Older studios stay forward-
+ * compatible because `is_watch_envelope` drops unknown kinds on the floor.
  */
 
 import type { FlowTree } from './schemas.js';
@@ -36,4 +39,10 @@ export type WeftWatchMessage =
   | {
       readonly kind: 'event';
       readonly event: Readonly<Record<string, unknown>>;
+    }
+  | {
+      readonly kind: 'events_invalid';
+      readonly path: string;
+      readonly line_number: number;
+      readonly message: string;
     };

@@ -23,5 +23,15 @@ export {
   resolve_listening_port,
 } from './ws_server.js';
 export type { WsServerHandle, ListeningServer } from './ws_server.js';
-export { start_watcher } from './watcher.js';
+export { start_tree_watcher } from './watcher.js';
 export type { WatcherHandle, WatcherCallbacks } from './watcher.js';
+export { start_events_tail } from './events_tail.js';
+export type { EventsTailHandle, EventsTailCallbacks } from './events_tail.js';
+export {
+  trajectory_event_schema,
+  span_start_event_schema,
+  span_end_event_schema,
+  emit_event_schema,
+  custom_event_schema,
+} from './trajectory_event_schema.js';
+export type { ParsedTrajectoryEvent } from './trajectory_event_schema.js';

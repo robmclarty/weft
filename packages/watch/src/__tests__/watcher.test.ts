@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { start_watcher } from '../watcher.js';
+import { start_tree_watcher } from '../watcher.js';
 import type { WatcherHandle } from '../watcher.js';
 import type { WeftWatchMessage } from '../messages.js';
 
@@ -24,7 +24,7 @@ function next_message(messages: WeftWatchMessage[], timeout_ms = 1500): Promise<
   });
 }
 
-describe('start_watcher', () => {
+describe('start_tree_watcher', () => {
   let dir: string;
   let path: string;
   let handle: WatcherHandle | null = null;
@@ -49,7 +49,7 @@ describe('start_watcher', () => {
       path,
       JSON.stringify({ version: 1, root: { kind: 'step', id: 's1' } }),
     );
-    handle = start_watcher(path, {
+    handle = start_tree_watcher(path, {
       on_message: (msg) => {
         messages.push(msg);
       },
@@ -72,7 +72,7 @@ describe('start_watcher', () => {
       path,
       JSON.stringify({ version: 1, root: { kind: 'step', id: 's1' } }),
     );
-    handle = start_watcher(path, {
+    handle = start_tree_watcher(path, {
       on_message: (msg) => {
         messages.push(msg);
       },
@@ -92,7 +92,7 @@ describe('start_watcher', () => {
       path,
       JSON.stringify({ version: 1, root: { kind: 'step', id: 's1' } }),
     );
-    handle = start_watcher(path, {
+    handle = start_tree_watcher(path, {
       on_message: (msg) => {
         messages.push(msg);
       },
