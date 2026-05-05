@@ -1,0 +1,8 @@
+{"kind":"span_start","span_id":"sequence:abc","name":"sequence","id":"sequence_1","run_id":"run_001"}
+{"kind":"span_start","span_id":"step:def","name":"step","id":"fetch","run_id":"run_001","parent_span_id":"sequence:abc"}
+{"kind":"emit","ts":1700000000000,"run_id":"run_001"}
+{"kind":"cost","total_usd":0.0023,"run_id":"run_001"}
+{"kind":"span_end","span_id":"step:def","run_id":"run_001"}
+{"kind":"span_start","span_id":"step:ghi","name":"step","id":"parse","run_id":"run_001","parent_span_id":"sequence:abc"}
+{"kind":"span_end","span_id":"step:ghi","error":"network down","run_id":"run_001"}
+{"kind":"span_end","span_id":"sequence:abc","run_id":"run_001"}
