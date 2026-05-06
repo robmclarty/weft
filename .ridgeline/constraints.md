@@ -106,13 +106,13 @@ No layer may import from a layer above it.
 
 **May NOT import:** `@repo/core`, `@repo/weft`, `@repo/studio`, `react`, `react-dom`, `@xyflow/react`. The CLI ships without the React peer surface — that is the point of separating it.
 
-### Node-type components do not import other node-type components
+### Node-type and edge-type components do not import siblings
 
-Each component in `packages/core/src/nodes/` (or wherever node components live) depends only on React, `@xyflow/react`, and shared helpers. `StepNode` does not import `SequenceNode`. Sharing happens through the React Flow node-data contract. Promote to mechanical enforcement only if a regression appears.
+Each component in `packages/core/src/nodes/` depends only on React, `@xyflow/react`, and shared helpers (`node_helpers`, `glyphs`, `WrapperBadges`, `RuntimeOverlay`). `StepNode` does not import `SequenceNode`. The same rule applies to `packages/core/src/edges/` — `WeftOrthogonalEdge`, `SelfLoopEdge`, and `LoopBackEdge` are independent. Sharing happens through the React Flow node-data / edge-data contract. Promote to mechanical enforcement only if a regression appears.
 
 ### Dispatch-on-kind, never branch-on-kind
 
-The node-type registry (the React Flow `nodeTypes` map) is the single dispatch table mapping `kind` → component. No component contains kind-specific branching for *other* kinds. Unknown kinds fall through to a generic component, never to a crash.
+Two registries are the **only** places that map `kind` to a component: `packages/core/src/nodes/registry.ts` (`node_types`, the React Flow `nodeTypes` map) and `packages/core/src/edges/registry.ts` (`edge_types`). No component contains kind-specific branching for *other* kinds. Unknown node kinds fall through to `GenericNode`; structural / wrapper-decoration edges fall through to the default `weft-orth` type. Crashes are not an option.
 
 ---
 
@@ -253,12 +253,14 @@ Per-build coverage requirements (which kinds, which failure modes, end-to-end fl
 
 ## §10 — What This Document Does Not Cover
 
-- Exact `WeftCanvas` props, `canvas_api` shape, or `WeftNodeData` fields → `.ridgeline/builds/v0/spec.md` §4.
-- Specific visual encoding per kind (handles, badges, colors, layout direction defaults) → build `spec.md`.
+- Exact `WeftCanvas` props, `CanvasApi` shape, or `WeftNodeData` fields → `.ridgeline/builds/v0/spec.md` §4 plus `design.md` §5 (the umbrella's exported categories).
+- Specific visual encoding per kind (handles, badges, colors, layout direction defaults) → build `spec.md` and `docs/primitives.md` for the shipped state.
 - Inspector panel layout, keyboard shortcut set → build `spec.md`.
 - Choice of styling system, routing library, UI primitive library, CLI argument parser, file-watcher, WebSocket library → build `spec.md`.
-- v1 trajectory event shapes, span-to-node mapping → `.ridgeline/builds/v1/spec.md`.
-- v2 DSL serialization format, edit commands, diff semantics → `.ridgeline/builds/v2/spec.md`.
+- v1 trajectory event shapes, span-to-node mapping, runtime overlay reducer (`derive_runtime_state`, `NodeRuntimeState`, `runtime_state` prop) → `.ridgeline/builds/v1/spec.md`.
+- v2 spec serialization format, edit commands, diff semantics → `.ridgeline/builds/v2/spec.md`.
 - Code formatting (indentation, semicolons, line length) → `taste.md`.
 - Rationale for the package layout, umbrella seam, sibling-builds split → `taste.md`.
 - The visualizable shape of the architecture (diagram, file tree, data flow) → `design.md`.
+
+> **Sample FlowTree location:** the canonical sample trees live at `examples/<name>.json` (renamed from `fixtures/` in v0.1.9). The studio's dev server mounts them at `/examples/<name>.json`; tests, screenshot scripts, and metrics scripts read them via `load_example_raw` (renamed from `load_fixture_raw`). Future builds reuse this location; do not re-introduce a `fixtures/` directory.
