@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.11 — 2026-05-04
+
+### Internal
+
+- Aligned `.ridgeline/` root docs with the ridgeline planning contract and the post-v0 shipped state. `design.md` is now the visual design system (palette, typography, spacing, component shapes, motion) sourced from `canvas.css` / `index.css` instead of architectural sketches. `taste.md` trimmed to genuine best-effort preferences with hard rules left in `constraints.md`. `learnings.md` got post-v0 visual evolution and v1 close-out retrospective entries under the canonical headings. `builds/v2/spec.md` rewritten ridgeline-ready: §0 baseline pins the current visual model (junctions as 56×56 diamonds, wrappers as inline `WeftNodeData.wrappers` badges, sequence/scope as structural-only, compose as the only outer container, ELK orthogonal routing); edit-command target rules corrected so `add_child` rejects junctions and single-child wrappers; `tree_id` fast path added to `compute_diff`; `/edit` keyboard shortcuts no longer collide with v0's `f` / `/` / `Escape` / `?`; phase decomposition hint added for the build planner.
+
 ## v0.1.10 — 2026-05-04
 
 ### Added
